@@ -898,14 +898,14 @@ const App = () => {
       }
 
       try {
-        const response = await fetch('/Cities_FeaturesToJSON.geojson');
+        const response = await fetch('/Cities.geojson');
 
         if (!response.ok) {
           throw new Error(`Failed to load project data: ${response.status}`);
         }
 
         const data = await response.json();
-        console.log('[Projects] Loaded Cities_FeaturesToJSON.geojson:', data.features.length, 'features');
+        console.log('[Projects] Loaded Cities.geojson:', data.features.length, 'features');
         console.log('[Projects] Sample properties:', data.features[0]?.properties ? Object.keys(data.features[0].properties).slice(0, 10) : 'No properties');
         console.log('[Projects] Sample Infrastruc value:', data.features[0]?.properties?.Infrastruc);
         console.log('[Projects] Sample NAME (city) value:', data.features[0]?.properties?.NAME);
