@@ -898,14 +898,14 @@ const App = () => {
       }
 
       try {
-        const response = await fetch('/Cities.geojson');
+        const response = await fetch('/Cities_FeaturesToJSON.geojson');
 
         if (!response.ok) {
           throw new Error(`Failed to load project data: ${response.status}`);
         }
 
         const data = await response.json();
-        console.log('[Projects] Loaded Cities.geojson:', data.features.length, 'features');
+        console.log('[Projects] Loaded Cities_FeaturesToJSON.geojson:', data.features.length, 'features');
         console.log('[Projects] Sample properties:', data.features[0]?.properties ? Object.keys(data.features[0].properties).slice(0, 10) : 'No properties');
         console.log('[Projects] Sample Infrastruc value:', data.features[0]?.properties?.Infrastruc);
         console.log('[Projects] Sample NAME (city) value:', data.features[0]?.properties?.NAME);
@@ -948,7 +948,23 @@ const App = () => {
 
         const markers = [];
         data.features.forEach(feature => {
-          const coordinates = feature.geometry.coordinates;
+          const geometry = feature.geometry;
+          const coordinates = geometry && geometry.coordinates;
+          // Skip features without valid point coordinates
+          if (
+            !geometry ||
+            geometry.type !== 'Point' ||
+            !Array.isArray(coordinates) ||
+            coordinates.length < 2 ||
+            typeof coordinates[0] !== 'number' ||
+            typeof coordinates[1] !== 'number' ||
+            !Number.isFinite(coordinates[0]) ||
+            !Number.isFinite(coordinates[1])
+          ) {
+            console.warn('[Projects] Skipping feature with invalid coordinates:', feature.id);
+            return;
+          }
+
           const properties = feature.properties;
           
           // Normalize city property by trimming whitespace (use NAME field, fallback to City)
@@ -1000,18 +1016,22 @@ const App = () => {
 
         setAllMarkers(markers);
 
-        const bounds = new mapboxgl.LngLatBounds();
-        data.features.forEach(feature => {
-          bounds.extend(feature.geometry.coordinates);
-        });
-        if (!bounds.isEmpty()) {
-          // Use shifted bounds for default position (shifted northeast)
-          const shiftedBounds = shiftBoundsNortheast(bounds);
-          map.current.fitBounds(shiftedBounds, { 
-            padding: { top: 100, bottom: 100, left: 100, right: 100 },
-            maxZoom: 13,
-            duration: 0 // No animation on initial load
+        // Use marker positions (valid points only) to compute initial bounds
+        if (markers.length > 0) {
+          const bounds = new mapboxgl.LngLatBounds();
+          markers.forEach(marker => {
+            const coords = marker.getLngLat();
+            bounds.extend([coords.lng, coords.lat]);
           });
+          if (!bounds.isEmpty()) {
+            // Use shifted bounds for default position (shifted northeast)
+            const shiftedBounds = shiftBoundsNortheast(bounds);
+            map.current.fitBounds(shiftedBounds, { 
+              padding: { top: 100, bottom: 100, left: 100, right: 100 },
+              maxZoom: 13,
+              duration: 0 // No animation on initial load
+            });
+          }
         }
 
         setLoading(false);
