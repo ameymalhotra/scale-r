@@ -1969,7 +1969,9 @@ const App = () => {
                 margin: 0,
                 textAlign: 'justify'
               }}>
-                This project is based upon work supported by the National Science Foundation under Grant Number (2435008).{' '}
+                This project is based upon work supported by the National Science Foundation under Grant Number (2435008).
+              </p>
+              <div style={{ marginTop: '8px' }}>
                 <a
                   href="#"
                   onClick={(e) => {
@@ -1977,6 +1979,7 @@ const App = () => {
                     setShowDisclaimer(!showDisclaimer);
                   }}
                   style={{
+                    fontSize: '0.75em',
                     color: '#3498db',
                     textDecoration: 'none',
                     cursor: 'pointer'
@@ -1987,9 +1990,9 @@ const App = () => {
                   Disclaimer
                 </a>
                 {showDisclaimer && (
-                  <span>: Any opinions, findings, and conclusions or recommendations expressed in this website are those of the investigator(s) and do not necessarily reflect the views of the National Science Foundation.</span>
+                  <span style={{ fontSize: '0.75em', color: '#546e7a' }}>: Any opinions, findings, and conclusions or recommendations expressed in this website are those of the investigator(s) and do not necessarily reflect the views of the National Science Foundation.</span>
                 )}
-              </p>
+              </div>
             </div>
           </div>
         </aside>
