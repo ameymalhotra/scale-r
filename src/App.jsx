@@ -174,6 +174,7 @@ const App = () => {
   const [selectedCity, setSelectedCity] = useState('');
   const [cityDropdownOpen, setCityDropdownOpen] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
+  const [showDisclaimer, setShowDisclaimer] = useState(false);
 
   // Listen for popup close events to reset activeFeature state
   useEffect(() => {
@@ -1945,6 +1946,52 @@ const App = () => {
               </div>
             </div>
           )}
+
+          {/* NSF Disclaimer */}
+          <div style={{
+            marginTop: '24px',
+            paddingTop: '24px',
+            borderTop: '1px solid rgba(0, 0, 0, 0.1)'
+          }}>
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.8)',
+              backdropFilter: 'blur(10px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(10px) saturate(180%)',
+              border: '1px solid rgba(255, 255, 255, 0.4)',
+              borderRadius: '12px',
+              padding: '16px',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08), inset 0 0 0 1px rgba(255, 255, 255, 0.5)'
+            }}>
+              <p style={{
+                fontSize: '0.75em',
+                color: '#546e7a',
+                lineHeight: 1.6,
+                margin: 0,
+                textAlign: 'justify'
+              }}>
+                This project is based upon work supported by the National Science Foundation under Grant Number (2435008).{' '}
+                <a
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setShowDisclaimer(!showDisclaimer);
+                  }}
+                  style={{
+                    color: '#3498db',
+                    textDecoration: 'none',
+                    cursor: 'pointer'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.textDecoration = 'underline'}
+                  onMouseLeave={(e) => e.currentTarget.style.textDecoration = 'none'}
+                >
+                  Disclaimer
+                </a>
+                {showDisclaimer && (
+                  <span>: Any opinions, findings, and conclusions or recommendations expressed in this website are those of the investigator(s) and do not necessarily reflect the views of the National Science Foundation.</span>
+                )}
+              </p>
+            </div>
+          </div>
         </aside>
 
         
