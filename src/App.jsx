@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { createPortal } from 'react-dom';
 import mapboxgl from 'https://cdn.skypack.dev/mapbox-gl@2.15.0';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
+import { searchProjects } from './utils/searchProjects.js';
 
 
 const parseNumericValue = (value) => {
@@ -175,6 +176,10 @@ const App = () => {
   const [cityDropdownOpen, setCityDropdownOpen] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
   const [showDisclaimer, setShowDisclaimer] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [selectedResultIndex, setSelectedResultIndex] = useState(-1);
 
   // Listen for popup close events to reset activeFeature state
   useEffect(() => {
@@ -206,6 +211,112 @@ const App = () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [cityDropdownOpen]);
+
+  // Navigate to a specific project (zoom and open popup)
+  const navigateToProject = useCallback((feature) => {
+    if (!map.current || !feature || !feature.geometry) return;
+
+    const coords = feature.geometry.coordinates;
+    if (!coords || coords.length < 2) return;
+
+    // Find the corresponding marker (if it exists)
+    const marker = allMarkers.find(m => {
+      if (!m.feature) return false;
+      const markerCoords = m.feature.geometry?.coordinates;
+      if (!markerCoords) return false;
+      // Compare coordinates (with small tolerance for floating point)
+      return Math.abs(markerCoords[0] - coords[0]) < 0.0001 && 
+             Math.abs(markerCoords[1] - coords[1]) < 0.0001;
+    });
+
+    // If marker exists and is hidden, make it visible temporarily
+    if (marker && marker.getElement().style.display === 'none') {
+      marker.getElement().style.display = 'block';
+    }
+
+    // Zoom to the project location
+    map.current.flyTo({
+      center: [coords[0], coords[1]],
+      zoom: 15,
+      duration: 1500
+    });
+
+    // Set active feature to open popup
+    setActiveFeature(feature);
+
+    // Close search results
+    setShowSearchResults(false);
+    setSearchQuery('');
+    setSelectedResultIndex(-1);
+  }, [allMarkers]);
+
+  // Handle search query changes
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      setShowSearchResults(false);
+      setSelectedResultIndex(-1);
+      return;
+    }
+
+    const results = searchProjects(searchQuery, allProjectsData);
+    setSearchResults(results);
+    setShowSearchResults(true); // Show dropdown even if no results (to display "no results" message)
+    setSelectedResultIndex(-1);
+  }, [searchQuery, allProjectsData]);
+
+  // Close search dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      const searchContainer = document.querySelector('[data-search-container]');
+      if (showSearchResults && searchContainer && !searchContainer.contains(event.target)) {
+        setShowSearchResults(false);
+      }
+    };
+
+    if (showSearchResults) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showSearchResults]);
+
+  // Handle keyboard navigation for search
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (!showSearchResults || searchResults.length === 0) return;
+
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        setSelectedResultIndex(prev => 
+          prev < searchResults.length - 1 ? prev + 1 : prev
+        );
+      } else if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        setSelectedResultIndex(prev => prev > 0 ? prev - 1 : -1);
+      } else if (event.key === 'Enter') {
+        event.preventDefault();
+        const index = selectedResultIndex >= 0 ? selectedResultIndex : 0;
+        if (searchResults[index]) {
+          navigateToProject(searchResults[index]);
+        }
+      } else if (event.key === 'Escape') {
+        setShowSearchResults(false);
+        setSearchQuery('');
+        setSelectedResultIndex(-1);
+      }
+    };
+
+    if (showSearchResults) {
+      document.addEventListener('keydown', handleKeyDown);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showSearchResults, searchResults, selectedResultIndex, navigateToProject]);
 
   const handleCensusViewChange = (view) => {
     censusViewRef.current = view;
@@ -773,7 +884,15 @@ const App = () => {
   useEffect(() => {
     if (map.current) return;
 
-    mapboxgl.accessToken = 'pk.eyJ1IjoiaXNhYWNlZGoiLCJhIjoiY21naTVhc3ZkMDVtbjJzcHBwdnFuOW44MSJ9.3B7ShXPP1-_51v1sFoVMKA';
+    // Get Mapbox access token from environment variable
+    const mapboxToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
+    if (!mapboxToken) {
+      console.error('Mapbox access token is missing. Please set VITE_MAPBOX_ACCESS_TOKEN in your .env file.');
+      setError('Mapbox access token is not configured. Please check your environment variables.');
+      setLoading(false);
+      return;
+    }
+    mapboxgl.accessToken = mapboxToken;
     
     const loadDistricts = async () => {
     try {
@@ -2029,6 +2148,213 @@ const App = () => {
 
         <div style={{ flex: 1, position: 'relative', height: '100%', width: '100%', minWidth: 0, overflow: 'hidden', boxSizing: 'border-box' }}>
           <div ref={mapContainer} style={{ width: '100%', height: '100%', minWidth: 0, overflow: 'hidden', boxSizing: 'border-box' }} />
+          
+          {/* Search Bar Overlay */}
+          {!loading && (
+          <div
+            data-search-container
+            style={{
+              position: 'absolute',
+              top: '20px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              zIndex: 1000,
+              width: '90%',
+              maxWidth: '500px'
+            }}
+          >
+            <div style={{
+              position: 'relative',
+              background: 'rgba(255, 255, 255, 0.85)',
+              backdropFilter: 'blur(20px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+              borderRadius: '12px',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.6)',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              overflow: 'visible'
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                padding: '12px 16px',
+                gap: '12px'
+              }}>
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#546e7a"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  style={{ flexShrink: 0 }}
+                >
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <path d="m21 21-4.35-4.35"></path>
+                </svg>
+                <input
+                  type="text"
+                  placeholder="Search projects..."
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setShowSearchResults(true);
+                  }}
+                  onFocus={() => {
+                    if (searchResults.length > 0) {
+                      setShowSearchResults(true);
+                    }
+                  }}
+                  style={{
+                    flex: 1,
+                    border: 'none',
+                    outline: 'none',
+                    background: 'transparent',
+                    fontSize: '0.95em',
+                    color: '#2c3e50',
+                    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
+                  }}
+                />
+                {searchQuery && (
+                  <button
+                    aria-label="Clear search"
+                    onClick={() => {
+                      setSearchQuery('');
+                      setSearchResults([]);
+                      setShowSearchResults(false);
+                      setSelectedResultIndex(-1);
+                    }}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: '4px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#546e7a',
+                      transition: 'color 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.color = '#2c3e50'}
+                    onMouseLeave={(e) => e.currentTarget.style.color = '#546e7a'}
+                  >
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <line x1="18" y1="6" x2="6" y2="18"></line>
+                      <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                  </button>
+                )}
+              </div>
+
+              {/* Search Results Dropdown */}
+              {showSearchResults && searchResults.length > 0 && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  right: 0,
+                  marginTop: '4px',
+                  maxHeight: '400px',
+                  overflowY: 'auto',
+                  background: 'rgba(255, 255, 255, 0.95)',
+                  backdropFilter: 'blur(20px) saturate(180%)',
+                  WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+                  borderRadius: '12px',
+                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15), inset 0 0 0 1px rgba(255, 255, 255, 0.6)',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  zIndex: 1001
+                }}>
+                  {searchResults.map((result, index) => {
+                    const props = result.properties || {};
+                    const projectName = props['Project_Na'] || props['Project Name'] || 'Unnamed Project';
+                    const city = (props['NAME'] || props['City']) ? formatCityName((props['NAME'] || props['City']).trim()) : '—';
+                    const infrastructureType = props['Infrastruc'] || props['Infrastructure Type'] || props['Type'] || '—';
+                    const isSelected = index === selectedResultIndex;
+
+                    return (
+                      <div
+                        key={result.id || index}
+                        onClick={() => navigateToProject(result)}
+                        style={{
+                          padding: '12px 16px',
+                          cursor: 'pointer',
+                          borderBottom: index < searchResults.length - 1 ? '1px solid rgba(0, 0, 0, 0.05)' : 'none',
+                          backgroundColor: isSelected ? 'rgba(52, 152, 219, 0.1)' : 'transparent',
+                          transition: 'background-color 0.2s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isSelected) {
+                            e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.03)';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isSelected) {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                          }
+                        }}
+                      >
+                        <div style={{
+                          fontSize: '0.95em',
+                          fontWeight: 600,
+                          color: '#2c3e50',
+                          marginBottom: '4px'
+                        }}>
+                          {projectName}
+                        </div>
+                        <div style={{
+                          fontSize: '0.85em',
+                          color: '#546e7a',
+                          display: 'flex',
+                          gap: '12px',
+                          flexWrap: 'wrap'
+                        }}>
+                          <span>{city}</span>
+                          <span>•</span>
+                          <span>{infrastructureType}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* No Results Message */}
+              {showSearchResults && searchQuery.trim() && searchResults.length === 0 && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  right: 0,
+                  marginTop: '4px',
+                  padding: '16px',
+                  background: 'rgba(255, 255, 255, 0.95)',
+                  backdropFilter: 'blur(20px) saturate(180%)',
+                  WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+                  borderRadius: '12px',
+                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15), inset 0 0 0 1px rgba(255, 255, 255, 0.6)',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  zIndex: 1001,
+                  textAlign: 'center',
+                  color: '#546e7a',
+                  fontSize: '0.9em'
+                }}>
+                  No projects found matching "{searchQuery}"
+                </div>
+              )}
+            </div>
+          </div>
+          )}
+
           {map.current && (
             <MapboxPopup map={map.current} activeFeature={activeFeature} />
           )}

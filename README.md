@@ -51,7 +51,17 @@ npx vite preview
 - Sample: `public/project_inventory_database_Sample.geojson`
 - Districts: `public/miami_cities.geojson`
 
-Mapbox token is set in `src/App.jsx` (`mapboxgl.accessToken = '...'`). Replace for deployments.
+## Environment Variables
+
+Create a `.env` file in the project root with your Mapbox access token:
+
+```
+VITE_MAPBOX_ACCESS_TOKEN=your_mapbox_access_token_here
+```
+
+Get your token from https://account.mapbox.com/access-tokens/
+
+**Important**: The `.env` file is gitignored and will not be committed. Use `.env.example` as a template.
 
 ## Troubleshooting
 - Not seeing changes? Ensure Vite is running, use the printed port, and hard refresh.
