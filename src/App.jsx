@@ -991,7 +991,8 @@ const App = () => {
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/light-v11',
       center: [-80.70, 26.15],
-      zoom: 11
+      zoom: 11,
+      attributionControl: false
     });
 
     map.current.addControl(new mapboxgl.NavigationControl(), 'top-left');
@@ -2301,11 +2302,10 @@ const App = () => {
             style={{
               position: 'absolute',
               top: isMobile ? '8px' : '20px',
-              left: '50%',
-              transform: 'translateX(-50%)',
+              ...(isMobile ? { left: '50%', transform: 'translateX(-50%)' } : { right: '20px', left: 'auto', transform: 'none' }),
               zIndex: 1000,
-              width: isMobile ? 'min(420px, 98vw)' : '90%',
-              maxWidth: isMobile ? 'min(420px, 98vw)' : '500px'
+              width: isMobile ? 'min(420px, 98vw)' : '320px',
+              maxWidth: isMobile ? 'min(420px, 98vw)' : '320px'
             }}
           >
             <div style={{
@@ -2533,115 +2533,69 @@ const App = () => {
 
           {censusLayersReady && censusStats && (
             <>
-              {isMobile && modellingLayerOpen && (
-                <div
-                  role="presentation"
-                  aria-hidden
-                  onClick={() => setModellingLayerOpen(false)}
-                  style={{
-                    position: 'fixed',
-                    inset: 0,
-                    zIndex: 1098,
-                    backgroundColor: 'rgba(0,0,0,0.25)',
-                    transition: 'opacity 0.2s ease'
-                  }}
-                />
-              )}
               {isMobile ? (
                 <>
-                  <button
-                    type="button"
-                    aria-label={modellingLayerOpen ? 'Close layers panel' : 'Open layers panel'}
-                    onClick={() => setModellingLayerOpen((prev) => !prev)}
+                  {/* Mobile: Layers dropdown above Satellite (bottom-up: Satellite, then Layers dropdown) */}
+                  <div
                     style={{
                       position: 'absolute',
-                      bottom: 'max(16px, env(safe-area-inset-bottom))',
+                      bottom: '62px',
                       right: 'max(16px, env(safe-area-inset-right))',
                       zIndex: 1000,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px',
-                      padding: '10px 14px',
-                      background: 'rgba(255, 255, 255, 0.85)',
-                      backdropFilter: 'blur(20px) saturate(180%)',
-                      WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-                      border: '1px solid rgba(255, 255, 255, 0.3)',
-                      borderRadius: '10px',
-                      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.6)',
-                      color: '#1b3a4b',
-                      fontSize: '0.9em',
-                      fontWeight: 500,
-                      cursor: 'pointer'
+                      minWidth: '160px'
                     }}
                   >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polygon points="12 2 2 7 12 12 22 7 12 2"/>
-                      <polyline points="2 17 12 22 22 17"/>
-                    </svg>
-                    Layers
-                  </button>
-                  {modellingLayerOpen && (
-                    <>
-                      <div style={{
-                        position: 'absolute',
-                        bottom: '190px',
-                        right: '20px',
-                        zIndex: 1100,
-                        background: 'rgba(255, 255, 255, 0.75)',
+                    <select
+                      aria-label="Modelling layer"
+                      value={!censusVisible || activeCensusView === 'none' ? 'none' : activeCensusView}
+                      onChange={(e) => handleCensusViewChange(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '10px 32px 10px 14px',
+                        background: 'rgba(255, 255, 255, 0.85)',
                         backdropFilter: 'blur(20px) saturate(180%)',
                         WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-                        padding: '16px',
-                        borderRadius: '12px',
-                        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.6)',
                         border: '1px solid rgba(255, 255, 255, 0.3)',
-                        minWidth: '220px'
-                      }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                          <div style={{ fontSize: '1em', fontWeight: 600, color: '#1b3a4b' }}>Modelling Layer</div>
-                          <button type="button" aria-label="Close" onClick={() => setModellingLayerOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: '#546e7a', display: 'flex' }}>
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                          </button>
+                        borderRadius: '10px',
+                        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.6)',
+                        color: '#1b3a4b',
+                        fontSize: '0.9em',
+                        fontWeight: 500,
+                        cursor: 'pointer',
+                        appearance: 'none',
+                        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
+                      }}
+                    >
+                      <option value="none">No Layer</option>
+                      <option value="risk">Risk Index</option>
+                      <option value="pred3pe">Resilience Index</option>
+                    </select>
+                  </div>
+                  {/* Mobile: Legend always visible when layer is active (above Layers dropdown) */}
+                  {censusVisible && activeCensusView === 'risk' && sortedRatings.length > 0 && (
+                    <div style={{ position: 'absolute', right: 'max(16px, env(safe-area-inset-right))', bottom: '108px', zIndex: 1000, background: 'rgba(255, 255, 255, 0.85)', backdropFilter: 'blur(20px) saturate(180%)', WebkitBackdropFilter: 'blur(20px) saturate(180%)', padding: '12px 14px', borderRadius: '10px', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.6)', border: '1px solid rgba(255, 255, 255, 0.3)', minWidth: '180px' }}>
+                      <div style={{ fontSize: '0.9em', fontWeight: 600, color: '#1b3a4b', marginBottom: '8px' }}>FEMA Risk Rating</div>
+                      <div style={{ marginBottom: '4px' }}>
+                        <div style={{ width: '100%', height: '14px', borderRadius: '4px', overflow: 'hidden', marginBottom: '4px' }}>
+                          <div style={{ width: '100%', height: '100%', background: 'linear-gradient(to right, #FFF9C4 0%, #FFF9C4 20%, #FFE082 25%, #FFE082 40%, #FFB74D 45%, #FFB74D 60%, #FF8A65 65%, #FF8A65 80%, #E64A19 85%, #E64A19 100%)' }}></div>
                         </div>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', cursor: 'pointer', fontSize: '0.9em', color: '#1b3a4b' }}>
-                          <input type="radio" name="census-view-mobile" value="none" checked={!censusVisible || activeCensusView === 'none'} onChange={() => handleCensusViewChange('none')} />
-                          No Layer
-                        </label>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', cursor: 'pointer', fontSize: '0.9em', color: '#1b3a4b' }}>
-                          <input type="radio" name="census-view-mobile" value="risk" checked={activeCensusView === 'risk' && censusVisible} onChange={() => handleCensusViewChange('risk')} />
-                          Risk Index
-                        </label>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.9em', color: '#1b3a4b' }}>
-                          <input type="radio" name="census-view-mobile" value="pred3pe" checked={activeCensusView === 'pred3pe' && censusVisible} onChange={() => handleCensusViewChange('pred3pe')} />
-                          Resilience Index
-                        </label>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7em', color: '#546e7a' }}><span>Very Low</span><span>Very High</span></div>
                       </div>
-                      {censusVisible && activeCensusView === 'risk' && sortedRatings.length > 0 && (
-                        <div style={{ position: 'absolute', right: '20px', bottom: '70px', zIndex: 1100, background: 'rgba(255, 255, 255, 0.75)', backdropFilter: 'blur(20px) saturate(180%)', WebkitBackdropFilter: 'blur(20px) saturate(180%)', padding: '16px', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.6)', border: '1px solid rgba(255, 255, 255, 0.3)', minWidth: '220px' }}>
-                          <div style={{ fontSize: '1em', fontWeight: 600, color: '#1b3a4b', marginBottom: '12px' }}>FEMA Risk Rating</div>
-                          <div style={{ marginBottom: '8px' }}>
-                            <div style={{ width: '100%', height: '20px', borderRadius: '4px', overflow: 'hidden', marginBottom: '8px' }}>
-                              <div style={{ width: '100%', height: '100%', background: 'linear-gradient(to right, #FFF9C4 0%, #FFF9C4 20%, #FFE082 25%, #FFE082 40%, #FFB74D 45%, #FFB74D 60%, #FF8A65 65%, #FF8A65 80%, #E64A19 85%, #E64A19 100%)' }}></div>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75em', color: '#546e7a' }}><span>Very Low</span><span>Very High</span></div>
-                          </div>
+                    </div>
+                  )}
+                  {censusVisible && activeCensusView === 'pred3pe' && censusStats?.pred3PE && (
+                    <div style={{ position: 'absolute', right: 'max(16px, env(safe-area-inset-right))', bottom: '108px', zIndex: 1000, background: 'rgba(255, 255, 255, 0.85)', backdropFilter: 'blur(20px) saturate(180%)', WebkitBackdropFilter: 'blur(20px) saturate(180%)', padding: '12px 14px', borderRadius: '10px', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.6)', border: '1px solid rgba(255, 255, 255, 0.3)', minWidth: '180px' }}>
+                      <div style={{ fontSize: '0.9em', fontWeight: 600, color: '#1b3a4b', marginBottom: '8px' }}>Resilience Index (%)</div>
+                      <div style={{ marginBottom: '4px' }}>
+                        <div style={{ width: '100%', height: '14px', borderRadius: '4px', overflow: 'hidden', marginBottom: '4px' }}>
+                          <div style={{ width: '100%', height: '100%', background: 'linear-gradient(to right, #E8D4F5 0%, #E8D4F5 10%, #D4B3E8 20%, #C298DB 35%, #A866C7 50%, #7A3FA8 65%, #5A1D85 80%, #2D0045 90%, #2D0045 100%)' }}></div>
                         </div>
-                      )}
-                      {censusVisible && activeCensusView === 'pred3pe' && censusStats?.pred3PE && (
-                        <div style={{ position: 'absolute', right: '20px', bottom: '70px', zIndex: 1100, background: 'rgba(255, 255, 255, 0.75)', backdropFilter: 'blur(20px) saturate(180%)', WebkitBackdropFilter: 'blur(20px) saturate(180%)', padding: '16px', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.6)', border: '1px solid rgba(255, 255, 255, 0.3)', minWidth: '220px' }}>
-                          <div style={{ fontSize: '1em', fontWeight: 600, color: '#1b3a4b', marginBottom: '12px' }}>Resilience Index (%)</div>
-                          <div style={{ marginBottom: '8px' }}>
-                            <div style={{ width: '100%', height: '20px', borderRadius: '4px', overflow: 'hidden', marginBottom: '8px' }}>
-                              <div style={{ width: '100%', height: '100%', background: 'linear-gradient(to right, #E8D4F5 0%, #E8D4F5 10%, #D4B3E8 20%, #C298DB 35%, #A866C7 50%, #7A3FA8 65%, #5A1D85 80%, #2D0045 90%, #2D0045 100%)' }}></div>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75em', color: '#546e7a' }}>
-                              <span>{censusStats.pred3PE.min?.toFixed(1) || '0'}%</span>
-                              <span>{censusStats.pred3PE.max?.toFixed(1) || '0'}%</span>
-                            </div>
-                          </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7em', color: '#546e7a' }}>
+                          <span>{censusStats.pred3PE.min?.toFixed(1) || '0'}%</span>
+                          <span>{censusStats.pred3PE.max?.toFixed(1) || '0'}%</span>
                         </div>
-                      )}
-                    </>
+                      </div>
+                    </div>
                   )}
                 </>
               ) : (
@@ -2787,10 +2741,10 @@ const App = () => {
           )}
 
 
-          {/* Map Style Toggle */}
+          {/* Map Style Toggle (mobile: at bottom; desktop: 30px) */}
           <div style={{ 
             position: 'absolute', 
-            bottom: isMobile ? '72px' : '30px',
+            bottom: isMobile ? 'max(16px, env(safe-area-inset-bottom))' : '30px',
             right: isMobile ? 'max(16px, env(safe-area-inset-right))' : '20px',
             background: 'rgba(255, 255, 255, 0.75)',
             backdropFilter: 'blur(20px) saturate(180%)',
