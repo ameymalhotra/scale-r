@@ -1675,7 +1675,8 @@ const App = () => {
     alignItems: 'center',
     boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
     flexShrink: 0,
-    paddingTop: isMobile ? 'max(8px, env(safe-area-inset-top))' : undefined
+    paddingTop: isMobile ? 'max(8px, env(safe-area-inset-top))' : undefined,
+    ...(isMobile ? { position: 'relative', zIndex: 10 } : {})
   };
   const titleStyle = {
     fontSize: isMobile ? '1.25em' : '2em',
@@ -2292,7 +2293,16 @@ const App = () => {
         
 
 
-        <div style={{ flex: 1, position: 'relative', height: '100%', width: '100%', minWidth: 0, overflow: 'hidden', boxSizing: 'border-box' }}>
+        <div style={{
+          flex: 1,
+          position: isMobile ? 'fixed' : 'relative',
+          ...(isMobile ? { top: 0, left: 0, right: 0, bottom: 0, zIndex: 0 } : {}),
+          height: '100%',
+          width: '100%',
+          minWidth: 0,
+          overflow: 'hidden',
+          boxSizing: 'border-box'
+        }}>
           <div ref={mapContainer} style={{ width: '100%', height: '100%', minWidth: 0, overflow: 'hidden', boxSizing: 'border-box' }} />
           
           {/* Search Bar Overlay */}
@@ -2301,11 +2311,13 @@ const App = () => {
             data-search-container
             style={{
               position: 'absolute',
-              top: isMobile ? '8px' : '20px',
-              ...(isMobile ? { left: '50%', transform: 'translateX(-50%)' } : { right: '20px', left: 'auto', transform: 'none' }),
+              top: isMobile ? 'calc(env(safe-area-inset-top) + 56px + 8px)' : '20px',
+              ...(isMobile
+                ? { left: 'max(12px, env(safe-area-inset-left))', right: 'max(12px, env(safe-area-inset-right))', transform: 'none' }
+                : { right: '20px', left: 'auto', transform: 'none' }),
               zIndex: 1000,
-              width: isMobile ? 'min(300px, 78vw)' : '320px',
-              maxWidth: isMobile ? 'min(300px, 78vw)' : '320px'
+              width: isMobile ? undefined : '320px',
+              maxWidth: isMobile ? undefined : '320px'
             }}
           >
             <div style={{
