@@ -1697,7 +1697,7 @@ const App = () => {
   };
 
   return (
-    <div style={{ margin: 0, padding: 0, fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif", backgroundColor: 'white', height: '100vh', height: '100dvh', width: '100%', overflow: 'hidden', boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ margin: 0, padding: 0, fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif", backgroundColor: 'white', height: '100%', width: '100%', overflow: 'hidden', boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>
       <div style={headerStyle}>
         <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: isMobile ? '12px' : 0, flex: 1, minWidth: 0 }}>
           {isMobile && (
@@ -2304,8 +2304,8 @@ const App = () => {
               top: isMobile ? '8px' : '20px',
               ...(isMobile ? { left: '50%', transform: 'translateX(-50%)' } : { right: '20px', left: 'auto', transform: 'none' }),
               zIndex: 1000,
-              width: isMobile ? 'min(420px, 98vw)' : '320px',
-              maxWidth: isMobile ? 'min(420px, 98vw)' : '320px'
+              width: isMobile ? 'min(300px, 78vw)' : '320px',
+              maxWidth: isMobile ? 'min(300px, 78vw)' : '320px'
             }}
           >
             <div style={{
