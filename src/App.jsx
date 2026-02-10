@@ -2612,7 +2612,7 @@ const App = () => {
                     borderRadius: '12px',
                     boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.6)',
                     border: '1px solid rgba(255, 255, 255, 0.3)',
-                    minWidth: '220px'
+                    width: '320px'
                   }}>
                     <div style={{ fontSize: '1em', fontWeight: 600, color: '#1b3a4b', marginBottom: '10px' }}>
                       Modelling Layer
@@ -2662,7 +2662,7 @@ const App = () => {
                   borderRadius: '12px',
                   boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.6)',
                   border: '1px solid rgba(255, 255, 255, 0.3)',
-                  minWidth: '220px'
+                  width: '320px'
                 }}>
                   <div style={{ fontSize: '1em', fontWeight: 600, color: '#1b3a4b', marginBottom: '12px' }}>
                     FEMA Risk Rating
@@ -2702,7 +2702,7 @@ const App = () => {
                   borderRadius: '12px',
                   boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.6)',
                   border: '1px solid rgba(255, 255, 255, 0.3)',
-                  minWidth: '220px'
+                  width: '320px'
                 }}>
                   <div style={{ fontSize: '1em', fontWeight: 600, color: '#1b3a4b', marginBottom: '12px' }}>
                     Resilience Index (%)
@@ -2746,6 +2746,7 @@ const App = () => {
             position: 'absolute', 
             bottom: isMobile ? 'max(16px, env(safe-area-inset-bottom))' : '30px',
             right: isMobile ? 'max(16px, env(safe-area-inset-right))' : '20px',
+            ...(isMobile ? {} : { width: '320px' }),
             background: 'rgba(255, 255, 255, 0.75)',
             backdropFilter: 'blur(20px) saturate(180%)',
             WebkitBackdropFilter: 'blur(20px) saturate(180%)',
@@ -2760,6 +2761,7 @@ const App = () => {
               style={{
                 display: 'flex',
                 alignItems: 'center',
+                justifyContent: 'center',
                 padding: '8px 12px',
                 background: 'transparent',
                 border: 'none',
@@ -2767,7 +2769,8 @@ const App = () => {
                 fontSize: '0.8em',
                 color: '#2c3e50',
                 transition: 'all 0.3s',
-                minWidth: '120px'
+                minWidth: isMobile ? '120px' : '100%',
+                width: isMobile ? undefined : '100%'
               }}
             >
               <div style={{ 
