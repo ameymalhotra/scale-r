@@ -8,13 +8,20 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "test:coverage": "vitest --coverage"
+    "test:coverage": "vitest --coverage",
+    "seed": "node --env-file=.env scripts/js/seed-supabase.js",
+    "seed-merged": "node --env-file=.env scripts/js/seed-supabase-merged.js",
+    "upload-geojson": "node --env-file=.env scripts/js/upload-projects-geojson.js",
+    "upload-geojson-merged": "node --env-file=.env scripts/js/upload-projects-merged-geojson.js"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.95.3",
+    "firebase": "^12.9.0",
     "mapbox-gl": "^3.15.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
-    "recharts": "^3.5.1"
+    "recharts": "^3.5.1",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.1.5",

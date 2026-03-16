@@ -191,6 +191,24 @@ Preview the production build locally before deploying to ensure everything works
 
 ```
 Climate-Resilience---Miami-Dade/
+├── data/                            # CSV/Excel data for scripts (input & output)
+│   ├── input/                       # Source files (LMS CSV, Our dataset CSV)
+│   └── output/
+│       ├── logs/
+│       │   ├── geocoding/           # Geocoding log, geocoded LMS CSV, duplicate addresses
+│       │   └── matched/             # Matched-project reference and pairs Excel files
+│       └── merged/                  # Final merged Excel (used by seed-merged)
+├── scripts/
+│   ├── python/                      # Python scripts (geocoding, merge)
+│   │   ├── geocode_lms.py
+│   │   ├── merge_geocoding_log.py
+│   │   ├── merge_lms_to_our_dataset.py
+│   │   └── requirements.txt
+│   └── js/                          # Node scripts (seed, upload GeoJSON)
+│       ├── seed-supabase.js
+│       ├── seed-supabase-merged.js
+│       ├── upload-projects-geojson.js
+│       └── upload-projects-merged-geojson.js
 ├── public/                          # Static assets and data files
 │   ├── Images/                      # Logo and branding images
 │   ├── *.geojson                    # Geographic data files
@@ -224,6 +242,15 @@ Climate-Resilience---Miami-Dade/
 - **`public/project_inventory_database.geojson`** - Primary project data source
 - **`public/miami_cities.geojson`** - City and district boundary data
 - **`vite.config.js`** - Build configuration and plugin setup
+
+### Data folder layout (scripts)
+
+Python scripts live in `scripts/python/`, Node scripts in `scripts/js/`. They use repo-root-relative paths, so you can run them from any directory. Run Python scripts with `python scripts/python/geocode_lms.py` (etc.); run Node scripts via npm (e.g. `npm run seed-merged`).
+
+- **`data/input/`** — Source CSVs read by scripts: LMS dataset, "Our dataset".
+- **`data/output/logs/geocoding/`** — Geocoding outputs: geocoding log, geocoded LMS CSV, duplicate-addresses CSV.
+- **`data/output/logs/matched/`** — Matched-project outputs: reference and pairs Excel files.
+- **`data/output/merged/`** — Final merged Excel file consumed by `npm run seed-merged`.
 
 ## Features in Detail
 
@@ -489,6 +516,16 @@ The production build is optimized with:
 - `dist/` directory contains all production assets
 - `dist/index.html` - Entry point
 - `dist/assets/` - Optimized JavaScript and CSS bundles
+
+### Project data from Supabase Storage
+
+When `VITE_SUPABASE_URL` is set, the app loads project data from Supabase Storage (no DB read per visit). Set up:
+
+1. In Supabase Dashboard: create a **public** Storage bucket named `project-data`.
+2. Seed the `projects` table: `npm run seed`. For merged data, place `MergedDataset_OurDB_plus_LMS.xlsx` in `data/output/merged/` and run `npm run seed-merged`.
+3. Upload the GeoJSON to Storage: `npm run upload-geojson` (writes `project-data/projects.geojson`).
+
+After any insert/update/delete on `projects`, run `npm run upload-geojson` again, or deploy the Edge Function `regenerate-projects-geojson` and call it from your upload flow so the file updates automatically.
 
 ### Other Deployment Platforms
 
