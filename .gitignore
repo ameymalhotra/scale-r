@@ -16,6 +16,11 @@ dist-ssr
 .env.*.local
 !.env.example
 
+# Local scripts and data (not needed for deployment)
+scripts/
+supabase/
+data/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
