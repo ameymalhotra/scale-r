@@ -1,0 +1,44 @@
+┌─────────────────────────┐     ┌─────────────────────────┐
+│ LMS Dataset_01-23-2026  │     │ OurDataset 12-18-2025   │
+│ (raw LMS CSV)           │     │ (your existing DB)      │
+└───────────┬─────────────┘     └───────────┬─────────────┘
+            │                               │
+            ▼                               │
+┌─────────────────────────┐                 │
+│  geocode_lms.py         │                 │
+│  (Google API, unique    │                 │
+│   addresses only)       │                 │
+└───────────┬─────────────┘                 │
+            │                               │
+            ▼                               │
+┌─────────────────────────┐                 │
+│ LMS_Dataset_Geocoded    │                 │
+└───────────┬─────────────┘                 │
+            │                               │
+            ▼                               │
+┌───────────────────────────────────────────┴───┐
+│  merge_lms_to_our_dataset.py                   │
+│  • Fuzzy dedup (title + city)                  │
+│  • Column mapping (LMS → our schema)           │
+│  • Our DB + new LMS only → MergedDataset.xlsx  │
+└───────────────────────┬───────────────────────┘
+                        │
+                        ▼
+            ┌─────────────────────────┐
+            │ [Manual step: Excel →   │
+            │  GeoJSON via ArcGIS/QGIS│
+            │  → Cities_FeaturesTo...]│
+            └───────────┬─────────────┘
+                        │
+                        ▼
+            ┌─────────────────────────┐
+            │  seed-supabase.js       │
+            │  → Supabase projects    │
+            └───────────┬─────────────┘
+                        │
+                        ▼
+            ┌─────────────────────────┐
+            │  upload-projects-geojson│
+            │  or Edge Function       │
+            │  → Storage/projects.geojson
+            └─────────────────────────┘

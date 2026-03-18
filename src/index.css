@@ -52,6 +52,18 @@ html, body {
   left: env(safe-area-inset-left, 0);
 }
 
+/* Site navbar (tab menu below header) */
+.site-navbar a:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* Page content container for About, Team, Partners, etc. */
+.page-content {
+  flex: 1;
+  overflow-y: auto;
+}
+
 /* Smaller map controls on mobile (scale down, keep tappable) */
 @media (max-width: 768px) {
   .mapboxgl-ctrl-top-left .mapboxgl-ctrl-group {
@@ -66,5 +78,12 @@ html, body {
     transform: scale(0.85);
     transform-origin: bottom left;
     font-size: 10px;
+  }
+  .site-navbar {
+    padding: 0 12px !important;
+  }
+  .site-navbar a {
+    padding: 10px 12px !important;
+    font-size: 0.8rem !important;
   }
 }

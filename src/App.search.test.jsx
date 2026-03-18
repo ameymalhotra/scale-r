@@ -1,7 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
 import App from './App.jsx';
+
+const renderApp = () => render(
+  <MemoryRouter initialEntries={['/dashboard']}>
+    <App />
+  </MemoryRouter>
+);
 
 // Mock mapbox-gl
 vi.mock('https://cdn.skypack.dev/mapbox-gl@2.15.0', () => {
@@ -27,6 +34,8 @@ vi.mock('https://cdn.skypack.dev/mapbox-gl@2.15.0', () => {
       style: {}
     })),
     setFeatureState: vi.fn(),
+    dragRotate: { enable: vi.fn(), disable: vi.fn() },
+    touchZoomRotate: { enableRotation: vi.fn(), disableRotation: vi.fn() },
     once: vi.fn((event, callback) => {
       if (event === 'styledata') {
         setTimeout(callback, 0);
@@ -71,7 +80,57 @@ vi.mock('https://cdn.skypack.dev/mapbox-gl@2.15.0', () => {
 });
 
 // Mock fetch for GeoJSON data
+const mockProjectsGeoJson = () => ({
+  type: 'FeatureCollection',
+  features: [
+    {
+      id: 1,
+      type: 'Feature',
+      geometry: {
+        type: 'Point',
+        coordinates: [-80.1918, 25.7617]
+      },
+      properties: {
+        'Project_Na': 'Miami Beach Flood Protection',
+        'NAME': 'Miami Beach',
+        'City': 'Miami Beach',
+        'Infrastruc': 'Gray Infrastructure',
+        'Categories': 'Flood Control',
+        'Disaster_F': 'Flooding',
+        'New_15_25_': 'Comprehensive flood protection system',
+        'Estimated_': '5000000',
+        'Project__1': 'Ongoing'
+      }
+    },
+    {
+      id: 2,
+      type: 'Feature',
+      geometry: {
+        type: 'Point',
+        coordinates: [-80.1318, 25.7917]
+      },
+      properties: {
+        'Project_Na': 'Coral Gables Green Infrastructure',
+        'NAME': 'Coral Gables',
+        'City': 'Coral Gables',
+        'Infrastruc': 'Green Infrastructure',
+        'Categories': 'Environmental',
+        'Disaster_F': 'Hurricane',
+        'New_15_25_': 'Green infrastructure project',
+        'Estimated_': '3000000',
+        'Project__1': 'Completed'
+      }
+    }
+  ]
+});
+
 global.fetch = vi.fn((url) => {
+  if (url.includes('projects_merged.geojson') || (url.includes('project-data') && url.includes('geojson'))) {
+    return Promise.resolve({
+      ok: true,
+      json: async () => mockProjectsGeoJson()
+    });
+  }
   if (url.includes('Cities_FeaturesToJSON.geojson')) {
     return Promise.resolve({
       ok: true,
@@ -153,7 +212,7 @@ describe('App Search Functionality', () => {
   });
 
   it('should render the search bar', async () => {
-    render(<App />);
+    renderApp();
     
     await waitFor(() => {
       const searchInput = screen.getByPlaceholderText(/search projects/i);
@@ -163,7 +222,7 @@ describe('App Search Functionality', () => {
 
   it('should show search results when typing', async () => {
     const user = userEvent.setup();
-    render(<App />);
+    renderApp();
 
     await waitFor(() => {
       expect(screen.getByPlaceholderText(/search projects/i)).toBeInTheDocument();
@@ -179,7 +238,7 @@ describe('App Search Functionality', () => {
 
   it('should clear search when clear button is clicked', async () => {
     const user = userEvent.setup();
-    render(<App />);
+    renderApp();
 
     await waitFor(() => {
       expect(screen.getByPlaceholderText(/search projects/i)).toBeInTheDocument();
@@ -204,7 +263,7 @@ describe('App Search Functionality', () => {
 
   it('should show "No results found" for non-matching queries', async () => {
     const user = userEvent.setup();
-    render(<App />);
+    renderApp();
 
     await waitFor(() => {
       expect(screen.getByPlaceholderText(/search projects/i)).toBeInTheDocument();
@@ -220,7 +279,7 @@ describe('App Search Functionality', () => {
 
   it('should filter results by project name', async () => {
     const user = userEvent.setup();
-    render(<App />);
+    renderApp();
 
     await waitFor(() => {
       expect(screen.getByPlaceholderText(/search projects/i)).toBeInTheDocument();
@@ -237,7 +296,7 @@ describe('App Search Functionality', () => {
 
   it('should display project details in search results', async () => {
     const user = userEvent.setup();
-    render(<App />);
+    renderApp();
 
     await waitFor(() => {
       expect(screen.getByPlaceholderText(/search projects/i)).toBeInTheDocument();
@@ -259,7 +318,7 @@ describe('App Search Functionality', () => {
 
   it('should handle empty search query', async () => {
     const user = userEvent.setup();
-    render(<App />);
+    renderApp();
 
     await waitFor(() => {
       expect(screen.getByPlaceholderText(/search projects/i)).toBeInTheDocument();
@@ -285,7 +344,7 @@ describe('App Search Functionality', () => {
 
   it('should be case-insensitive in search', async () => {
     const user = userEvent.setup();
-    render(<App />);
+    renderApp();
 
     await waitFor(() => {
       expect(screen.getByPlaceholderText(/search projects/i)).toBeInTheDocument();
