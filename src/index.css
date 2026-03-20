@@ -2,6 +2,11 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  scrollbar-width: none;          /* Firefox */
+  -ms-overflow-style: none;       /* IE / Edge */
+}
+*::-webkit-scrollbar {
+  display: none;                  /* Chrome / Safari */
 }
 
 html, body {
@@ -62,6 +67,134 @@ html, body {
 .page-content {
   flex: 1;
   overflow-y: auto;
+}
+
+/* ── Full-width page shells ───────────────────────────────── */
+.page-hero {
+  background: #f9faf9;
+  padding: 36px 48px 28px;
+  position: relative;
+  border-bottom: 1px solid #e6ebe8;
+}
+.page-hero h1 {
+  font-size: 1.85rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin: 0 0 8px;
+  color: #1a2e23;
+  max-width: 1400px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.page-hero .subtitle {
+  font-size: 0.98rem;
+  font-weight: 400;
+  color: #5a6d64;
+  line-height: 1.6;
+  margin: 0 auto 0;
+  max-width: 1400px;
+}
+
+.page-body {
+  padding: 40px 48px 64px;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.page-section {
+  margin-bottom: 48px;
+}
+.page-section:last-child {
+  margin-bottom: 0;
+}
+
+.section-title {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #1a2e23;
+  margin: 0 0 16px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #e0e7e3;
+  display: inline-block;
+}
+
+.prose {
+  color: #3d4f47;
+  font-size: 1rem;
+  line-height: 1.75;
+}
+.prose a {
+  color: #01703a;
+  text-decoration: underline;
+  text-decoration-color: rgba(1,112,58,0.3);
+  text-underline-offset: 2px;
+  transition: text-decoration-color 0.2s;
+}
+.prose a:hover {
+  text-decoration-color: rgba(1,112,58,0.8);
+}
+.prose ul, .prose ol {
+  padding-left: 20px;
+  margin: 12px 0;
+}
+.prose li {
+  margin-bottom: 8px;
+}
+.prose li::marker {
+  color: #01703a;
+}
+
+/* Card grid */
+.card-grid {
+  display: grid;
+  gap: 24px;
+}
+.card-grid.cols-3 {
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+}
+.card-grid.cols-2 {
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+}
+
+.card {
+  background: #fff;
+  border: 1px solid #e8ece9;
+  border-radius: 14px;
+  padding: 28px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+.card:hover {
+  box-shadow: 0 6px 20px rgba(0,0,0,0.07);
+  transform: translateY(-2px);
+}
+
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+/* ── Responsive tweaks ───────────────────────────────────── */
+@media (max-width: 768px) {
+  .page-hero {
+    padding: 28px 20px 22px;
+  }
+  .page-hero h1 {
+    font-size: 1.45rem;
+  }
+  .page-body {
+    padding: 24px 20px 40px;
+  }
+  .card-grid.cols-3,
+  .card-grid.cols-2 {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Smaller map controls on mobile (scale down, keep tappable) */

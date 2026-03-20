@@ -1,67 +1,103 @@
 import React from 'react';
 
-const containerStyle = {
-  maxWidth: 1000,
-  margin: '0 auto',
-  padding: '32px 24px',
-  fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-};
-
-const gridStyle = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-  gap: '24px',
-  marginTop: '24px',
-};
-
-const cardStyle = {
-  background: 'rgba(255, 255, 255, 0.9)',
-  border: '1px solid rgba(0, 0, 0, 0.08)',
-  borderRadius: '12px',
-  padding: '24px',
-  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)',
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  textAlign: 'center',
-};
-
-const placeholderPartners = [
-  { name: 'Partner Organization 1', description: 'Short description placeholder.' },
-  { name: 'Partner Organization 2', description: 'Short description placeholder.' },
+const partners = [
+  {
+    name: 'National Science Foundation',
+    description:
+      'SCALE-R is supported under NSF Grant No. 2435008, enabling the research, training, and public-facing tools associated with this project.',
+  },
+  {
+    name: 'University of Miami',
+    description:
+      'Core units include the Department of Geography and Sustainable Development, School of Architecture, Rosenstiel School of Marine, Atmospheric, and Earth Science, College of Engineering, and the Climate Resilience Institute.',
+  },
+  {
+    name: 'Miami-Dade County',
+    description:
+      'County staff have contributed through workshops and engagement with experts across Planning, Resilience, Transportation, Historic Preservation, Planning Research, and Zoning.',
+  },
+  {
+    name: 'Miami-Dade Office of Historic Preservation',
+    description:
+      'Hands-on training for graduate researchers and students on how climate resilience impacts cultural landscapes and how conservation practices can help.',
+  },
+  {
+    name: 'Palmer Trinity School',
+    description:
+      'Outreach with Human Geography students and faculty to raise awareness of coastal resilience issues among the broader community.',
+  },
+  {
+    name: 'United Nations / UN-Habitat',
+    description:
+      'Dissemination through the World Urban Forum (WUF12, 2024) and Habitat UNI, UN-Habitat\'s network for university and research partners.',
+  },
+  {
+    name: 'Smart City Expo Miami',
+    description:
+      'A platform for sharing project findings with Greater Miami stakeholders and professional networks.',
+  },
 ];
+
+function abbr(name) {
+  return name
+    .split(/[\s/]+/)
+    .filter((w) => w.length > 1 && w[0] === w[0].toUpperCase())
+    .slice(0, 3)
+    .map((w) => w[0])
+    .join('');
+}
 
 export default function Partners() {
   return (
-    <div style={containerStyle} className="page-content">
-      <h1 style={{ fontSize: '1.75rem', color: '#2c3e50', marginBottom: '8px' }}>
-        Partners
-      </h1>
-      <p style={{ color: '#546e7a', lineHeight: 1.7 }}>
-        [Placeholder] Our project is made possible through collaboration with the following
-        partners.
-      </p>
-      <div style={gridStyle}>
-        {placeholderPartners.map((partner, i) => (
-          <div key={i} style={cardStyle}>
-            <div
-              style={{
-                width: 120,
-                height: 60,
-                background: '#e8e8e8',
-                borderRadius: '8px',
-                marginBottom: '16px',
-              }}
-              aria-hidden
-            />
-            <div style={{ fontWeight: 600, color: '#2c3e50', marginBottom: '8px' }}>
-              {partner.name}
-            </div>
-            <div style={{ fontSize: '0.9rem', color: '#546e7a', lineHeight: 1.5 }}>
-              {partner.description}
-            </div>
+    <div className="page-content">
+      <div className="page-hero">
+        <h1>Partners</h1>
+        <p className="subtitle">
+          Institutions, government agencies, schools, and international forums that shape SCALE-R's
+          research and community engagement.
+        </p>
+      </div>
+
+      <div className="page-body">
+        <section className="page-section">
+          <div className="card-grid cols-3">
+            {partners.map((p, i) => (
+              <div className="card" key={i}>
+                <div
+                  style={{
+                    width: 52,
+                    height: 52,
+                    borderRadius: 10,
+                    background: '#f0f4f2',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: 16,
+                    fontSize: '0.85rem',
+                    fontWeight: 700,
+                    color: '#01703a',
+                    letterSpacing: '0.5px',
+                  }}
+                >
+                  {abbr(p.name)}
+                </div>
+                <div
+                  style={{
+                    fontWeight: 600,
+                    color: '#1a2e23',
+                    fontSize: '1.02rem',
+                    marginBottom: 8,
+                  }}
+                >
+                  {p.name}
+                </div>
+                <div className="prose" style={{ fontSize: '0.92rem' }}>
+                  {p.description}
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
+        </section>
       </div>
     </div>
   );
