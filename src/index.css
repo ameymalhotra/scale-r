@@ -57,10 +57,73 @@ html, body {
   left: env(safe-area-inset-left, 0);
 }
 
-/* Site navbar (tab menu below header) */
-.site-navbar a:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.08);
+/* Dashboard: sit controls just to the right of the frosted filter sidebar (desktop) */
+@media (min-width: 769px) {
+  .dashboard-map-area .mapboxgl-ctrl-top-left {
+    top: max(10px, env(safe-area-inset-top, 0px));
+    left: calc(max(env(safe-area-inset-left, 0px), clamp(240px, 26vw, 320px)) + 12px);
+  }
+  .dashboard-map-area .mapboxgl-ctrl-bottom-left {
+    bottom: max(10px, env(safe-area-inset-bottom, 0px));
+    left: calc(max(env(safe-area-inset-left, 0px), clamp(240px, 26vw, 320px)) + 12px);
+  }
+}
+
+/* Fullscreen map has no sidebar — align controls to the map edge again */
+.dashboard-map-area:fullscreen .mapboxgl-ctrl-top-left,
+.dashboard-map-area:-webkit-full-screen .mapboxgl-ctrl-top-left {
+  top: max(10px, env(safe-area-inset-top, 0px));
+  left: max(10px, env(safe-area-inset-left, 0px));
+}
+.dashboard-map-area:fullscreen .mapboxgl-ctrl-bottom-left,
+.dashboard-map-area:-webkit-full-screen .mapboxgl-ctrl-bottom-left {
+  bottom: max(10px, env(safe-area-inset-bottom, 0px));
+  left: max(10px, env(safe-area-inset-left, 0px));
+}
+
+/* Site navbar — Stitch-aligned glass bar (below app header; header unchanged) */
+.site-navbar {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0;
+  padding: 0 1.75rem;
+  background: rgba(232, 255, 238, 0.78);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(11, 31, 21, 0.1);
+}
+
+.site-navbar-link {
+  display: block;
+  padding: 0.9rem 1rem;
+  font-family: 'Manrope', 'Segoe UI', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: rgba(11, 31, 21, 0.72);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.site-navbar-link:hover {
+  color: #9e4300;
+  background: rgba(158, 67, 0, 0.06);
+}
+
+.site-navbar-link--active {
+  color: #9e4300;
+  border-bottom-color: #9e4300;
+  background: transparent;
+}
+
+.site-navbar-link--active:hover {
+  color: #9e4300;
+  background: rgba(158, 67, 0, 0.06);
 }
 
 /* Page content container for About, Team, Partners, etc. */
@@ -213,10 +276,11 @@ html, body {
     font-size: 10px;
   }
   .site-navbar {
-    padding: 0 12px !important;
+    padding: 0 12px;
   }
-  .site-navbar a {
-    padding: 10px 12px !important;
-    font-size: 0.8rem !important;
+  .site-navbar-link {
+    padding: 10px 12px;
+    font-size: 0.68rem;
+    letter-spacing: 0.05em;
   }
 }

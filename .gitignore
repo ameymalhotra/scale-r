@@ -16,6 +16,9 @@ dist-ssr
 .env.*.local
 !.env.example
 
+# Stitch / design tool exports (reference only; not for version control)
+design-reference/
+
 # Local scripts and data (not needed for deployment)
 scripts/
 supabase/

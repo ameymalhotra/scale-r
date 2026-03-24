@@ -1,4 +1,6 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
+import './About.css';
 
 const engagementItems = [
   {
@@ -33,103 +35,221 @@ const engagementItems = [
   },
 ];
 
+const partners = [
+  { icon: '🏛️', name: 'National Science Foundation' },
+  { icon: '🎓', name: 'University of Miami' },
+  { icon: '🏙️', name: 'Miami-Dade County' },
+  { icon: '🌊', name: 'Rosenstiel School of Marine & Earth Science' },
+  { icon: '🌿', name: 'UM Climate Resilience Institute' },
+  { icon: '📐', name: 'UM School of Architecture' },
+  { icon: '⚙️', name: 'UM College of Engineering' },
+  { icon: '🌍', name: 'UN Habitat' },
+];
+
 export default function About() {
   return (
-    <div className="page-content">
-      {/* ── Hero ────────────────────────────────────────── */}
-      <div className="page-hero">
-        <h1>About SCALE-R</h1>
-        <p className="subtitle">
-          Simulating Coastal Adaptation and Local Exposure for Enhanced Resilience
-        </p>
-      </div>
+    <div className="about-root">
 
-      {/* ── Body ────────────────────────────────────────── */}
-      <div className="page-body">
-        {/* Overview */}
-        <section className="page-section">
-          <h2 className="section-title">Overview</h2>
-          <div className="prose">
+      {/* ── Hero ─────────────────────────────────────────────── */}
+      <header className="about-hero">
+        <div className="about-hero-bg">
+          <img
+            src="/Images/about-stitch-hero-coast.jpg"
+            alt="Aerial view of Miami-Dade County coastline"
+          />
+          <div className="about-hero-bg-overlay" />
+        </div>
+
+        <div className="about-hero-inner">
+          <div>
+            <span className="about-label">Project Overview</span>
+            <h1 className="about-hero-title">
+              The SCALE-R<br />
+              <span className="accent">Mission.</span>
+            </h1>
+            <p className="about-hero-sub">
+              Addressing the $2.7 trillion climate challenge through localized
+              adaptation and community-driven intelligence in Miami-Dade County.
+            </p>
+            <a
+              className="about-hero-cta"
+              href="https://geography.as.miami.edu/research/geo_labs/scale-r/index.html"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Visit the SCALE-R Lab →
+            </a>
+          </div>
+
+          <div className="about-hero-card">
+            <div className="about-hero-card-glow" />
+            <div className="about-hero-card-icon">🌐</div>
+            <h3>Global Context</h3>
             <p>
-              Since 1980, the U.S. has incurred over $2.7 trillion in costs from climate-related
-              disasters. Sea-level rise poses ongoing threats to coastal communities — home to about
-              40% of the nation's population. SCALE-R promotes researcher–community partnerships to
-              co-develop decision-support tools that visualize, test, and prioritize localized
-              adaptation and mitigation strategies to enhance coastal resilience.
-            </p>
-            <p style={{ marginTop: 16 }}>
-              The project uses place-based, participatory methods to incorporate stakeholder knowledge
-              into the design and evaluation of solutions. It also trains graduate students and
-              researchers, contributing to interdisciplinary STEM education and workforce development.
-            </p>
-            <p style={{ marginTop: 16 }}>
-              This is a collaboration among researchers at the University of Miami's Department of
-              Geography and Sustainable Development, School of Architecture, Rosenstiel School of
-              Marine, Atmospheric, and Earth Science, College of Engineering, and the Climate
-              Resilience Institute.{' '}
-              <a
-                href="https://geography.as.miami.edu/research/geo_labs/scale-r/index.html"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Visit the SCALE-R lab page &rarr;
-              </a>
+              Since 1980, the U.S. alone has incurred over{' '}
+              <strong>$2.7 trillion</strong> in costs from climate-related
+              disasters. SCALE-R bridges research and grassroots community
+              resilience in one of the most vulnerable coastal regions in America.
             </p>
           </div>
-        </section>
+        </div>
+      </header>
 
-        {/* Goals */}
-        <section className="page-section">
-          <h2 className="section-title">Advancing Greater Miami's coastal resilience</h2>
-          <div className="card-grid cols-3">
-            {[
-              {
-                num: '01',
-                heading: 'Equitable partnerships',
-                text: 'Building equitable community partnerships that center local stakeholder knowledge and lived experience.',
-              },
-              {
-                num: '02',
-                heading: 'Mapping the network',
-                text: 'Mapping the complex network of resilience plans, projects, and investments across spatial and temporal scales.',
-              },
-              {
-                num: '03',
-                heading: 'Decision-support tools',
-                text: 'Designing an integrated decision-support dashboard to facilitate pathways toward a resilient future.',
-              },
-            ].map((g, i) => (
-              <div className="card" key={i}>
-                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#01703a', marginBottom: 12, letterSpacing: '1px' }}>{g.num}</div>
-                <div style={{ fontWeight: 600, color: '#1a2e23', marginBottom: 8, fontSize: '1.05rem' }}>
-                  {g.heading}
-                </div>
-                <div className="prose" style={{ fontSize: '0.95rem' }}>{g.text}</div>
+      {/* ── Mission Detail ───────────────────────────────────── */}
+      <section className="about-mission">
+        <div className="about-mission-inner">
+          <div>
+            <span className="about-label">Our Approach</span>
+            <h2>
+              Promoting <span className="accent">Localized</span> Adaptation
+            </h2>
+            <p className="body-text">
+              SCALE-R redefines how scientific inquiry meets urban planning. By
+              fostering deep partnerships between University of Miami researchers
+              and local residents, we ensure that resilience isn't just a metric
+              — it's a lived reality for coastal communities.
+            </p>
+            <p className="body-text" style={{ marginTop: '-1.5rem' }}>
+              The project uses place-based, participatory methods to incorporate
+              stakeholder knowledge into the design and evaluation of solutions,
+              while training graduate students and contributing to
+              interdisciplinary STEM workforce development.
+            </p>
+            <div className="about-mission-stats">
+              <div className="about-mission-stat">
+                <div className="about-mission-stat-num">01.</div>
+                <h4>Science to Action</h4>
+                <p>
+                  Translating complex climate modeling into actionable
+                  neighborhood strategies.
+                </p>
               </div>
-            ))}
+              <div className="about-mission-stat">
+                <div className="about-mission-stat-num">02.</div>
+                <h4>Equity Centered</h4>
+                <p>
+                  Prioritizing vulnerable coastal populations often overlooked
+                  by traditional engineering approaches.
+                </p>
+              </div>
+            </div>
           </div>
-        </section>
 
-        {/* Plan context */}
-        <section className="page-section">
-          <h2 className="section-title">Plan and policy context</h2>
-          <div className="prose">
-            <p>
-              The team has systematically reviewed <strong>22 resilience plans</strong> across the
-              Greater Miami region — including those from the South Florida Water Management District,
-              Southeast Florida Regional Climate Change Compact, Miami-Dade County, the City of Miami,
-              Miami Beach, and other local jurisdictions. The analysis reveals how plans emphasize
-              themes across six major clusters:
+          <div className="about-mission-photos">
+            <div className="photo-a">
+              <div className="about-mission-photo">
+                <img
+                  src="/Images/about-stitch-hero-coast.jpg"
+                  alt="Miami-Dade coastline aerial"
+                />
+              </div>
+            </div>
+            <div>
+              <div className="about-mission-photo">
+                <img
+                  src="/Images/about-scale-r-hero.jpg"
+                  alt="SCALE-R project fieldwork"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Core Pillars ─────────────────────────────────────── */}
+      <section className="about-pillars">
+        <div className="about-pillars-inner">
+          <div className="about-pillars-header">
+            <div>
+              <span className="about-label">Core Pillars</span>
+              <h2>
+                Advancing Greater Miami's<br />Coastal Resilience
+              </h2>
+            </div>
+            <p className="about-pillars-header-sub">
+              Our framework for systemic change and community empowerment.
             </p>
           </div>
-          <div
-            style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: 10,
-              marginTop: 20,
-            }}
-          >
+
+          <div className="about-pillars-grid">
+            {/* Pillar 1 — large left (Stitch: groups) */}
+            <div className="pillar-card pillar-card-large">
+              <div className="pillar-icon-large">
+                <span className="material-symbols-outlined" aria-hidden>
+                  groups
+                </span>
+              </div>
+              <h3>Equitable Partnerships</h3>
+              <p>
+                Building bridges between University of Miami researchers and
+                neighborhood advocates to ensure solutions are culturally
+                relevant, socially just, and center local stakeholder knowledge
+                and lived experience.
+              </p>
+              <div className="pillar-bg-icon" aria-hidden>
+                <span className="material-symbols-outlined">groups</span>
+              </div>
+            </div>
+
+            {/* Pillar 2 — small right (Stitch: hub) */}
+            <div className="pillar-card pillar-card-small">
+              <div className="pillar-icon-small">
+                <span className="material-symbols-outlined" aria-hidden>
+                  hub
+                </span>
+              </div>
+              <h3>Mapping the Network</h3>
+              <p>
+                Systematically reviewing and mapping the complex network of{' '}
+                <strong style={{ color: 'rgba(255,255,255,0.9)' }}>
+                  22 resilience plans
+                </strong>{' '}
+                across the Greater Miami region — visualizing social and
+                ecological interdependencies to identify critical gaps.
+              </p>
+            </div>
+
+            {/* Pillar 3 — full-width bottom (Stitch: analytics + trending_up) */}
+            <div className="pillar-card pillar-card-wide">
+              <div className="pillar-icon-circle">
+                <span className="material-symbols-outlined" aria-hidden>
+                  analytics
+                </span>
+              </div>
+              <div className="pillar-text">
+                <h3>Decision-Support Tools</h3>
+                <p>
+                  Designing an integrated decision-support dashboard providing
+                  policymakers and civic leaders with real-time data
+                  visualizations to make informed decisions about infrastructure,
+                  protection, and resilience investment priorities.
+                </p>
+              </div>
+              <div className="pillar-trailing-icon" aria-hidden>
+                <span className="material-symbols-outlined">trending_up</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Plan & Policy Context ────────────────────────────── */}
+      <section className="about-policy">
+        <div className="about-policy-inner">
+          <span className="about-label">Research Foundation</span>
+          <h2>Plan and policy context</h2>
+          <p className="body-text">
+            The team has systematically reviewed{' '}
+            <strong style={{ color: 'rgba(255,255,255,0.9)' }}>
+              22 resilience plans
+            </strong>{' '}
+            across the Greater Miami region — including those from the South
+            Florida Water Management District, Southeast Florida Regional
+            Climate Change Compact, Miami-Dade County, the City of Miami, Miami
+            Beach, and other local jurisdictions. The analysis reveals how plans
+            emphasize themes across six major clusters:
+          </p>
+          <div className="about-badges">
             {[
               { label: 'Governance & Society', color: '#455a64' },
               { label: 'Environment & Climate', color: '#2e7d32' },
@@ -137,69 +257,132 @@ export default function About() {
               { label: 'Land & Housing', color: '#6d4c41' },
               { label: 'Water & Energy', color: '#00838f' },
               { label: 'Health & Equity', color: '#ad1457' },
-            ].map((c) => (
+            ].map((b) => (
               <span
-                className="badge"
-                key={c.label}
-                style={{ background: c.color, color: '#fff' }}
+                key={b.label}
+                className="about-badge"
+                style={{ background: b.color }}
               >
-                {c.label}
+                {b.label}
               </span>
             ))}
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* Community engagement */}
-        <section className="page-section">
-          <h2 className="section-title">Community engagement</h2>
-          <div className="card-grid cols-2">
+      {/* ── Community Engagement ─────────────────────────────── */}
+      <section className="about-engagement">
+        <div className="about-engagement-inner">
+          <span className="about-label">Outreach & Impact</span>
+          <h2>Community engagement</h2>
+          <div className="engagement-grid">
             {engagementItems.map((e, i) => (
-              <div className="card" key={i} style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-                <div
-                  style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: '50%',
-                    background: 'linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                    fontWeight: 700,
-                    fontSize: '0.85rem',
-                    color: '#2e7d32',
-                  }}
-                >
-                  {i + 1}
-                </div>
+              <div className="engagement-card" key={i}>
+                <div className="engagement-num">{i + 1}</div>
                 <div>
-                  <div style={{ fontWeight: 600, color: '#1a2e23', marginBottom: 4 }}>{e.title}</div>
-                  <div className="prose" style={{ fontSize: '0.92rem' }}>{e.detail}</div>
+                  <h4>{e.title}</h4>
+                  <p>{e.detail}</p>
                 </div>
               </div>
             ))}
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* Acknowledgment */}
-        <section className="page-section">
-          <div
-            style={{
-              background: '#f5f7f6',
-              borderRadius: 12,
-              padding: '24px 28px',
-              borderLeft: '4px solid #01703a',
-            }}
-          >
-            <div className="prose" style={{ fontSize: '0.93rem' }}>
-              This material is based upon work supported by the{' '}
-              <strong>National Science Foundation</strong> under Grant No.&nbsp;2435008. Any opinions,
-              findings, conclusions, or recommendations expressed are those of the authors and do not
-              necessarily reflect the views of the NSF.
+      {/* ── Scrolling Partners ───────────────────────────────── */}
+      <section className="about-partners">
+        <div className="about-partners-inner">
+          <span className="partners-label">Strategic Partners</span>
+          <div className="marquee-container">
+            <div className="marquee-track">
+              {/* original set */}
+              {partners.map((p) => (
+                <div className="partner-item" key={p.name}>
+                  <span className="icon">{p.icon}</span>
+                  <span className="name">{p.name}</span>
+                </div>
+              ))}
+              {/* duplicate for seamless loop */}
+              {partners.map((p) => (
+                <div className="partner-item" key={`dup-${p.name}`}>
+                  <span className="icon">{p.icon}</span>
+                  <span className="name">{p.name}</span>
+                </div>
+              ))}
             </div>
           </div>
-        </section>
-      </div>
+        </div>
+      </section>
+
+      {/* ── Acknowledgment ───────────────────────────────────── */}
+      <section className="about-ack">
+        <div className="about-ack-inner">
+          <p>
+            This material is based upon work supported by the{' '}
+            <strong style={{ color: 'rgba(255,255,255,0.8)' }}>
+              National Science Foundation
+            </strong>{' '}
+            under Grant No.&nbsp;2435008. Any opinions, findings, conclusions, or
+            recommendations expressed are those of the authors and do not
+            necessarily reflect the views of the NSF.{' '}
+            <a
+              href="https://geography.as.miami.edu/research/geo_labs/scale-r/index.html"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Visit the SCALE-R lab page →
+            </a>
+          </p>
+        </div>
+      </section>
+
+      {/* ── Footer ───────────────────────────────────────────── */}
+      <footer className="about-footer">
+        <div className="about-footer-inner">
+          <div className="about-footer-brand">
+            <div className="about-footer-logo">SCALE-R</div>
+            <p>
+              © {new Date().getFullYear()} SCALE-R Miami-Dade.
+              <br />
+              Supported by NSF &amp; University of Miami.
+            </p>
+          </div>
+          <div className="about-footer-col">
+            <h5 className="about-footer-heading">Navigation</h5>
+            <Link to="/about">About the project</Link>
+            <Link to="/docs">Technical Documentation</Link>
+            <Link to="/dashboard">Dashboard</Link>
+          </div>
+          <div className="about-footer-col">
+            <h5 className="about-footer-heading">Legal &amp; Portal</h5>
+            <a href="#">Privacy Policy</a>
+            <a href="#">Terms of Service</a>
+            <a href="#">Partner Portal</a>
+          </div>
+          <div className="about-footer-col">
+            <h5 className="about-footer-heading">Connect</h5>
+            <a href="mailto:spraharaj@miami.edu">Contact Us</a>
+            <div className="about-footer-social">
+              <a
+                href="https://geography.as.miami.edu/research/geo_labs/scale-r/index.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="SCALE-R lab website"
+              >
+                <span className="material-symbols-outlined" aria-hidden>
+                  public
+                </span>
+              </a>
+              <a href="mailto:spraharaj@miami.edu" aria-label="Email SCALE-R">
+                <span className="material-symbols-outlined" aria-hidden>
+                  mail
+                </span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </footer>
+
     </div>
   );
 }
