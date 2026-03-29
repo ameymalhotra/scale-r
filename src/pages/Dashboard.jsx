@@ -170,13 +170,52 @@ const PROJECTS_GEOJSON_FILE = 'projects_merged.geojson';
 const OVERLAY_LAYERS_CONFIG = [
   { id: 'overlay-community-centers', label: 'Community Centers', url: `${SUPABASE_STORAGE}/Community%20Cent_FeaturesToJSO.geojson`, style: { type: 'circle', paint: { 'circle-color': '#e67e22', 'circle-radius': 5, 'circle-opacity': 0.8, 'circle-stroke-color': '#d35400', 'circle-stroke-width': 1 } } },
   { id: 'overlay-communications', label: 'Communications', url: `${SUPABASE_STORAGE}/Communications_FeaturesToJSO.geojson`, style: { type: 'circle', paint: { 'circle-color': '#9b59b6', 'circle-radius': 5, 'circle-opacity': 0.8, 'circle-stroke-color': '#8e44ad', 'circle-stroke-width': 1 } } },
-  { id: 'overlay-disaster-debris', label: 'Disaster Debris Sites', url: `${SUPABASE_STORAGE}/Disaster%20Debri_FeaturesToJSO.geojson`, style: { type: 'circle', paint: { 'circle-color': '#e74c3c', 'circle-radius': 5, 'circle-opacity': 0.8, 'circle-stroke-color': '#c0392b', 'circle-stroke-width': 1 } }, popupTitleField: 'NAME', popupFields: ['ADDRESS', 'CITY'] },
   { id: 'overlay-disaster-recovery', label: 'Disaster Recovery Centers', url: `${SUPABASE_STORAGE}/Disaster%20Recov_FeaturesToJSO.geojson`, style: { type: 'circle', paint: { 'circle-color': '#1abc9c', 'circle-radius': 5, 'circle-opacity': 0.8, 'circle-stroke-color': '#16a085', 'circle-stroke-width': 1 } } },
   { id: 'overlay-emergency-medical', label: 'Emergency Medical', url: `${SUPABASE_STORAGE}/EmergencyMedical_FeaturesToJSO.geojson`, style: { type: 'circle', paint: { 'circle-color': '#c0392b', 'circle-radius': 5, 'circle-opacity': 0.8, 'circle-stroke-color': '#922b21', 'circle-stroke-width': 1 } }, popupTitleField: 'Name', popupFields: ['Address', 'City'], pointLonLatFields: ['X', 'Y'] },
   { id: 'overlay-emergency-ops', label: 'Emergency Operations Centers', url: `${SUPABASE_STORAGE}/Emergency%20Oper_FeaturesToJSO.geojson`, style: { type: 'circle', paint: { 'circle-color': '#f39c12', 'circle-radius': 5, 'circle-opacity': 0.8, 'circle-stroke-color': '#e67e22', 'circle-stroke-width': 1 } } },
   { id: 'overlay-evacuation-routes', label: 'Evacuation Routes', url: `${SUPABASE_STORAGE}/Evacuation%20Rou_FeaturesToJSO.geojson`, style: { type: 'line', paint: { 'line-color': '#34495e', 'line-width': 3 } } },
   { id: 'overlay-military', label: 'Military Installations', url: `${SUPABASE_STORAGE}/MILITARY_FeaturesToJSO.geojson`, style: { type: 'fill', paint: { 'fill-color': '#2c3e50', 'fill-opacity': 0.35, 'fill-outline-color': '#1a252f', 'line-color': '#1a252f' } }, popupTitleField: 'NAME', popupFields: ['GEOID', 'FEMAIndexR'] },
   { id: 'overlay-risk-shelters', label: 'Risk Shelters', url: `${SUPABASE_STORAGE}/Risk%20Shelter%20I_FeaturesToJSO.geojson`, style: { type: 'circle', paint: { 'circle-color': '#d35400', 'circle-radius': 5, 'circle-opacity': 0.8, 'circle-stroke-color': '#a04000', 'circle-stroke-width': 1 } }, popupTitleField: 'Name', popupFields: ['Address', 'City'] },
+];
+
+/** Combined Critical Infrastructure sublayers: one UI toggle loads multiple GeoJSON sources. */
+const OVERLAY_GROUP_CRITICAL_FACILITIES = {
+  id: 'overlay-group-critical-facilities',
+  label: 'Emergency medical, EOC & military',
+  memberIds: ['overlay-emergency-medical', 'overlay-emergency-ops', 'overlay-military'],
+};
+
+const OVERLAY_GROUP_RISK_AND_RECOVERY = {
+  id: 'overlay-group-risk-recovery',
+  label: 'Risk shelters & disaster recovery',
+  memberIds: ['overlay-risk-shelters', 'overlay-disaster-recovery'],
+};
+
+const CRITICAL_INFRASTRUCTURE_SUBLAYER_GROUPS = [OVERLAY_GROUP_CRITICAL_FACILITIES, OVERLAY_GROUP_RISK_AND_RECOVERY];
+
+const OVERLAY_LAYER_ID_TO_GROUP_ID = (() => {
+  const m = {};
+  CRITICAL_INFRASTRUCTURE_SUBLAYER_GROUPS.forEach((g) => {
+    g.memberIds.forEach((mid) => {
+      m[mid] = g.id;
+    });
+  });
+  return m;
+})();
+
+function expandCriticalInfraSublayerKeys(keys) {
+  const out = [];
+  keys.forEach((k) => {
+    const group = CRITICAL_INFRASTRUCTURE_SUBLAYER_GROUPS.find((g) => g.id === k);
+    if (group) out.push(...group.memberIds);
+    else out.push(k);
+  });
+  return [...new Set(out)];
+}
+
+const CRITICAL_INFRASTRUCTURE_SUBLAYER_UI_ITEMS = [
+  ...CRITICAL_INFRASTRUCTURE_SUBLAYER_GROUPS.map((g) => ({ kind: 'group', id: g.id, label: g.label })),
+  ...OVERLAY_LAYERS_CONFIG.filter((c) => !OVERLAY_LAYER_ID_TO_GROUP_ID[c.id]).map((c) => ({ kind: 'layer', id: c.id, label: c.label })),
 ];
 
 /** Matches filter sidebar frosted glass (map overlays). */
@@ -188,21 +227,18 @@ const mapOverlayGlassStyle = {
   boxShadow: '0 8px 32px rgba(0, 0, 0, 0.14), inset 0 0 0 1px rgba(255, 255, 255, 0.65)',
 };
 
-const criticalInfraSelectStyle = {
-  width: '100%',
-  marginTop: '6px',
-  marginBottom: '8px',
-  padding: '8px 28px 8px 10px',
-  background: 'rgba(255, 255, 255, 0.4)',
-  border: '1px solid rgba(255, 255, 255, 0.45)',
-  borderRadius: '8px',
-  color: '#1b3a4b',
-  fontSize: '0.88em',
-  fontWeight: 500,
-  cursor: 'pointer',
-  appearance: 'none',
-  fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-};
+const MODELLING_LAYER_OPTIONS = [
+  { view: 'none', label: 'No Layer', ariaLabel: 'No modelling layer' },
+  { view: 'risk', label: 'FEMA Risk Rating', ariaLabel: 'FEMA Risk Rating layer' },
+  { view: 'pred3pe', label: 'Resilience Index', ariaLabel: 'Resilience Index layer' },
+  { view: 'critical-infrastructure', label: 'Critical Infrastructure', ariaLabel: 'Critical Infrastructure layer' },
+];
+
+/** Mobile map: legends sit above the combined Modelling + sublayers card */
+const MOBILE_CENSUS_OVERLAY_BOTTOM = 'calc(62px + min(62vh, 520px) + 20px)';
+
+/** Above modelling/legend map overlays (z-index 1000); below mobile filter drawer backdrop (1099). */
+const SEARCH_BAR_OVERLAY_Z_INDEX = 1050;
 
 const Dashboard = () => {
   const mapContainer = useRef(null);
@@ -242,8 +278,12 @@ const Dashboard = () => {
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [selectedResultIndex, setSelectedResultIndex] = useState(-1);
 
-  const [enabledOverlayLayers, setEnabledOverlayLayers] = useState([]);
+  const [criticalInfraSublayerKeys, setCriticalInfraSublayerKeys] = useState([]);
   const [loadingOverlayLayer, setLoadingOverlayLayer] = useState(null);
+  const enabledOverlayLayerIds = useMemo(
+    () => expandCriticalInfraSublayerKeys(criticalInfraSublayerKeys),
+    [criticalInfraSublayerKeys]
+  );
   const overlayDataCacheRef = useRef({});
 
   // Debounce search input before running search (reduces work on mobile)
@@ -435,6 +475,23 @@ const Dashboard = () => {
       setCensusVisible(false);
     } else {
       setCensusVisible(true);
+    }
+  };
+
+  const isModellingLayerSwitchOn = (view) => {
+    if (view === 'none') return !censusVisible || activeCensusView === 'none';
+    return censusVisible && activeCensusView === view;
+  };
+
+  const handleModellingLayerSwitch = (view) => {
+    const on = isModellingLayerSwitchOn(view);
+    if (view === 'none') {
+      if (on) handleCensusViewChange('risk');
+      else handleCensusViewChange('none');
+    } else if (on) {
+      handleCensusViewChange('none');
+    } else {
+      handleCensusViewChange(view);
     }
   };
 
@@ -677,39 +734,38 @@ const Dashboard = () => {
     }
   }, [addOverlaySourceAndLayer]);
 
-  const MAX_CRITICAL_INFRASTRUCTURE_LAYERS = 2;
+  const MAX_CRITICAL_INFRASTRUCTURE_SUBLAYERS = 2;
 
-  /** Two dropdowns for critical infrastructure (max 2 distinct layers). */
-  const handleCriticalInfraSlotChange = useCallback((slotIndex, layerId) => {
-    setEnabledOverlayLayers((prev) => {
-      const a = prev[0] || '';
-      const b = prev[1] || '';
+  /** Toggle one sublayer or combined group; max 2 logical selections — adding a third drops the first (FIFO). */
+  const handleCriticalInfraSublayerToggle = useCallback((key) => {
+    setCriticalInfraSublayerKeys((prev) => {
       let next;
-      if (slotIndex === 0) {
-        if (!layerId) next = b ? [b] : [];
-        else if (layerId === b) next = [layerId];
-        else next = [layerId, b].filter(Boolean);
+      if (prev.includes(key)) {
+        next = prev.filter((k) => k !== key);
+      } else if (prev.length < MAX_CRITICAL_INFRASTRUCTURE_SUBLAYERS) {
+        next = [...prev, key];
       } else {
-        if (!layerId) next = a ? [a] : [];
-        else if (layerId === a) next = [layerId];
-        else next = [a, layerId].filter(Boolean);
+        next = [prev[1], key];
       }
-      const nextUnique = [...new Set(next)].slice(0, MAX_CRITICAL_INFRASTRUCTURE_LAYERS);
+      next = [...new Set(next)].slice(0, MAX_CRITICAL_INFRASTRUCTURE_SUBLAYERS);
 
-      prev.forEach((id) => {
-        if (!nextUnique.includes(id) && map.current?.getLayer(`${id}-layer`)) {
+      const prevLayerIds = expandCriticalInfraSublayerKeys(prev);
+      const nextLayerIds = expandCriticalInfraSublayerKeys(next);
+
+      prevLayerIds.forEach((id) => {
+        if (!nextLayerIds.includes(id) && map.current?.getLayer(`${id}-layer`)) {
           map.current.setLayoutProperty(`${id}-layer`, 'visibility', 'none');
         }
       });
 
-      const toAdd = nextUnique.filter((id) => !prev.includes(id));
+      const toAdd = nextLayerIds.filter((id) => !prevLayerIds.includes(id));
       if (toAdd.length) {
         queueMicrotask(() => {
           toAdd.forEach((id) => ensureOverlayLayerLoaded(id));
         });
       }
 
-      return nextUnique;
+      return next;
     });
   }, [ensureOverlayLayerLoaded]);
 
@@ -1092,7 +1148,7 @@ const Dashboard = () => {
       addCensusSourceAndLayers();
 
       const cache = overlayDataCacheRef.current;
-      enabledOverlayLayers.forEach((layerId) => {
+      enabledOverlayLayerIds.forEach((layerId) => {
         const geojson = cache[layerId];
         if (!geojson) return;
         const config = OVERLAY_LAYERS_CONFIG.find((c) => c.id === layerId);
@@ -1630,11 +1686,11 @@ const Dashboard = () => {
     OVERLAY_LAYERS_CONFIG.forEach((config) => {
       const layerMapId = config.id + '-layer';
       if (map.current.getLayer(layerMapId)) {
-        const visible = isCriticalInfra && enabledOverlayLayers.includes(config.id);
+        const visible = isCriticalInfra && enabledOverlayLayerIds.includes(config.id);
         map.current.setLayoutProperty(layerMapId, 'visibility', visible ? 'visible' : 'none');
       }
     });
-  }, [activeCensusView, enabledOverlayLayers]);
+  }, [activeCensusView, enabledOverlayLayerIds]);
 
   useEffect(() => {
     if (censusStats) {
@@ -2403,7 +2459,7 @@ const Dashboard = () => {
               position: 'absolute',
               top: isMobile ? '8px' : '20px',
               ...(isMobile ? { left: '50%', transform: 'translateX(-50%)' } : { right: '20px', left: 'auto', transform: 'none' }),
-              zIndex: 1000,
+              zIndex: SEARCH_BAR_OVERLAY_Z_INDEX,
               width: isMobile ? 'min(300px, 78vw)' : '320px',
               maxWidth: isMobile ? 'min(300px, 78vw)' : '320px'
             }}
@@ -2520,7 +2576,7 @@ const Dashboard = () => {
                   overflowY: 'auto',
                   ...mapOverlayGlassStyle,
                   borderRadius: '12px',
-                  zIndex: 1001
+                  zIndex: 2
                 }}>
                   {searchResults.map((result, index) => {
                     const props = result.properties || {};
@@ -2603,7 +2659,7 @@ const Dashboard = () => {
                   padding: '16px',
                   ...mapOverlayGlassStyle,
                   borderRadius: '12px',
-                  zIndex: 1001,
+                  zIndex: 2,
                   textAlign: 'center',
                   color: '#546e7a',
                   fontSize: '0.9em'
@@ -2623,91 +2679,112 @@ const Dashboard = () => {
             <>
               {isMobile ? (
                 <>
-                  {/* Mobile: Layers dropdown above Satellite (bottom-up: Satellite, then Layers dropdown) */}
+                  {/* Mobile: Modelling Layer switches above Satellite */}
                   <div
                     style={{
                       position: 'absolute',
                       bottom: '62px',
                       right: 'max(16px, env(safe-area-inset-right))',
                       zIndex: 1000,
-                      minWidth: '160px'
-                    }}
-                  >
-                    <select
-                      aria-label="Modelling layer"
-                      value={!censusVisible || activeCensusView === 'none' ? 'none' : activeCensusView}
-                      onChange={(e) => handleCensusViewChange(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '10px 32px 10px 14px',
-                        ...mapOverlayGlassStyle,
-                        borderRadius: '10px',
-                        color: '#1b3a4b',
-                        fontSize: '0.9em',
-                        fontWeight: 500,
-                        cursor: 'pointer',
-                        appearance: 'none',
-                        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
-                      }}
-                    >
-                      <option value="none">No Layer</option>
-                      <option value="risk">FEMA Risk Rating</option>
-                      <option value="pred3pe">Resilience Index</option>
-                      <option value="critical-infrastructure">Critical Infrastructure</option>
-                    </select>
-                  </div>
-                  {censusVisible && activeCensusView === 'critical-infrastructure' && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      bottom: '108px',
-                      right: 'max(16px, env(safe-area-inset-right))',
-                      zIndex: 1000,
-                      ...mapOverlayGlassStyle,
+                      minWidth: '260px',
+                      maxWidth: 'min(92vw, 320px)',
+                      maxHeight: 'min(72vh, 580px)',
+                      overflowY: 'auto',
                       padding: '12px 14px',
                       borderRadius: '10px',
-                      minWidth: '200px',
-                      maxWidth: 'min(92vw, 280px)',
-                      maxHeight: '240px',
-                      overflowY: 'auto'
+                      ...mapOverlayGlassStyle,
                     }}
                   >
-                    <div style={{ fontSize: '0.9em', fontWeight: 600, color: '#1b3a4b', marginBottom: '4px' }}>Critical Infrastructure</div>
-                    <div style={{ fontSize: '0.75em', color: '#546e7a', marginBottom: '6px' }}>Choose up to 2 layers</div>
-                    <label style={{ fontSize: '0.72em', color: '#546e7a', display: 'block' }} htmlFor="critical-infra-slot-1-mobile">Layer 1</label>
-                    <select
-                      id="critical-infra-slot-1-mobile"
-                      aria-label="Critical infrastructure layer 1"
-                      value={enabledOverlayLayers[0] || ''}
-                      onChange={(e) => handleCriticalInfraSlotChange(0, e.target.value)}
-                      style={criticalInfraSelectStyle}
-                    >
-                      <option value="">None</option>
-                      {OVERLAY_LAYERS_CONFIG.map((layer) => (
-                        <option key={layer.id} value={layer.id}>{layer.label}</option>
-                      ))}
-                    </select>
-                    <label style={{ fontSize: '0.72em', color: '#546e7a', display: 'block' }} htmlFor="critical-infra-slot-2-mobile">Layer 2</label>
-                    <select
-                      id="critical-infra-slot-2-mobile"
-                      aria-label="Critical infrastructure layer 2"
-                      value={enabledOverlayLayers[1] || ''}
-                      onChange={(e) => handleCriticalInfraSlotChange(1, e.target.value)}
-                      style={criticalInfraSelectStyle}
-                    >
-                      <option value="">None</option>
-                      {OVERLAY_LAYERS_CONFIG.map((layer) => (
-                        <option key={`2-${layer.id}`} value={layer.id}>{layer.label}</option>
-                      ))}
-                    </select>
-                    {loadingOverlayLayer && (
-                      <div style={{ fontSize: '0.78em', color: '#546e7a' }}>Loading layer…</div>
-                    )}
-                    {enabledOverlayLayers.length > 0 && (
+                    <div style={{ fontSize: '0.9em', fontWeight: 600, color: '#1b3a4b', marginBottom: '10px' }}>
+                      Modelling Layer
+                    </div>
+                    <div role="group" aria-label="Modelling layer">
+                      {MODELLING_LAYER_OPTIONS.map(({ view, label, ariaLabel }) => {
+                        const checked = isModellingLayerSwitchOn(view);
+                        if (view === 'critical-infrastructure') {
+                          return (
+                            <React.Fragment key={view}>
+                              <div
+                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '8px' }}
+                              >
+                                <span style={{ fontSize: '0.85em', fontWeight: 500, color: '#1b3a4b', flex: 1, minWidth: 0 }}>{label}</span>
+                                <button
+                                  type="button"
+                                  role="switch"
+                                  className="modelling-switch-track"
+                                  aria-checked={checked}
+                                  aria-label={ariaLabel}
+                                  onClick={() => handleModellingLayerSwitch(view)}
+                                >
+                                  <span className="modelling-switch-thumb" aria-hidden />
+                                </button>
+                              </div>
+                              <div
+                                style={{
+                                  marginTop: '2px',
+                                  marginBottom: '4px',
+                                  paddingTop: '10px',
+                                  borderTop: '1px solid rgba(0,0,0,0.08)',
+                                }}
+                              >
+                                <div style={{ fontSize: '0.7em', color: '#546e7a', marginBottom: '8px', lineHeight: 1.35 }}>
+                                  Sublayers (max 2). Combined layers count as one. Visible when Critical Infrastructure is on.
+                                </div>
+                                <div role="group" aria-label="Critical infrastructure sublayers">
+                                  {CRITICAL_INFRASTRUCTURE_SUBLAYER_UI_ITEMS.map((item) => {
+                                    const subOn = criticalInfraSublayerKeys.includes(item.id);
+                                    return (
+                                      <div
+                                        key={item.id}
+                                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '8px' }}
+                                      >
+                                        <span style={{ fontSize: '0.78em', fontWeight: 500, color: '#1b3a4b', flex: 1, minWidth: 0, lineHeight: 1.25 }}>{item.label}</span>
+                                        <button
+                                          type="button"
+                                          role="switch"
+                                          className="modelling-switch-track"
+                                          aria-checked={subOn}
+                                          aria-label={`${item.label} sublayer`}
+                                          onClick={() => handleCriticalInfraSublayerToggle(item.id)}
+                                        >
+                                          <span className="modelling-switch-thumb" aria-hidden />
+                                        </button>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                                {loadingOverlayLayer && (
+                                  <div style={{ fontSize: '0.78em', color: '#546e7a', marginTop: '6px' }}>Loading layer…</div>
+                                )}
+                              </div>
+                            </React.Fragment>
+                          );
+                        }
+                        return (
+                          <div
+                            key={view}
+                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '8px' }}
+                          >
+                            <span style={{ fontSize: '0.85em', fontWeight: 500, color: '#1b3a4b', flex: 1, minWidth: 0 }}>{label}</span>
+                            <button
+                              type="button"
+                              role="switch"
+                              className="modelling-switch-track"
+                              aria-checked={checked}
+                              aria-label={ariaLabel}
+                              onClick={() => handleModellingLayerSwitch(view)}
+                            >
+                              <span className="modelling-switch-thumb" aria-hidden />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {censusVisible && activeCensusView === 'critical-infrastructure' && enabledOverlayLayerIds.length > 0 && (
                       <>
-                        <div style={{ borderTop: '1px solid rgba(0,0,0,0.08)', marginTop: '10px', paddingTop: '10px', fontSize: '0.9em', fontWeight: 600, color: '#1b3a4b', marginBottom: '6px' }}>Data markers</div>
-                        <div style={{ minHeight: '48px', height: '48px', overflowY: 'auto' }}>
-                        {enabledOverlayLayers.map((layerId) => {
+                        <div style={{ borderTop: '1px solid rgba(0,0,0,0.08)', marginTop: '10px', paddingTop: '10px', fontSize: '0.88em', fontWeight: 600, color: '#1b3a4b', marginBottom: '6px' }}>Data markers</div>
+                        <div style={{ maxHeight: '100px', overflowY: 'auto' }}>
+                        {enabledOverlayLayerIds.map((layerId) => {
                           const config = OVERLAY_LAYERS_CONFIG.find((c) => c.id === layerId);
                           if (!config?.style?.paint) return null;
                           const paint = config.style.paint;
@@ -2728,10 +2805,9 @@ const Dashboard = () => {
                       </>
                     )}
                   </div>
-                  )}
                   {/* Mobile: Legend always visible when layer is active (above Layers dropdown) */}
                   {censusVisible && activeCensusView === 'risk' && sortedRatings.length > 0 && (
-                    <div style={{ position: 'absolute', right: 'max(16px, env(safe-area-inset-right))', bottom: '108px', zIndex: 1000, ...mapOverlayGlassStyle, padding: '12px 14px', borderRadius: '10px', minWidth: '180px' }}>
+                    <div style={{ position: 'absolute', right: 'max(16px, env(safe-area-inset-right))', bottom: MOBILE_CENSUS_OVERLAY_BOTTOM, zIndex: 1000, ...mapOverlayGlassStyle, padding: '12px 14px', borderRadius: '10px', minWidth: '180px' }}>
                       <div style={{ fontSize: '0.9em', fontWeight: 600, color: '#1b3a4b', marginBottom: '8px' }}>FEMA Risk Rating</div>
                       <div style={{ marginBottom: '4px' }}>
                         <div style={{ width: '100%', height: '14px', borderRadius: '4px', overflow: 'hidden', marginBottom: '4px' }}>
@@ -2742,7 +2818,7 @@ const Dashboard = () => {
                     </div>
                   )}
                   {censusVisible && activeCensusView === 'pred3pe' && censusStats?.pred3PE && (
-                    <div style={{ position: 'absolute', right: 'max(16px, env(safe-area-inset-right))', bottom: '108px', zIndex: 1000, ...mapOverlayGlassStyle, padding: '12px 14px', borderRadius: '10px', minWidth: '180px' }}>
+                    <div style={{ position: 'absolute', right: 'max(16px, env(safe-area-inset-right))', bottom: MOBILE_CENSUS_OVERLAY_BOTTOM, zIndex: 1000, ...mapOverlayGlassStyle, padding: '12px 14px', borderRadius: '10px', minWidth: '180px' }}>
                       <div style={{ fontSize: '0.9em', fontWeight: 600, color: '#1b3a4b', marginBottom: '8px' }}>Resilience Index (%)</div>
                       <div style={{ marginBottom: '4px' }}>
                         <div style={{ width: '100%', height: '14px', borderRadius: '4px', overflow: 'hidden', marginBottom: '4px' }}>
@@ -2777,80 +2853,88 @@ const Dashboard = () => {
                     <div style={{ fontSize: '1em', fontWeight: 600, color: '#1b3a4b', marginBottom: '10px' }}>
                       Modelling Layer
                     </div>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', cursor: 'pointer', fontSize: '0.9em', color: '#1b3a4b' }}>
-                      <input
-                        type="radio"
-                        name="census-view"
-                        value="none"
-                        checked={!censusVisible || activeCensusView === 'none'}
-                        onChange={() => handleCensusViewChange('none')}
-                      />
-                      No Layer
-                    </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', cursor: 'pointer', fontSize: '0.9em', color: '#1b3a4b' }}>
-                      <input
-                        type="radio"
-                        name="census-view"
-                        value="risk"
-                        checked={activeCensusView === 'risk' && censusVisible}
-                        onChange={() => handleCensusViewChange('risk')}
-                      />
-                      FEMA Risk Rating
-                    </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', cursor: 'pointer', fontSize: '0.9em', color: '#1b3a4b' }}>
-                      <input
-                        type="radio"
-                        name="census-view"
-                        value="pred3pe"
-                        checked={activeCensusView === 'pred3pe' && censusVisible}
-                        onChange={() => handleCensusViewChange('pred3pe')}
-                      />
-                      Resilience Index
-                    </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', cursor: 'pointer', fontSize: '0.9em', color: '#1b3a4b' }}>
-                      <input
-                        type="radio"
-                        name="census-view"
-                        value="critical-infrastructure"
-                        checked={activeCensusView === 'critical-infrastructure' && censusVisible}
-                        onChange={() => handleCensusViewChange('critical-infrastructure')}
-                      />
-                      Critical Infrastructure
-                    </label>
-                    {activeCensusView === 'critical-infrastructure' && censusVisible && (
-                    <div style={{ marginLeft: '24px', marginBottom: '8px' }}>
-                      <div style={{ fontSize: '0.8em', color: '#546e7a', marginBottom: '6px' }}>Choose up to 2 layers</div>
-                      <label style={{ fontSize: '0.75em', color: '#546e7a', display: 'block' }} htmlFor="critical-infra-slot-1-desktop">Layer 1</label>
-                      <select
-                        id="critical-infra-slot-1-desktop"
-                        aria-label="Critical infrastructure layer 1"
-                        value={enabledOverlayLayers[0] || ''}
-                        onChange={(e) => handleCriticalInfraSlotChange(0, e.target.value)}
-                        style={{ ...criticalInfraSelectStyle, fontSize: '0.9em' }}
-                      >
-                        <option value="">None</option>
-                        {OVERLAY_LAYERS_CONFIG.map((layer) => (
-                          <option key={layer.id} value={layer.id}>{layer.label}</option>
-                        ))}
-                      </select>
-                      <label style={{ fontSize: '0.75em', color: '#546e7a', display: 'block' }} htmlFor="critical-infra-slot-2-desktop">Layer 2</label>
-                      <select
-                        id="critical-infra-slot-2-desktop"
-                        aria-label="Critical infrastructure layer 2"
-                        value={enabledOverlayLayers[1] || ''}
-                        onChange={(e) => handleCriticalInfraSlotChange(1, e.target.value)}
-                        style={{ ...criticalInfraSelectStyle, fontSize: '0.9em' }}
-                      >
-                        <option value="">None</option>
-                        {OVERLAY_LAYERS_CONFIG.map((layer) => (
-                          <option key={`d2-${layer.id}`} value={layer.id}>{layer.label}</option>
-                        ))}
-                      </select>
-                      {loadingOverlayLayer && (
-                        <div style={{ fontSize: '0.82em', color: '#546e7a' }}>Loading layer…</div>
-                      )}
+                    <div role="group" aria-label="Modelling layer">
+                      {MODELLING_LAYER_OPTIONS.map(({ view, label, ariaLabel }) => {
+                        const checked = isModellingLayerSwitchOn(view);
+                        if (view === 'critical-infrastructure') {
+                          return (
+                            <React.Fragment key={view}>
+                              <div
+                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', marginBottom: '8px' }}
+                              >
+                                <span style={{ fontSize: '0.95em', fontWeight: 500, color: '#2c3e50' }}>{label}</span>
+                                <button
+                                  type="button"
+                                  role="switch"
+                                  className="modelling-switch-track"
+                                  aria-checked={checked}
+                                  aria-label={ariaLabel}
+                                  onClick={() => handleModellingLayerSwitch(view)}
+                                >
+                                  <span className="modelling-switch-thumb" aria-hidden />
+                                </button>
+                              </div>
+                              <div
+                                style={{
+                                  marginTop: '4px',
+                                  marginBottom: '4px',
+                                  paddingTop: '12px',
+                                  borderTop: '1px solid rgba(0,0,0,0.08)',
+                                }}
+                              >
+                                <div style={{ fontSize: '0.75em', color: '#546e7a', marginBottom: '10px', lineHeight: 1.35 }}>
+                                  Sublayers (max 2). Combined layers count as one. Visible when Critical Infrastructure is on.
+                                </div>
+                                <div role="group" aria-label="Critical infrastructure sublayers">
+                                  {CRITICAL_INFRASTRUCTURE_SUBLAYER_UI_ITEMS.map((item) => {
+                                    const subOn = criticalInfraSublayerKeys.includes(item.id);
+                                    return (
+                                      <div
+                                        key={item.id}
+                                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', marginBottom: '8px' }}
+                                      >
+                                        <span style={{ fontSize: '0.88em', fontWeight: 500, color: '#2c3e50', flex: 1, minWidth: 0, lineHeight: 1.3 }}>{item.label}</span>
+                                        <button
+                                          type="button"
+                                          role="switch"
+                                          className="modelling-switch-track"
+                                          aria-checked={subOn}
+                                          aria-label={`${item.label} sublayer`}
+                                          onClick={() => handleCriticalInfraSublayerToggle(item.id)}
+                                        >
+                                          <span className="modelling-switch-thumb" aria-hidden />
+                                        </button>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                                {loadingOverlayLayer && (
+                                  <div style={{ fontSize: '0.82em', color: '#546e7a', marginTop: '6px' }}>Loading layer…</div>
+                                )}
+                              </div>
+                            </React.Fragment>
+                          );
+                        }
+                        return (
+                          <div
+                            key={view}
+                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', marginBottom: '8px' }}
+                          >
+                            <span style={{ fontSize: '0.95em', fontWeight: 500, color: '#2c3e50' }}>{label}</span>
+                            <button
+                              type="button"
+                              role="switch"
+                              className="modelling-switch-track"
+                              aria-checked={checked}
+                              aria-label={ariaLabel}
+                              onClick={() => handleModellingLayerSwitch(view)}
+                            >
+                              <span className="modelling-switch-thumb" aria-hidden />
+                            </button>
+                          </div>
+                        );
+                      })}
                     </div>
-                    )}
                   </div>
 
               {/* Legend: single fixed-size container so position/size stay constant */}
@@ -2868,7 +2952,7 @@ const Dashboard = () => {
               }}>
                 {!(censusVisible && activeCensusView === 'risk' && sortedRatings.length > 0) &&
                  !(censusVisible && activeCensusView === 'pred3pe' && censusStats?.pred3PE) &&
-                 !(censusVisible && activeCensusView === 'critical-infrastructure' && enabledOverlayLayers.length > 0) && (
+                 !(censusVisible && activeCensusView === 'critical-infrastructure' && enabledOverlayLayerIds.length > 0) && (
                   <div style={{ fontSize: '1em', fontWeight: 600, color: '#1b3a4b' }}>
                     Select a layer
                   </div>
@@ -2925,13 +3009,13 @@ const Dashboard = () => {
                     </div>
                   </>
                 )}
-                {censusVisible && activeCensusView === 'critical-infrastructure' && enabledOverlayLayers.length > 0 && (
+                {censusVisible && activeCensusView === 'critical-infrastructure' && enabledOverlayLayerIds.length > 0 && (
                   <>
                     <div style={{ fontSize: '1em', fontWeight: 600, color: '#1b3a4b', marginBottom: '12px', flexShrink: 0 }}>
                       Data markers
                     </div>
                     <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-                      {enabledOverlayLayers.map((layerId) => {
+                      {enabledOverlayLayerIds.map((layerId) => {
                         const config = OVERLAY_LAYERS_CONFIG.find((c) => c.id === layerId);
                         if (!config?.style?.paint) return null;
                         const paint = config.style.paint;
@@ -3011,6 +3095,62 @@ const Dashboard = () => {
         @keyframes spin {
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
+        }
+        .modelling-switch-track {
+          width: 40px;
+          height: 22px;
+          border-radius: 11px;
+          border: 1px solid rgba(0, 0, 0, 0.2);
+          cursor: pointer;
+          padding: 0;
+          flex-shrink: 0;
+          position: relative;
+          background: rgba(200, 200, 200, 0.88);
+          box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.07);
+          transition:
+            background 1s cubic-bezier(0.4, 0, 0.2, 1),
+            box-shadow 1s cubic-bezier(0.4, 0, 0.2, 1),
+            border-color 0.85s ease;
+        }
+        .modelling-switch-track[aria-checked="true"] {
+          background: #3498db;
+          border-color: rgba(41, 128, 185, 0.55);
+          box-shadow:
+            0 2px 16px rgba(52, 152, 219, 0.42),
+            0 0 0 1px rgba(52, 152, 219, 0.2);
+        }
+        .modelling-switch-thumb {
+          position: absolute;
+          top: 2px;
+          left: 2px;
+          width: 16px;
+          height: 16px;
+          border-radius: 50%;
+          background: #fff;
+          box-shadow: 0 1px 4px rgba(0, 0, 0, 0.22);
+          pointer-events: none;
+          transition:
+            left 1s cubic-bezier(0.33, 1, 0.32, 1),
+            transform 1s cubic-bezier(0.33, 1, 0.32, 1),
+            box-shadow 1s ease;
+        }
+        .modelling-switch-track[aria-checked="true"] .modelling-switch-thumb {
+          left: 20px;
+          transform: scale(1);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+        .modelling-switch-track:not([aria-checked="true"]) .modelling-switch-thumb {
+          transform: scale(0.92);
+        }
+        .modelling-switch-track:focus-visible {
+          outline: 2px solid #3498db;
+          outline-offset: 2px;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .modelling-switch-track,
+          .modelling-switch-thumb {
+            transition-duration: 0.01ms !important;
+          }
         }
         .mapboxgl-popup-content {
           background: rgba(255, 255, 255, 0.85) !important;

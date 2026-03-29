@@ -36,14 +36,28 @@ const engagementItems = [
 ];
 
 const partners = [
-  { icon: '🏛️', name: 'National Science Foundation' },
-  { icon: '🎓', name: 'University of Miami' },
-  { icon: '🏙️', name: 'Miami-Dade County' },
-  { icon: '🌊', name: 'Rosenstiel School of Marine & Earth Science' },
-  { icon: '🌿', name: 'UM Climate Resilience Institute' },
-  { icon: '📐', name: 'UM School of Architecture' },
-  { icon: '⚙️', name: 'UM College of Engineering' },
-  { icon: '🌍', name: 'UN Habitat' },
+  {
+    src: '/strategic-partners/miami-dade-county.png',
+    alt: 'Miami-Dade County',
+  },
+  {
+    src: '/strategic-partners/university-of-miami.png',
+    alt: 'University of Miami',
+  },
+  {
+    src: '/strategic-partners/coral-gables.webp',
+    alt: 'City of Coral Gables',
+    logoClass: 'partner-logo--boost partner-logo--coral',
+  },
+  {
+    src: '/strategic-partners/miami-waterkeeper.png',
+    alt: 'Miami Waterkeeper',
+  },
+  {
+    src: '/strategic-partners/everglades-foundation.png',
+    alt: 'The Everglades Foundation',
+    logoClass: 'partner-logo--boost',
+  },
 ];
 
 export default function About() {
@@ -212,23 +226,41 @@ export default function About() {
       </section>
 
       {/* ── Scrolling Partners ───────────────────────────────── */}
-      <section className="about-partners">
-        <div className="about-partners-inner">
-          <span className="partners-label">Strategic Partners</span>
+      <section className="about-partners" aria-labelledby="strategic-partners-heading">
+        <div className="about-partners-header">
+          <h2 id="strategic-partners-heading" className="about-partners-title">
+            Strategic Partners
+          </h2>
+        </div>
+        <div className="about-partners-marquee">
           <div className="marquee-container">
             <div className="marquee-track">
               {/* original set */}
               {partners.map((p) => (
-                <div className="partner-item" key={p.name}>
-                  <span className="icon">{p.icon}</span>
-                  <span className="name">{p.name}</span>
+                <div className="partner-item" key={p.alt}>
+                  <img
+                    className={['partner-logo', p.logoClass].filter(Boolean).join(' ')}
+                    src={p.src}
+                    alt={p.alt}
+                    loading="lazy"
+                    decoding="async"
+                  />
                 </div>
               ))}
               {/* duplicate for seamless loop */}
               {partners.map((p) => (
-                <div className="partner-item" key={`dup-${p.name}`}>
-                  <span className="icon">{p.icon}</span>
-                  <span className="name">{p.name}</span>
+                <div
+                  className="partner-item"
+                  key={`dup-${p.alt}`}
+                  aria-hidden="true"
+                >
+                  <img
+                    className={['partner-logo', p.logoClass].filter(Boolean).join(' ')}
+                    src={p.src}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                  />
                 </div>
               ))}
             </div>

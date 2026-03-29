@@ -426,67 +426,39 @@
   margin: 0;
 }
 
-/* ── Scrolling Partners ─────────────────────────────────────── */
+/* ── Scrolling Partners (full-width light band) ─────────────── */
 .about-partners {
-  background: #001b0e;
-  padding: 5rem 4rem 5.5rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  width: 100%;
+  margin: 0;
+  padding: 3.5rem 0 4rem;
+  background: linear-gradient(180deg, #f4f9f6 0%, #e8f1eb 48%, #e2ebe4 100%);
+  border-bottom: 1px solid rgba(15, 40, 28, 0.08);
+  box-sizing: border-box;
 }
-.about-partners-inner {
+.about-partners-header {
   max-width: 1280px;
   margin: 0 auto;
-  position: relative;
-  overflow: hidden;
-  background: linear-gradient(
-    155deg,
-    #044a2e 0%,
-    #01321e 42%,
-    #022a1c 100%
-  );
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 2rem;
-  padding: 3rem 3.5rem;
-  display: flex;
-  align-items: center;
-  gap: 3rem;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.1),
-    0 12px 40px rgba(0, 0, 0, 0.35),
-    0 0 0 1px rgba(158, 67, 0, 0.2),
-    0 0 72px -24px rgba(158, 67, 0, 0.45);
+  padding: 0 4rem 2.25rem;
+  text-align: center;
 }
-.about-partners-inner::before {
-  content: '';
-  position: absolute;
-  inset: -40% -20% auto 55%;
-  height: 120%;
-  background: radial-gradient(
-    ellipse at center,
-    rgba(249, 115, 22, 0.14) 0%,
-    transparent 62%
-  );
-  pointer-events: none;
-}
-.about-partners-inner > * {
-  position: relative;
-  z-index: 1;
-}
-.partners-label {
+.about-partners-title {
   font-family: 'Manrope', sans-serif;
+  font-size: clamp(1.65rem, 3vw, 2.35rem);
   font-weight: 700;
-  color: #f97316;
-  text-transform: uppercase;
-  letter-spacing: 0.22em;
-  font-size: 0.78rem;
-  white-space: nowrap;
-  text-shadow: 0 0 28px rgba(249, 115, 22, 0.35);
+  margin: 0;
+  letter-spacing: -0.03em;
+  color: #0d2818;
+}
+.about-partners-marquee {
+  width: 100%;
+  overflow: hidden;
 }
 .marquee-container {
-  flex: 1;
+  width: 100%;
   overflow: hidden;
   white-space: nowrap;
-  -webkit-mask-image: linear-gradient(to right, transparent, black 12%, black 88%, transparent);
-  mask-image: linear-gradient(to right, transparent, black 12%, black 88%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+  mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
 }
 @keyframes scroll {
   0%   { transform: translateX(0); }
@@ -501,26 +473,34 @@
 .partner-item {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  opacity: 0.88;
+  justify-content: center;
+  flex-shrink: 0;
+  opacity: 0.92;
   transition: opacity 0.2s, transform 0.2s;
   cursor: default;
+  padding: 0.25rem 0.5rem;
+  background: transparent;
 }
 .partner-item:hover {
   opacity: 1;
   transform: translateY(-1px);
 }
-.partner-item span.icon {
-  font-size: 1.95rem;
-  color: #fb923c;
-  filter: drop-shadow(0 0 10px rgba(249, 115, 22, 0.45));
+.partner-logo {
+  display: block;
+  height: clamp(2.25rem, 5vw, 3rem);
+  width: auto;
+  max-width: min(240px, 48vw);
+  object-fit: contain;
+  object-position: center;
 }
-.partner-item span.name {
-  font-family: 'Manrope', sans-serif;
-  font-weight: 700;
-  font-size: 1.02rem;
-  color: rgba(255, 255, 255, 0.96);
-  letter-spacing: -0.02em;
+/* Files with lots of internal padding — bump size so the mark matches peers */
+.partner-logo.partner-logo--boost {
+  height: clamp(3.57rem, 8.34vw, 4.89rem);
+  max-width: min(368px, 71vw);
+}
+.partner-logo.partner-logo--boost.partner-logo--coral {
+  height: clamp(3.93rem, 9.17vw, 5.38rem);
+  max-width: min(405px, 78vw);
 }
 
 /* ── Acknowledgment (tail band — separated from partners above) ─ */
@@ -623,7 +603,6 @@
 @media (max-width: 1024px) {
   .pillar-card-large { grid-column: span 12; }
   .pillar-card-small { grid-column: span 12; }
-  .about-partners-inner { flex-direction: column; align-items: flex-start; gap: 1.5rem; }
   .marquee-container { width: 100%; }
   .about-footer-inner {
     grid-template-columns: repeat(2, 1fr);
@@ -631,7 +610,11 @@
 }
 @media (max-width: 768px) {
   .about-hero, .about-pillars,
-  .about-policy, .about-engagement, .about-partners, .about-ack, .about-footer {
+  .about-policy, .about-engagement, .about-ack, .about-footer {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+  .about-partners-header {
     padding-left: 1.5rem;
     padding-right: 1.5rem;
   }
