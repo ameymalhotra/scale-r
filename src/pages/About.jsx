@@ -71,90 +71,12 @@ export default function About() {
               Addressing the $2.7 trillion climate challenge through localized
               adaptation and community-driven intelligence in Miami-Dade County.
             </p>
-            <a
-              className="about-hero-cta"
-              href="https://geography.as.miami.edu/research/geo_labs/scale-r/index.html"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Visit the SCALE-R Lab →
-            </a>
-          </div>
-
-          <div className="about-hero-card">
-            <div className="about-hero-card-glow" />
-            <div className="about-hero-card-icon">🌐</div>
-            <h3>Global Context</h3>
-            <p>
-              Since 1980, the U.S. alone has incurred over{' '}
-              <strong>$2.7 trillion</strong> in costs from climate-related
-              disasters. SCALE-R bridges research and grassroots community
-              resilience in one of the most vulnerable coastal regions in America.
-            </p>
+            <Link className="about-hero-cta" to="/dashboard">
+              Visit the tool →
+            </Link>
           </div>
         </div>
       </header>
-
-      {/* ── Mission Detail ───────────────────────────────────── */}
-      <section className="about-mission">
-        <div className="about-mission-inner">
-          <div>
-            <span className="about-label">Our Approach</span>
-            <h2>
-              Promoting <span className="accent">Localized</span> Adaptation
-            </h2>
-            <p className="body-text">
-              SCALE-R redefines how scientific inquiry meets urban planning. By
-              fostering deep partnerships between University of Miami researchers
-              and local residents, we ensure that resilience isn't just a metric
-              — it's a lived reality for coastal communities.
-            </p>
-            <p className="body-text" style={{ marginTop: '-1.5rem' }}>
-              The project uses place-based, participatory methods to incorporate
-              stakeholder knowledge into the design and evaluation of solutions,
-              while training graduate students and contributing to
-              interdisciplinary STEM workforce development.
-            </p>
-            <div className="about-mission-stats">
-              <div className="about-mission-stat">
-                <div className="about-mission-stat-num">01.</div>
-                <h4>Science to Action</h4>
-                <p>
-                  Translating complex climate modeling into actionable
-                  neighborhood strategies.
-                </p>
-              </div>
-              <div className="about-mission-stat">
-                <div className="about-mission-stat-num">02.</div>
-                <h4>Equity Centered</h4>
-                <p>
-                  Prioritizing vulnerable coastal populations often overlooked
-                  by traditional engineering approaches.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="about-mission-photos">
-            <div className="photo-a">
-              <div className="about-mission-photo">
-                <img
-                  src="/Images/about-stitch-hero-coast.jpg"
-                  alt="Miami-Dade coastline aerial"
-                />
-              </div>
-            </div>
-            <div>
-              <div className="about-mission-photo">
-                <img
-                  src="/Images/about-scale-r-hero.jpg"
-                  alt="SCALE-R project fieldwork"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* ── Core Pillars ─────────────────────────────────────── */}
       <section className="about-pillars">
