@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import mapboxgl from 'https://cdn.skypack.dev/mapbox-gl@2.15.0';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
@@ -165,33 +165,192 @@ const formatCityName = (cityName) => {
 };
 
 const SUPABASE_STORAGE = 'https://mmlqltdcpsuxirbqhugw.supabase.co/storage/v1/object/public/project-data';
-const PROJECTS_GEOJSON_FILE = 'projects_merged.geojson';
+const PROJECTS_GEOJSON_FILE = 'projects.geojson';
+
+/** Raster size for overlay glyphs; paired with pixelRatio 2 in addImage for crisp symbols. */
+const OVERLAY_SYMBOL_ICON_PX = 128;
+
+/** Mapbox image ids for point overlay symbol layers (registered before layer add; re-registered after setStyle). */
+const OVERLAY_SYMBOL_IMAGES = {
+  medicalCross: 'cr-overlay-medical-cross',
+  eocCross: 'cr-overlay-eoc-cross',
+  community: 'cr-overlay-community',
+  disasterRecovery: 'cr-overlay-disaster-recovery',
+  riskShelter: 'cr-overlay-risk-shelter',
+};
+
+function createImageDataFromCanvas(draw) {
+  const s = OVERLAY_SYMBOL_ICON_PX;
+  const canvas = document.createElement('canvas');
+  canvas.width = s;
+  canvas.height = s;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+  draw(ctx, s);
+  return ctx.getImageData(0, 0, s, s);
+}
+
+/** White disk + medical cross (equal arms); used for Emergency Medical. */
+function imageDataMedicalCross(fillHex) {
+  return createImageDataFromCanvas((ctx, s) => {
+    const cx = s / 2;
+    const cy = s / 2;
+    const r = s * 0.42;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.14)';
+    ctx.lineWidth = Math.max(1, s * 0.02);
+    ctx.stroke();
+    const arm = s * 0.3;
+    const thick = s * 0.11;
+    ctx.fillStyle = fillHex;
+    ctx.fillRect(cx - thick / 2, cy - arm / 2, thick, arm);
+    ctx.fillRect(cx - arm / 2, cy - thick / 2, arm, thick);
+  });
+}
+
+/** Orange disk + stylized community hall (roof + columns / windows). */
+function imageDataCommunityCenter() {
+  return createImageDataFromCanvas((ctx, s) => {
+    const cx = s / 2;
+    const cy = s / 2;
+    const r = s * 0.42;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fillStyle = '#e67e22';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+    ctx.lineWidth = Math.max(1, s * 0.018);
+    ctx.stroke();
+    ctx.fillStyle = '#ffffff';
+    const bodyW = s * 0.44;
+    const bodyH = s * 0.22;
+    const bodyTop = cy + s * 0.04;
+    ctx.fillRect(cx - bodyW / 2, bodyTop - bodyH / 2, bodyW, bodyH);
+    ctx.beginPath();
+    ctx.moveTo(cx, bodyTop - bodyH / 2 - s * 0.1);
+    ctx.lineTo(cx - bodyW / 2 - s * 0.02, bodyTop - bodyH / 2);
+    ctx.lineTo(cx + bodyW / 2 + s * 0.02, bodyTop - bodyH / 2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#c55a11';
+    const winW = s * 0.065;
+    const winGap = s * 0.085;
+    for (let i = -1; i <= 1; i += 1) {
+      ctx.fillRect(cx + i * winGap - winW / 2, bodyTop - s * 0.02, winW, s * 0.09);
+    }
+  });
+}
+
+/** Teal disk + shield + check (recovery / assistance). */
+function imageDataDisasterRecovery() {
+  return createImageDataFromCanvas((ctx, s) => {
+    const cx = s / 2;
+    const cy = s / 2;
+    const r = s * 0.42;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fillStyle = '#1abc9c';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+    ctx.lineWidth = Math.max(1, s * 0.018);
+    ctx.stroke();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - s * 0.26);
+    ctx.lineTo(cx + s * 0.22, cy - s * 0.08);
+    ctx.lineTo(cx + s * 0.18, cy + s * 0.28);
+    ctx.lineTo(cx - s * 0.18, cy + s * 0.28);
+    ctx.lineTo(cx - s * 0.22, cy - s * 0.08);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#1abc9c';
+    ctx.lineWidth = s * 0.05;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(cx - s * 0.12, cy + s * 0.02);
+    ctx.lineTo(cx - s * 0.02, cy + s * 0.14);
+    ctx.lineTo(cx + s * 0.16, cy - s * 0.1);
+    ctx.stroke();
+  });
+}
+
+/** Dark orange disk + simple house (shelter). */
+function imageDataRiskShelter() {
+  return createImageDataFromCanvas((ctx, s) => {
+    const cx = s / 2;
+    const cy = s / 2;
+    const r = s * 0.42;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fillStyle = '#d35400';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.lineWidth = Math.max(1, s * 0.018);
+    ctx.stroke();
+    ctx.fillStyle = '#ffffff';
+    const hw = s * 0.26;
+    const hh = s * 0.2;
+    ctx.fillRect(cx - hw / 2, cy + s * 0.02, hw, hh);
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - s * 0.12);
+    ctx.lineTo(cx - hw / 2 - s * 0.02, cy + s * 0.02);
+    ctx.lineTo(cx + hw / 2 + s * 0.02, cy + s * 0.02);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#d35400';
+    ctx.fillRect(cx - s * 0.035, cy + s * 0.09, s * 0.07, s * 0.1);
+  });
+}
+
+function registerOverlaySymbolImages(mapInstance) {
+  if (!mapInstance) return;
+  const reg = (id, imageData) => {
+    if (!imageData || mapInstance.hasImage(id)) return;
+    try {
+      mapInstance.addImage(id, imageData, { pixelRatio: 2 });
+    } catch (e) {
+      console.warn('[Overlay] addImage failed', id, e);
+    }
+  };
+  reg(OVERLAY_SYMBOL_IMAGES.medicalCross, imageDataMedicalCross('#c0392b'));
+  reg(OVERLAY_SYMBOL_IMAGES.eocCross, imageDataMedicalCross('#f39c12'));
+  reg(OVERLAY_SYMBOL_IMAGES.community, imageDataCommunityCenter());
+  reg(OVERLAY_SYMBOL_IMAGES.disasterRecovery, imageDataDisasterRecovery());
+  reg(OVERLAY_SYMBOL_IMAGES.riskShelter, imageDataRiskShelter());
+}
 
 const OVERLAY_LAYERS_CONFIG = [
-  { id: 'overlay-community-centers', label: 'Community Centers', url: `${SUPABASE_STORAGE}/Community%20Cent_FeaturesToJSO.geojson`, style: { type: 'circle', paint: { 'circle-color': '#e67e22', 'circle-radius': 5, 'circle-opacity': 0.8, 'circle-stroke-color': '#d35400', 'circle-stroke-width': 1 } } },
-  { id: 'overlay-communications', label: 'Communications', url: `${SUPABASE_STORAGE}/Communications_FeaturesToJSO.geojson`, style: { type: 'circle', paint: { 'circle-color': '#9b59b6', 'circle-radius': 5, 'circle-opacity': 0.8, 'circle-stroke-color': '#8e44ad', 'circle-stroke-width': 1 } } },
-  { id: 'overlay-disaster-recovery', label: 'Disaster Recovery Centers', url: `${SUPABASE_STORAGE}/Disaster%20Recov_FeaturesToJSO.geojson`, style: { type: 'circle', paint: { 'circle-color': '#1abc9c', 'circle-radius': 5, 'circle-opacity': 0.8, 'circle-stroke-color': '#16a085', 'circle-stroke-width': 1 } } },
-  { id: 'overlay-emergency-medical', label: 'Emergency Medical', url: `${SUPABASE_STORAGE}/EmergencyMedical_FeaturesToJSO.geojson`, style: { type: 'circle', paint: { 'circle-color': '#c0392b', 'circle-radius': 5, 'circle-opacity': 0.8, 'circle-stroke-color': '#922b21', 'circle-stroke-width': 1 } }, popupTitleField: 'Name', popupFields: ['Address', 'City'], pointLonLatFields: ['X', 'Y'] },
-  { id: 'overlay-emergency-ops', label: 'Emergency Operations Centers', url: `${SUPABASE_STORAGE}/Emergency%20Oper_FeaturesToJSO.geojson`, style: { type: 'circle', paint: { 'circle-color': '#f39c12', 'circle-radius': 5, 'circle-opacity': 0.8, 'circle-stroke-color': '#e67e22', 'circle-stroke-width': 1 } } },
+  { id: 'overlay-community-centers', label: 'Community Centers', url: `${SUPABASE_STORAGE}/Community%20Cent_FeaturesToJSO.geojson`, style: { type: 'symbol', iconImage: OVERLAY_SYMBOL_IMAGES.community, iconSize: 0.42 } },
+  { id: 'overlay-disaster-recovery', label: 'Disaster Recovery Centers', url: `${SUPABASE_STORAGE}/Disaster%20Recov_FeaturesToJSO.geojson`, style: { type: 'symbol', iconImage: OVERLAY_SYMBOL_IMAGES.disasterRecovery, iconSize: 0.42 } },
+  { id: 'overlay-emergency-medical', label: 'Emergency Medical', url: `${SUPABASE_STORAGE}/EmergencyMedical_FeaturesToJSO.geojson`, style: { type: 'symbol', iconImage: OVERLAY_SYMBOL_IMAGES.medicalCross, iconSize: 0.42 }, popupTitleField: 'Name', popupFields: ['Address', 'City'], pointLonLatFields: ['X', 'Y'] },
+  { id: 'overlay-emergency-ops', label: 'Emergency Operations Centers', url: `${SUPABASE_STORAGE}/Emergency%20Oper_FeaturesToJSO.geojson`, style: { type: 'symbol', iconImage: OVERLAY_SYMBOL_IMAGES.eocCross, iconSize: 0.42 } },
   { id: 'overlay-evacuation-routes', label: 'Evacuation Routes', url: `${SUPABASE_STORAGE}/Evacuation%20Rou_FeaturesToJSO.geojson`, style: { type: 'line', paint: { 'line-color': '#34495e', 'line-width': 3 } } },
   { id: 'overlay-military', label: 'Military Installations', url: `${SUPABASE_STORAGE}/MILITARY_FeaturesToJSO.geojson`, style: { type: 'fill', paint: { 'fill-color': '#2c3e50', 'fill-opacity': 0.35, 'fill-outline-color': '#1a252f', 'line-color': '#1a252f' } }, popupTitleField: 'NAME', popupFields: ['GEOID', 'FEMAIndexR'] },
-  { id: 'overlay-risk-shelters', label: 'Risk Shelters', url: `${SUPABASE_STORAGE}/Risk%20Shelter%20I_FeaturesToJSO.geojson`, style: { type: 'circle', paint: { 'circle-color': '#d35400', 'circle-radius': 5, 'circle-opacity': 0.8, 'circle-stroke-color': '#a04000', 'circle-stroke-width': 1 } }, popupTitleField: 'Name', popupFields: ['Address', 'City'] },
+  { id: 'overlay-risk-shelters', label: 'Risk Shelters', url: `${SUPABASE_STORAGE}/Risk%20Shelter%20I_FeaturesToJSO.geojson`, style: { type: 'symbol', iconImage: OVERLAY_SYMBOL_IMAGES.riskShelter, iconSize: 0.42 }, popupTitleField: 'Name', popupFields: ['Address', 'City'] },
 ];
 
 /** Combined Critical Infrastructure sublayers: one UI toggle loads multiple GeoJSON sources. */
 const OVERLAY_GROUP_CRITICAL_FACILITIES = {
   id: 'overlay-group-critical-facilities',
-  label: 'Emergency medical, EOC & military',
+  label: 'Emergency & Medical Services',
   memberIds: ['overlay-emergency-medical', 'overlay-emergency-ops', 'overlay-military'],
 };
 
 const OVERLAY_GROUP_RISK_AND_RECOVERY = {
   id: 'overlay-group-risk-recovery',
-  label: 'Risk shelters & disaster recovery',
+  label: 'Risk and recovery centers',
   memberIds: ['overlay-risk-shelters', 'overlay-disaster-recovery'],
 };
 
 const CRITICAL_INFRASTRUCTURE_SUBLAYER_GROUPS = [OVERLAY_GROUP_CRITICAL_FACILITIES, OVERLAY_GROUP_RISK_AND_RECOVERY];
+const CRITICAL_INFRA_GROUP_LEGEND_REPRESENTATIVE_LAYER_ID = {
+  [OVERLAY_GROUP_CRITICAL_FACILITIES.id]: 'overlay-emergency-medical',
+  [OVERLAY_GROUP_RISK_AND_RECOVERY.id]: 'overlay-disaster-recovery',
+};
 
 const OVERLAY_LAYER_ID_TO_GROUP_ID = (() => {
   const m = {};
@@ -218,6 +377,25 @@ const CRITICAL_INFRASTRUCTURE_SUBLAYER_UI_ITEMS = [
   ...OVERLAY_LAYERS_CONFIG.filter((c) => !OVERLAY_LAYER_ID_TO_GROUP_ID[c.id]).map((c) => ({ kind: 'layer', id: c.id, label: c.label })),
 ];
 
+/** Nested panel under Critical Infrastructure — reads as child of main modelling switches. */
+const criticalInfraSublayerNestStyle = {
+  marginTop: '8px',
+  padding: '10px 10px 10px 12px',
+  borderRadius: '8px',
+  background: 'rgba(27, 58, 75, 0.055)',
+  borderLeft: '3px solid rgba(52, 152, 219, 0.5)',
+  boxShadow: 'inset 0 1px 2px rgba(255, 255, 255, 0.55)',
+};
+
+const criticalInfraSublayerHeadingStyle = {
+  fontSize: '0.65em',
+  fontWeight: 700,
+  letterSpacing: '0.07em',
+  textTransform: 'uppercase',
+  color: '#607d8b',
+  marginBottom: '6px',
+};
+
 /** Matches filter sidebar frosted glass (map overlays). */
 const mapOverlayGlassStyle = {
   background: 'rgba(255, 255, 255, 0.5)',
@@ -240,8 +418,15 @@ const MOBILE_CENSUS_OVERLAY_BOTTOM = 'calc(62px + min(62vh, 520px) + 20px)';
 /** Above modelling/legend map overlays (z-index 1000); below mobile filter drawer backdrop (1099). */
 const SEARCH_BAR_OVERLAY_Z_INDEX = 1050;
 
+/** Gap (px) between search dropdown bottom and top of modelling layer stack */
+const SEARCH_DROPDOWN_GAP_ABOVE_MODELLING = 12;
+const SEARCH_DROPDOWN_MARGIN_TOP = 4;
+
 const Dashboard = () => {
   const mapContainer = useRef(null);
+  const searchInputRowRef = useRef(null);
+  const desktopMapOverlaysRef = useRef(null);
+  const mobileMapOverlaysRef = useRef(null);
   const map = useRef(null);
   const districtsRef = useRef({});
   const censusDataRef = useRef(null);
@@ -277,6 +462,7 @@ const Dashboard = () => {
   const [searchResults, setSearchResults] = useState([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [selectedResultIndex, setSelectedResultIndex] = useState(-1);
+  const [searchDropdownMaxHeightPx, setSearchDropdownMaxHeightPx] = useState(400);
 
   const [criticalInfraSublayerKeys, setCriticalInfraSublayerKeys] = useState([]);
   const [loadingOverlayLayer, setLoadingOverlayLayer] = useState(null);
@@ -306,6 +492,64 @@ const Dashboard = () => {
   useEffect(() => {
     isMobileRef.current = isMobile;
   }, [isMobile]);
+
+  const updateSearchDropdownMaxHeight = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    const inputRow = searchInputRowRef.current;
+    const panel = isMobileRef.current ? mobileMapOverlaysRef.current : desktopMapOverlaysRef.current;
+    const fallback = 400;
+    if (!inputRow) {
+      setSearchDropdownMaxHeightPx(fallback);
+      return;
+    }
+    if (!panel) {
+      setSearchDropdownMaxHeightPx(fallback);
+      return;
+    }
+    const inputBottom = inputRow.getBoundingClientRect().bottom;
+    const panelTop = panel.getBoundingClientRect().top;
+    const raw = panelTop - inputBottom - SEARCH_DROPDOWN_MARGIN_TOP - SEARCH_DROPDOWN_GAP_ABOVE_MODELLING;
+    const capped = Math.min(fallback, Math.max(80, Math.floor(raw)));
+    setSearchDropdownMaxHeightPx(capped);
+  }, []);
+
+  useLayoutEffect(() => {
+    updateSearchDropdownMaxHeight();
+  }, [
+    updateSearchDropdownMaxHeight,
+    isMobile,
+    censusLayersReady,
+    censusStats,
+    loading,
+    showSearchResults,
+    searchResults.length,
+    activeCensusView,
+    criticalInfraSublayerKeys,
+    enabledOverlayLayerIds,
+  ]);
+
+  useEffect(() => {
+    window.addEventListener('resize', updateSearchDropdownMaxHeight);
+    const ro = new ResizeObserver(() => updateSearchDropdownMaxHeight());
+    const d = desktopMapOverlaysRef.current;
+    const m = mobileMapOverlaysRef.current;
+    const inputRow = searchInputRowRef.current;
+    if (d) ro.observe(d);
+    if (m) ro.observe(m);
+    if (inputRow) ro.observe(inputRow);
+    return () => {
+      window.removeEventListener('resize', updateSearchDropdownMaxHeight);
+      ro.disconnect();
+    };
+  }, [
+    updateSearchDropdownMaxHeight,
+    isMobile,
+    censusLayersReady,
+    censusStats,
+    showSearchResults,
+    searchResults.length,
+    loading,
+  ]);
 
   // Apply mobile rotation (disable rotation on mobile) when map is ready and isMobile/loading change
   useEffect(() => {
@@ -651,9 +895,19 @@ const Dashboard = () => {
     const layerMapId = layerId + '-layer';
     if (mapInstance.getSource(layerId)) return;
     mapInstance.addSource(layerId, { type: 'geojson', data: geojson });
-    const { type: layerType, paint } = config.style || {};
+    const styleCfg = config.style || {};
+    const { type: layerType, paint } = styleCfg;
     const baseLayer = { id: layerMapId, source: layerId, layout: { visibility: 'visible' }, paint: {} };
-    if (layerType === 'circle') {
+    if (layerType === 'symbol') {
+      registerOverlaySymbolImages(mapInstance);
+      baseLayer.type = 'symbol';
+      baseLayer.layout['icon-image'] = styleCfg.iconImage;
+      baseLayer.layout['icon-size'] = styleCfg.iconSize ?? 0.4;
+      baseLayer.layout['icon-allow-overlap'] = true;
+      baseLayer.layout['icon-ignore-placement'] = false;
+      baseLayer.layout['icon-anchor'] = 'center';
+      baseLayer.filter = ['any', ['==', ['geometry-type'], 'Point'], ['==', ['geometry-type'], 'MultiPoint']];
+    } else if (layerType === 'circle') {
       baseLayer.type = 'circle';
       baseLayer.paint['circle-color'] = paint['circle-color'] ?? '#3498db';
       baseLayer.paint['circle-radius'] = paint['circle-radius'] ?? 5;
@@ -1324,12 +1578,8 @@ const Dashboard = () => {
       }
 
       try {
-        const projectsGeoJsonUrl =
-          import.meta.env.VITE_SUPABASE_URL &&
-          `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/project-data/${PROJECTS_GEOJSON_FILE}`;
-        if (!projectsGeoJsonUrl) {
-          throw new Error('VITE_SUPABASE_URL is not set. Set it in .env to load project data from Storage.');
-        }
+        const supabaseBaseUrl = import.meta.env.VITE_SUPABASE_URL || SUPABASE_STORAGE.split('/storage/')[0];
+        const projectsGeoJsonUrl = `${supabaseBaseUrl}/storage/v1/object/public/project-data/${PROJECTS_GEOJSON_FILE}`;
         const response = await fetch(projectsGeoJsonUrl, { cache: 'no-store' });
 
         if (!response.ok) {
@@ -1705,6 +1955,63 @@ const Dashboard = () => {
   const legendRatings = censusStats?.risk?.ratings || [];
   const sortedRatings = ['Very Low', 'Relatively Low', 'Relatively Moderate', 'Relatively High', 'Very High']
     .filter(rating => legendRatings.includes(rating));
+  const criticalInfraLegendItems = useMemo(
+    () =>
+      criticalInfraSublayerKeys
+        .map((key) => {
+          const group = CRITICAL_INFRASTRUCTURE_SUBLAYER_GROUPS.find((g) => g.id === key);
+          if (group) {
+            const representativeLayerId = CRITICAL_INFRA_GROUP_LEGEND_REPRESENTATIVE_LAYER_ID[group.id] || group.memberIds[0];
+            const config = OVERLAY_LAYERS_CONFIG.find((c) => c.id === representativeLayerId);
+            if (!config?.style) return null;
+            return { id: group.id, label: group.label, config };
+          }
+          const config = OVERLAY_LAYERS_CONFIG.find((c) => c.id === key);
+          if (!config?.style) return null;
+          return { id: key, label: config.label, config };
+        })
+        .filter(Boolean),
+    [criticalInfraSublayerKeys]
+  );
+
+  const renderOverlayLegendSymbol = (config) => {
+    if (!config?.style) return null;
+    const { type, paint, iconImage } = config.style;
+    if (type === 'line') {
+      const color = paint?.['line-color'] ?? '#666';
+      return <div style={{ width: '16px', height: '3px', backgroundColor: color, borderRadius: 2, flexShrink: 0 }} />;
+    }
+    if (type === 'fill') {
+      const color = paint?.['fill-color'] ?? '#666';
+      const border = paint?.['fill-outline-color'] ?? paint?.['line-color'] ?? '#4d4d4d';
+      return <div style={{ width: '12px', height: '12px', backgroundColor: color, border: `1px solid ${border}`, borderRadius: 2, flexShrink: 0 }} />;
+    }
+    if (type === 'symbol') {
+      // Keep legend icons visually aligned with map symbology.
+      if (iconImage === OVERLAY_SYMBOL_IMAGES.medicalCross || iconImage === OVERLAY_SYMBOL_IMAGES.eocCross) {
+        const cross = iconImage === OVERLAY_SYMBOL_IMAGES.medicalCross ? '#c0392b' : '#f39c12';
+        return (
+          <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#fff', border: '1px solid rgba(0,0,0,0.28)', position: 'relative', flexShrink: 0 }}>
+            <div style={{ position: 'absolute', left: '50%', top: '20%', transform: 'translateX(-50%)', width: '3px', height: '60%', borderRadius: 1, backgroundColor: cross }} />
+            <div style={{ position: 'absolute', left: '20%', top: '50%', transform: 'translateY(-50%)', width: '60%', height: '3px', borderRadius: 1, backgroundColor: cross }} />
+          </div>
+        );
+      }
+      if (iconImage === OVERLAY_SYMBOL_IMAGES.community) {
+        return <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#e67e22', border: '1px solid #d35400', flexShrink: 0 }} />;
+      }
+      if (iconImage === OVERLAY_SYMBOL_IMAGES.disasterRecovery) {
+        return <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#1abc9c', border: '1px solid #16a085', flexShrink: 0 }} />;
+      }
+      if (iconImage === OVERLAY_SYMBOL_IMAGES.riskShelter) {
+        return <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#d35400', border: '1px solid #a04000', flexShrink: 0 }} />;
+      }
+      return <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#666', border: '1px solid #555', flexShrink: 0 }} />;
+    }
+    const color = paint?.['circle-color'] ?? '#666';
+    const border = paint?.['circle-stroke-color'] ?? color;
+    return <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: color, border: `1px solid ${border}`, flexShrink: 0 }} />;
+  };
 
   // Extract unique values for filters
   const getUniqueValues = (field) => {
@@ -2022,10 +2329,11 @@ const Dashboard = () => {
               aria-label={projectsLayerVisible ? 'Hide projects layer' : 'Show projects layer'}
               onClick={() => setProjectsLayerVisible(v => !v)}
               style={{
-                width: 40,
-                height: 22,
-                borderRadius: 11,
+                width: 32,
+                height: 18,
+                borderRadius: 9,
                 border: '1px solid rgba(0,0,0,0.2)',
+                boxSizing: 'border-box',
                 background: projectsLayerVisible ? '#3498db' : 'rgba(200,200,200,0.8)',
                 cursor: 'pointer',
                 padding: 0,
@@ -2037,13 +2345,14 @@ const Dashboard = () => {
               <span
                 style={{
                   position: 'absolute',
-                  top: 2,
-                  left: projectsLayerVisible ? 20 : 2,
-                  width: 16,
-                  height: 16,
+                  top: '50%',
+                  left: projectsLayerVisible ? 14 : 2,
+                  width: 14,
+                  height: 14,
                   borderRadius: '50%',
                   background: '#fff',
                   boxShadow: '0 1px 3px rgba(0,0,0,0.25)',
+                  transform: 'translateY(-50%)',
                   transition: 'left 0.2s ease'
                 }}
               />
@@ -2470,12 +2779,15 @@ const Dashboard = () => {
               borderRadius: isMobile ? '8px' : '12px',
               overflow: 'visible'
             }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                padding: isMobile ? '8px 12px' : '12px 16px',
-                gap: isMobile ? '8px' : '12px'
-              }}>
+              <div
+                ref={searchInputRowRef}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: isMobile ? '8px 12px' : '12px 16px',
+                  gap: isMobile ? '8px' : '12px'
+                }}
+              >
                 <svg
                   width={isMobile ? 18 : 20}
                   height={isMobile ? 18 : 20}
@@ -2572,7 +2884,7 @@ const Dashboard = () => {
                   left: 0,
                   right: 0,
                   marginTop: '4px',
-                  maxHeight: '400px',
+                  maxHeight: searchDropdownMaxHeightPx,
                   overflowY: 'auto',
                   ...mapOverlayGlassStyle,
                   borderRadius: '12px',
@@ -2657,6 +2969,8 @@ const Dashboard = () => {
                   right: 0,
                   marginTop: '4px',
                   padding: '16px',
+                  maxHeight: searchDropdownMaxHeightPx,
+                  overflowY: 'auto',
                   ...mapOverlayGlassStyle,
                   borderRadius: '12px',
                   zIndex: 2,
@@ -2681,6 +2995,7 @@ const Dashboard = () => {
                 <>
                   {/* Mobile: Modelling Layer switches above Satellite */}
                   <div
+                    ref={mobileMapOverlaysRef}
                     style={{
                       position: 'absolute',
                       bottom: '62px',
@@ -2705,7 +3020,7 @@ const Dashboard = () => {
                           return (
                             <React.Fragment key={view}>
                               <div
-                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '8px' }}
+                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '4px' }}
                               >
                                 <span style={{ fontSize: '0.85em', fontWeight: 500, color: '#1b3a4b', flex: 1, minWidth: 0 }}>{label}</span>
                                 <button
@@ -2719,16 +3034,10 @@ const Dashboard = () => {
                                   <span className="modelling-switch-thumb" aria-hidden />
                                 </button>
                               </div>
-                              <div
-                                style={{
-                                  marginTop: '2px',
-                                  marginBottom: '4px',
-                                  paddingTop: '10px',
-                                  borderTop: '1px solid rgba(0,0,0,0.08)',
-                                }}
-                              >
-                                <div style={{ fontSize: '0.7em', color: '#546e7a', marginBottom: '8px', lineHeight: 1.35 }}>
-                                  Sublayers (max 2). Combined layers count as one. Visible when Critical Infrastructure is on.
+                              <div style={criticalInfraSublayerNestStyle}>
+                                <div style={criticalInfraSublayerHeadingStyle}>Sublayers</div>
+                                <div style={{ fontSize: '0.68em', color: '#78909c', marginBottom: '8px', lineHeight: 1.4 }}>
+                                  Max 2 at a time. Each combined group counts as one. Shown when Critical Infrastructure is on.
                                 </div>
                                 <div role="group" aria-label="Critical infrastructure sublayers">
                                   {CRITICAL_INFRASTRUCTURE_SUBLAYER_UI_ITEMS.map((item) => {
@@ -2736,25 +3045,32 @@ const Dashboard = () => {
                                     return (
                                       <div
                                         key={item.id}
-                                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '8px' }}
+                                        style={{
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'space-between',
+                                          gap: '8px',
+                                          marginBottom: '6px',
+                                          paddingLeft: '2px',
+                                        }}
                                       >
-                                        <span style={{ fontSize: '0.78em', fontWeight: 500, color: '#1b3a4b', flex: 1, minWidth: 0, lineHeight: 1.25 }}>{item.label}</span>
+                                        <span style={{ fontSize: '0.76em', fontWeight: 500, color: '#455a64', flex: 1, minWidth: 0, lineHeight: 1.25 }}>{item.label}</span>
                                         <button
                                           type="button"
                                           role="switch"
-                                          className="modelling-switch-track"
+                                          className="modelling-switch-track modelling-switch-track--nested"
                                           aria-checked={subOn}
                                           aria-label={`${item.label} sublayer`}
                                           onClick={() => handleCriticalInfraSublayerToggle(item.id)}
                                         >
-                                          <span className="modelling-switch-thumb" aria-hidden />
+                                          <span className="modelling-switch-thumb modelling-switch-thumb--nested" aria-hidden />
                                         </button>
                                       </div>
                                     );
                                   })}
                                 </div>
                                 {loadingOverlayLayer && (
-                                  <div style={{ fontSize: '0.78em', color: '#546e7a', marginTop: '6px' }}>Loading layer…</div>
+                                  <div style={{ fontSize: '0.72em', color: '#78909c', marginTop: '4px' }}>Loading layer…</div>
                                 )}
                               </div>
                             </React.Fragment>
@@ -2780,24 +3096,16 @@ const Dashboard = () => {
                         );
                       })}
                     </div>
-                    {censusVisible && activeCensusView === 'critical-infrastructure' && enabledOverlayLayerIds.length > 0 && (
+                    {censusVisible && activeCensusView === 'critical-infrastructure' && criticalInfraLegendItems.length > 0 && (
                       <>
                         <div style={{ borderTop: '1px solid rgba(0,0,0,0.08)', marginTop: '10px', paddingTop: '10px', fontSize: '0.88em', fontWeight: 600, color: '#1b3a4b', marginBottom: '6px' }}>Data markers</div>
                         <div style={{ maxHeight: '100px', overflowY: 'auto' }}>
-                        {enabledOverlayLayerIds.map((layerId) => {
-                          const config = OVERLAY_LAYERS_CONFIG.find((c) => c.id === layerId);
-                          if (!config?.style?.paint) return null;
-                          const paint = config.style.paint;
-                          const isLine = config.style.type === 'line';
-                          const color = paint['circle-color'] ?? paint['line-color'] ?? '#666';
+                        {criticalInfraLegendItems.map((item) => {
+                          const { id, label, config } = item;
                           return (
-                            <div key={layerId} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', fontSize: '0.85em', color: '#1b3a4b' }}>
-                              {isLine ? (
-                                <div style={{ width: '16px', height: '3px', backgroundColor: color, borderRadius: 1 }} />
-                              ) : (
-                                <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: color, border: `1px solid ${paint['circle-stroke-color'] || color}` }} />
-                              )}
-                              <span>{config.label}</span>
+                            <div key={id} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', fontSize: '0.85em', color: '#1b3a4b' }}>
+                              {renderOverlayLegendSymbol(config)}
+                              <span>{label}</span>
                             </div>
                           );
                         })}
@@ -2833,17 +3141,20 @@ const Dashboard = () => {
                   )}
                 </>
               ) : (
-                <div style={{
-                  position: 'absolute',
-                  bottom: '20px',
-                  right: '20px',
-                  zIndex: 1000,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '12px',
-                  width: '320px',
-                  maxHeight: 'calc(100vh - 100px)',
-                }}>
+                <div
+                  ref={desktopMapOverlaysRef}
+                  style={{
+                    position: 'absolute',
+                    bottom: '20px',
+                    right: '20px',
+                    zIndex: 1000,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px',
+                    width: '320px',
+                    maxHeight: 'calc(100vh - 100px)',
+                  }}
+                >
                   <div style={{
                     ...mapOverlayGlassStyle,
                     padding: '16px',
@@ -2860,9 +3171,9 @@ const Dashboard = () => {
                           return (
                             <React.Fragment key={view}>
                               <div
-                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', marginBottom: '8px' }}
+                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', marginBottom: '4px' }}
                               >
-                                <span style={{ fontSize: '0.95em', fontWeight: 500, color: '#2c3e50' }}>{label}</span>
+                                <span style={{ fontSize: '0.95em', fontWeight: 500, color: '#2c3e50', flex: 1, minWidth: 0 }}>{label}</span>
                                 <button
                                   type="button"
                                   role="switch"
@@ -2874,16 +3185,10 @@ const Dashboard = () => {
                                   <span className="modelling-switch-thumb" aria-hidden />
                                 </button>
                               </div>
-                              <div
-                                style={{
-                                  marginTop: '4px',
-                                  marginBottom: '4px',
-                                  paddingTop: '12px',
-                                  borderTop: '1px solid rgba(0,0,0,0.08)',
-                                }}
-                              >
-                                <div style={{ fontSize: '0.75em', color: '#546e7a', marginBottom: '10px', lineHeight: 1.35 }}>
-                                  Sublayers (max 2). Combined layers count as one. Visible when Critical Infrastructure is on.
+                              <div style={criticalInfraSublayerNestStyle}>
+                                <div style={{ ...criticalInfraSublayerHeadingStyle, fontSize: '0.68em' }}>Sublayers</div>
+                                <div style={{ fontSize: '0.72em', color: '#78909c', marginBottom: '10px', lineHeight: 1.4 }}>
+                                  Max 2 at a time. Each combined group counts as one. Shown when Critical Infrastructure is on.
                                 </div>
                                 <div role="group" aria-label="Critical infrastructure sublayers">
                                   {CRITICAL_INFRASTRUCTURE_SUBLAYER_UI_ITEMS.map((item) => {
@@ -2891,25 +3196,32 @@ const Dashboard = () => {
                                     return (
                                       <div
                                         key={item.id}
-                                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', marginBottom: '8px' }}
+                                        style={{
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'space-between',
+                                          gap: '6px',
+                                          marginBottom: '6px',
+                                          paddingLeft: '2px',
+                                        }}
                                       >
-                                        <span style={{ fontSize: '0.88em', fontWeight: 500, color: '#2c3e50', flex: 1, minWidth: 0, lineHeight: 1.3 }}>{item.label}</span>
+                                        <span style={{ fontSize: '0.84em', fontWeight: 500, color: '#455a64', flex: 1, minWidth: 0, lineHeight: 1.3 }}>{item.label}</span>
                                         <button
                                           type="button"
                                           role="switch"
-                                          className="modelling-switch-track"
+                                          className="modelling-switch-track modelling-switch-track--nested"
                                           aria-checked={subOn}
                                           aria-label={`${item.label} sublayer`}
                                           onClick={() => handleCriticalInfraSublayerToggle(item.id)}
                                         >
-                                          <span className="modelling-switch-thumb" aria-hidden />
+                                          <span className="modelling-switch-thumb modelling-switch-thumb--nested" aria-hidden />
                                         </button>
                                       </div>
                                     );
                                   })}
                                 </div>
                                 {loadingOverlayLayer && (
-                                  <div style={{ fontSize: '0.82em', color: '#546e7a', marginTop: '6px' }}>Loading layer…</div>
+                                  <div style={{ fontSize: '0.78em', color: '#78909c', marginTop: '4px' }}>Loading layer…</div>
                                 )}
                               </div>
                             </React.Fragment>
@@ -2918,9 +3230,9 @@ const Dashboard = () => {
                         return (
                           <div
                             key={view}
-                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', marginBottom: '8px' }}
+                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', marginBottom: '8px' }}
                           >
-                            <span style={{ fontSize: '0.95em', fontWeight: 500, color: '#2c3e50' }}>{label}</span>
+                            <span style={{ fontSize: '0.95em', fontWeight: 500, color: '#2c3e50', flex: 1, minWidth: 0 }}>{label}</span>
                             <button
                               type="button"
                               role="switch"
@@ -2940,11 +3252,11 @@ const Dashboard = () => {
               {/* Legend: single fixed-size container so position/size stay constant */}
               <div style={{
                 ...mapOverlayGlassStyle,
-                padding: '16px',
+                padding: '10px 12px 4px',
                 borderRadius: '12px',
                 width: '320px',
-                minHeight: '120px',
-                height: '120px',
+                minHeight: '96px',
+                height: '96px',
                 boxSizing: 'border-box',
                 overflow: 'hidden',
                 display: 'flex',
@@ -2952,23 +3264,23 @@ const Dashboard = () => {
               }}>
                 {!(censusVisible && activeCensusView === 'risk' && sortedRatings.length > 0) &&
                  !(censusVisible && activeCensusView === 'pred3pe' && censusStats?.pred3PE) &&
-                 !(censusVisible && activeCensusView === 'critical-infrastructure' && enabledOverlayLayerIds.length > 0) && (
-                  <div style={{ fontSize: '1em', fontWeight: 600, color: '#1b3a4b' }}>
+                 !(censusVisible && activeCensusView === 'critical-infrastructure' && criticalInfraLegendItems.length > 0) && (
+                  <div style={{ fontSize: '0.95em', fontWeight: 600, color: '#1b3a4b' }}>
                     Select a layer
                   </div>
                 )}
                 {censusVisible && activeCensusView === 'risk' && sortedRatings.length > 0 && (
                   <>
-                    <div style={{ fontSize: '1em', fontWeight: 600, color: '#1b3a4b', marginBottom: '12px' }}>
+                    <div style={{ fontSize: '0.95em', fontWeight: 600, color: '#1b3a4b', marginBottom: '6px' }}>
                       FEMA Risk Rating
                     </div>
-                    <div style={{ marginBottom: '8px' }}>
+                    <div style={{ marginBottom: '4px' }}>
                       <div style={{
                         width: '100%',
-                        height: '20px',
+                        height: '14px',
                         borderRadius: '4px',
                         overflow: 'hidden',
-                        marginBottom: '8px'
+                        marginBottom: '4px'
                       }}>
                         <div style={{
                           width: '100%',
@@ -2976,7 +3288,7 @@ const Dashboard = () => {
                           background: 'linear-gradient(to right, #FFF9C4 0%, #FFF9C4 20%, #FFE082 25%, #FFE082 40%, #FFB74D 45%, #FFB74D 60%, #FF8A65 65%, #FF8A65 80%, #E64A19 85%, #E64A19 100%)'
                         }}></div>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75em', color: '#546e7a' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7em', color: '#546e7a' }}>
                         <span>Very Low</span>
                         <span>Very High</span>
                       </div>
@@ -2985,16 +3297,16 @@ const Dashboard = () => {
                 )}
                 {censusVisible && activeCensusView === 'pred3pe' && censusStats?.pred3PE && (
                   <>
-                    <div style={{ fontSize: '1em', fontWeight: 600, color: '#1b3a4b', marginBottom: '12px' }}>
+                    <div style={{ fontSize: '0.95em', fontWeight: 600, color: '#1b3a4b', marginBottom: '6px' }}>
                       Resilience Index (%)
                     </div>
-                    <div style={{ marginBottom: '8px' }}>
+                    <div style={{ marginBottom: '4px' }}>
                       <div style={{
                         width: '100%',
-                        height: '20px',
+                        height: '14px',
                         borderRadius: '4px',
                         overflow: 'hidden',
-                        marginBottom: '8px'
+                        marginBottom: '4px'
                       }}>
                         <div style={{
                           width: '100%',
@@ -3002,33 +3314,25 @@ const Dashboard = () => {
                           background: 'linear-gradient(to right, #E8D4F5 0%, #E8D4F5 10%, #D4B3E8 20%, #C298DB 35%, #A866C7 50%, #7A3FA8 65%, #5A1D85 80%, #2D0045 90%, #2D0045 100%)'
                         }}></div>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75em', color: '#546e7a' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7em', color: '#546e7a' }}>
                         <span>{censusStats.pred3PE.min?.toFixed(1) || '0'}%</span>
                         <span>{censusStats.pred3PE.max?.toFixed(1) || '0'}%</span>
                       </div>
                     </div>
                   </>
                 )}
-                {censusVisible && activeCensusView === 'critical-infrastructure' && enabledOverlayLayerIds.length > 0 && (
+                {censusVisible && activeCensusView === 'critical-infrastructure' && criticalInfraLegendItems.length > 0 && (
                   <>
-                    <div style={{ fontSize: '1em', fontWeight: 600, color: '#1b3a4b', marginBottom: '12px', flexShrink: 0 }}>
+                    <div style={{ fontSize: '0.95em', fontWeight: 600, color: '#1b3a4b', marginBottom: '6px', flexShrink: 0 }}>
                       Data markers
                     </div>
                     <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-                      {enabledOverlayLayerIds.map((layerId) => {
-                        const config = OVERLAY_LAYERS_CONFIG.find((c) => c.id === layerId);
-                        if (!config?.style?.paint) return null;
-                        const paint = config.style.paint;
-                        const isLine = config.style.type === 'line';
-                        const color = paint['circle-color'] ?? paint['line-color'] ?? '#666';
+                      {criticalInfraLegendItems.map((item) => {
+                        const { id, label, config } = item;
                         return (
-                          <div key={layerId} style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px', fontSize: '0.9em', color: '#1b3a4b' }}>
-                            {isLine ? (
-                              <div style={{ width: '20px', height: '4px', backgroundColor: color, borderRadius: 2 }} />
-                            ) : (
-                              <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: color, border: `1px solid ${paint['circle-stroke-color'] || color}` }} />
-                            )}
-                            <span>{config.label}</span>
+                          <div key={id} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', fontSize: '0.82em', color: '#1b3a4b' }}>
+                            {renderOverlayLegendSymbol(config)}
+                            <span>{label}</span>
                           </div>
                         );
                       })}
@@ -3097,10 +3401,11 @@ const Dashboard = () => {
           100% { transform: rotate(360deg); }
         }
         .modelling-switch-track {
-          width: 40px;
-          height: 22px;
-          border-radius: 11px;
+          width: 32px;
+          height: 18px;
+          border-radius: 9px;
           border: 1px solid rgba(0, 0, 0, 0.2);
+          box-sizing: border-box;
           cursor: pointer;
           padding: 0;
           flex-shrink: 0;
@@ -3121,26 +3426,37 @@ const Dashboard = () => {
         }
         .modelling-switch-thumb {
           position: absolute;
-          top: 2px;
+          top: 50%;
           left: 2px;
-          width: 16px;
-          height: 16px;
+          width: 14px;
+          height: 14px;
           border-radius: 50%;
           background: #fff;
           box-shadow: 0 1px 4px rgba(0, 0, 0, 0.22);
           pointer-events: none;
+          transform: translateY(-50%) scale(0.92);
           transition:
             left 1s cubic-bezier(0.33, 1, 0.32, 1),
             transform 1s cubic-bezier(0.33, 1, 0.32, 1),
             box-shadow 1s ease;
         }
         .modelling-switch-track[aria-checked="true"] .modelling-switch-thumb {
-          left: 20px;
-          transform: scale(1);
+          left: 16px;
+          transform: translateY(-50%) scale(1);
           box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
         }
-        .modelling-switch-track:not([aria-checked="true"]) .modelling-switch-thumb {
-          transform: scale(0.92);
+        .modelling-switch-track--nested {
+          width: 28px;
+          height: 16px;
+          border-radius: 8px;
+        }
+        .modelling-switch-thumb--nested {
+          width: 12px;
+          height: 12px;
+          left: 2px;
+        }
+        .modelling-switch-track--nested[aria-checked="true"] .modelling-switch-thumb--nested {
+          left: 14px;
         }
         .modelling-switch-track:focus-visible {
           outline: 2px solid #3498db;
@@ -3148,7 +3464,9 @@ const Dashboard = () => {
         }
         @media (prefers-reduced-motion: reduce) {
           .modelling-switch-track,
-          .modelling-switch-thumb {
+          .modelling-switch-thumb,
+          .modelling-switch-track--nested,
+          .modelling-switch-thumb--nested {
             transition-duration: 0.01ms !important;
           }
         }
