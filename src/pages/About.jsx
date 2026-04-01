@@ -97,10 +97,8 @@ export default function About() {
         <div className="about-pillars-inner">
           <div className="about-pillars-header">
             <div>
-              <span className="about-label">Core Pillars</span>
-              <h2>
-                Advancing Greater Miami's<br />Coastal Resilience
-              </h2>
+              <span className="about-label">Goals</span>
+              <h2>Goals</h2>
             </div>
             <p className="about-pillars-header-sub">
               Our framework for systemic change and community empowerment.
@@ -108,7 +106,7 @@ export default function About() {
           </div>
 
           <div className="about-pillars-grid">
-            {/* Pillar 1 — large left (Stitch: groups) */}
+            {/* Goal 1 */}
             <div className="pillar-card pillar-card-large">
               <div className="pillar-icon-large">
                 <span className="material-symbols-outlined" aria-hidden>
@@ -127,9 +125,9 @@ export default function About() {
               </div>
             </div>
 
-            {/* Pillar 2 — small right (Stitch: hub) */}
-            <div className="pillar-card pillar-card-small">
-              <div className="pillar-icon-small">
+            {/* Goal 2 */}
+            <div className="pillar-card pillar-card-large">
+              <div className="pillar-icon-large">
                 <span className="material-symbols-outlined" aria-hidden>
                   hub
                 </span>
@@ -145,7 +143,7 @@ export default function About() {
               </p>
             </div>
 
-            {/* Pillar 3 — full-width bottom (Stitch: analytics + trending_up) */}
+            {/* Goal 3 */}
             <div className="pillar-card pillar-card-wide">
               <div className="pillar-icon-circle">
                 <span className="material-symbols-outlined" aria-hidden>

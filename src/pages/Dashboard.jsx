@@ -190,7 +190,7 @@ function createImageDataFromCanvas(draw) {
   return ctx.getImageData(0, 0, s, s);
 }
 
-/** White disk + medical cross (equal arms); used for Emergency Medical. */
+/** Red disk + white medical cross; primary symbol for Emergency & Medical Services. */
 function imageDataMedicalCross(fillHex) {
   return createImageDataFromCanvas((ctx, s) => {
     const cx = s / 2;
@@ -198,20 +198,20 @@ function imageDataMedicalCross(fillHex) {
     const r = s * 0.42;
     ctx.beginPath();
     ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = fillHex;
     ctx.fill();
-    ctx.strokeStyle = 'rgba(0, 0, 0, 0.14)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.42)';
     ctx.lineWidth = Math.max(1, s * 0.02);
     ctx.stroke();
     const arm = s * 0.3;
     const thick = s * 0.11;
-    ctx.fillStyle = fillHex;
+    ctx.fillStyle = '#ffffff';
     ctx.fillRect(cx - thick / 2, cy - arm / 2, thick, arm);
     ctx.fillRect(cx - arm / 2, cy - thick / 2, arm, thick);
   });
 }
 
-/** Orange disk + stylized community hall (roof + columns / windows). */
+/** Indigo disk + people glyph for community-serving sites. */
 function imageDataCommunityCenter() {
   return createImageDataFromCanvas((ctx, s) => {
     const cx = s / 2;
@@ -219,28 +219,28 @@ function imageDataCommunityCenter() {
     const r = s * 0.42;
     ctx.beginPath();
     ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.fillStyle = '#e67e22';
+    ctx.fillStyle = '#5b61d6';
     ctx.fill();
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
     ctx.lineWidth = Math.max(1, s * 0.018);
     ctx.stroke();
     ctx.fillStyle = '#ffffff';
-    const bodyW = s * 0.44;
-    const bodyH = s * 0.22;
-    const bodyTop = cy + s * 0.04;
-    ctx.fillRect(cx - bodyW / 2, bodyTop - bodyH / 2, bodyW, bodyH);
+    const headR = s * 0.08;
+    const shoulderW = s * 0.2;
+    const shoulderH = s * 0.09;
     ctx.beginPath();
-    ctx.moveTo(cx, bodyTop - bodyH / 2 - s * 0.1);
-    ctx.lineTo(cx - bodyW / 2 - s * 0.02, bodyTop - bodyH / 2);
-    ctx.lineTo(cx + bodyW / 2 + s * 0.02, bodyTop - bodyH / 2);
-    ctx.closePath();
+    ctx.arc(cx - s * 0.11, cy - s * 0.1, headR, 0, Math.PI * 2);
+    ctx.arc(cx + s * 0.11, cy - s * 0.1, headR, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = '#c55a11';
-    const winW = s * 0.065;
-    const winGap = s * 0.085;
-    for (let i = -1; i <= 1; i += 1) {
-      ctx.fillRect(cx + i * winGap - winW / 2, bodyTop - s * 0.02, winW, s * 0.09);
-    }
+    ctx.fillRect(cx - s * 0.25, cy + s * 0.01, shoulderW, shoulderH);
+    ctx.fillRect(cx + s * 0.05, cy + s * 0.01, shoulderW, shoulderH);
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineCap = 'round';
+    ctx.lineWidth = s * 0.06;
+    ctx.beginPath();
+    ctx.moveTo(cx - s * 0.26, cy + s * 0.2);
+    ctx.lineTo(cx + s * 0.26, cy + s * 0.2);
+    ctx.stroke();
   });
 }
 
@@ -278,15 +278,16 @@ function imageDataDisasterRecovery() {
   });
 }
 
-/** Dark orange disk + simple house (shelter). */
+/** Teal disk + home glyph for risk and recovery centers. */
 function imageDataRiskShelter() {
   return createImageDataFromCanvas((ctx, s) => {
     const cx = s / 2;
     const cy = s / 2;
+    const houseYOffset = -s * 0.05;
     const r = s * 0.42;
     ctx.beginPath();
     ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.fillStyle = '#d35400';
+    ctx.fillStyle = '#169f89';
     ctx.fill();
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
     ctx.lineWidth = Math.max(1, s * 0.018);
@@ -294,16 +295,63 @@ function imageDataRiskShelter() {
     ctx.fillStyle = '#ffffff';
     const hw = s * 0.26;
     const hh = s * 0.2;
-    ctx.fillRect(cx - hw / 2, cy + s * 0.02, hw, hh);
+    const baseY = cy + s * 0.02 + houseYOffset;
+    ctx.fillRect(cx - hw / 2, baseY, hw, hh);
     ctx.beginPath();
-    ctx.moveTo(cx, cy - s * 0.12);
-    ctx.lineTo(cx - hw / 2 - s * 0.02, cy + s * 0.02);
-    ctx.lineTo(cx + hw / 2 + s * 0.02, cy + s * 0.02);
+    ctx.moveTo(cx, cy - s * 0.12 + houseYOffset);
+    ctx.lineTo(cx - hw / 2 - s * 0.02, baseY);
+    ctx.lineTo(cx + hw / 2 + s * 0.02, baseY);
     ctx.closePath();
     ctx.fill();
-    ctx.fillStyle = '#d35400';
-    ctx.fillRect(cx - s * 0.035, cy + s * 0.09, s * 0.07, s * 0.1);
+    ctx.fillStyle = '#169f89';
+    ctx.fillRect(cx - s * 0.035, cy + s * 0.09 + houseYOffset, s * 0.07, s * 0.1);
   });
+}
+
+let communityLegendIconDataUrl = '';
+let medicalLegendIconDataUrl = '';
+let riskLegendIconDataUrl = '';
+function getMedicalLegendIconDataUrl() {
+  if (medicalLegendIconDataUrl) return medicalLegendIconDataUrl;
+  if (typeof document === 'undefined') return '';
+  const s = OVERLAY_SYMBOL_ICON_PX;
+  const canvas = document.createElement('canvas');
+  canvas.width = s;
+  canvas.height = s;
+  const ctx = canvas.getContext('2d');
+  const imageData = imageDataMedicalCross('#c0392b');
+  if (!ctx || !imageData) return '';
+  ctx.putImageData(imageData, 0, 0);
+  medicalLegendIconDataUrl = canvas.toDataURL('image/png');
+  return medicalLegendIconDataUrl;
+}
+function getCommunityLegendIconDataUrl() {
+  if (communityLegendIconDataUrl) return communityLegendIconDataUrl;
+  if (typeof document === 'undefined') return '';
+  const s = OVERLAY_SYMBOL_ICON_PX;
+  const canvas = document.createElement('canvas');
+  canvas.width = s;
+  canvas.height = s;
+  const ctx = canvas.getContext('2d');
+  const imageData = imageDataCommunityCenter();
+  if (!ctx || !imageData) return '';
+  ctx.putImageData(imageData, 0, 0);
+  communityLegendIconDataUrl = canvas.toDataURL('image/png');
+  return communityLegendIconDataUrl;
+}
+function getRiskLegendIconDataUrl() {
+  if (riskLegendIconDataUrl) return riskLegendIconDataUrl;
+  if (typeof document === 'undefined') return '';
+  const s = OVERLAY_SYMBOL_ICON_PX;
+  const canvas = document.createElement('canvas');
+  canvas.width = s;
+  canvas.height = s;
+  const ctx = canvas.getContext('2d');
+  const imageData = imageDataRiskShelter();
+  if (!ctx || !imageData) return '';
+  ctx.putImageData(imageData, 0, 0);
+  riskLegendIconDataUrl = canvas.toDataURL('image/png');
+  return riskLegendIconDataUrl;
 }
 
 function registerOverlaySymbolImages(mapInstance) {
@@ -324,8 +372,8 @@ function registerOverlaySymbolImages(mapInstance) {
 }
 
 const OVERLAY_LAYERS_CONFIG = [
-  { id: 'overlay-community-centers', label: 'Community Centers', url: `${SUPABASE_STORAGE}/Community%20Cent_FeaturesToJSO.geojson`, style: { type: 'symbol', iconImage: OVERLAY_SYMBOL_IMAGES.community, iconSize: 0.42 } },
-  { id: 'overlay-disaster-recovery', label: 'Disaster Recovery Centers', url: `${SUPABASE_STORAGE}/Disaster%20Recov_FeaturesToJSO.geojson`, style: { type: 'symbol', iconImage: OVERLAY_SYMBOL_IMAGES.disasterRecovery, iconSize: 0.42 } },
+  { id: 'overlay-community-centers', label: 'Community Centers', url: `${SUPABASE_STORAGE}/Community%20Cent_FeaturesToJSO.geojson`, style: { type: 'symbol', iconImage: OVERLAY_SYMBOL_IMAGES.community, iconSize: 0.42 }, popupTitleField: 'Name', popupFields: ['Address', 'City'] },
+  { id: 'overlay-disaster-recovery', label: 'Disaster Recovery Centers', url: `${SUPABASE_STORAGE}/Disaster%20Recov_FeaturesToJSO.geojson`, style: { type: 'symbol', iconImage: OVERLAY_SYMBOL_IMAGES.riskShelter, iconSize: 0.42 }, popupTitleField: 'Name', popupFields: ['Address', 'City'] },
   { id: 'overlay-emergency-medical', label: 'Emergency Medical', url: `${SUPABASE_STORAGE}/EmergencyMedical_FeaturesToJSO.geojson`, style: { type: 'symbol', iconImage: OVERLAY_SYMBOL_IMAGES.medicalCross, iconSize: 0.42 }, popupTitleField: 'Name', popupFields: ['Address', 'City'], pointLonLatFields: ['X', 'Y'] },
   { id: 'overlay-emergency-ops', label: 'Emergency Operations Centers', url: `${SUPABASE_STORAGE}/Emergency%20Oper_FeaturesToJSO.geojson`, style: { type: 'symbol', iconImage: OVERLAY_SYMBOL_IMAGES.eocCross, iconSize: 0.42 } },
   { id: 'overlay-evacuation-routes', label: 'Evacuation Routes', url: `${SUPABASE_STORAGE}/Evacuation%20Rou_FeaturesToJSO.geojson`, style: { type: 'line', paint: { 'line-color': '#34495e', 'line-width': 3 } } },
@@ -347,20 +395,15 @@ const OVERLAY_GROUP_RISK_AND_RECOVERY = {
 };
 
 const CRITICAL_INFRASTRUCTURE_SUBLAYER_GROUPS = [OVERLAY_GROUP_CRITICAL_FACILITIES, OVERLAY_GROUP_RISK_AND_RECOVERY];
+const CRITICAL_INFRASTRUCTURE_DEFAULT_GROUP_KEYS = [
+  ...CRITICAL_INFRASTRUCTURE_SUBLAYER_GROUPS.map((g) => g.id),
+  'overlay-community-centers',
+  'overlay-evacuation-routes',
+];
 const CRITICAL_INFRA_GROUP_LEGEND_REPRESENTATIVE_LAYER_ID = {
   [OVERLAY_GROUP_CRITICAL_FACILITIES.id]: 'overlay-emergency-medical',
-  [OVERLAY_GROUP_RISK_AND_RECOVERY.id]: 'overlay-disaster-recovery',
+  [OVERLAY_GROUP_RISK_AND_RECOVERY.id]: 'overlay-risk-shelters',
 };
-
-const OVERLAY_LAYER_ID_TO_GROUP_ID = (() => {
-  const m = {};
-  CRITICAL_INFRASTRUCTURE_SUBLAYER_GROUPS.forEach((g) => {
-    g.memberIds.forEach((mid) => {
-      m[mid] = g.id;
-    });
-  });
-  return m;
-})();
 
 function expandCriticalInfraSublayerKeys(keys) {
   const out = [];
@@ -371,30 +414,6 @@ function expandCriticalInfraSublayerKeys(keys) {
   });
   return [...new Set(out)];
 }
-
-const CRITICAL_INFRASTRUCTURE_SUBLAYER_UI_ITEMS = [
-  ...CRITICAL_INFRASTRUCTURE_SUBLAYER_GROUPS.map((g) => ({ kind: 'group', id: g.id, label: g.label })),
-  ...OVERLAY_LAYERS_CONFIG.filter((c) => !OVERLAY_LAYER_ID_TO_GROUP_ID[c.id]).map((c) => ({ kind: 'layer', id: c.id, label: c.label })),
-];
-
-/** Nested panel under Critical Infrastructure — reads as child of main modelling switches. */
-const criticalInfraSublayerNestStyle = {
-  marginTop: '8px',
-  padding: '10px 10px 10px 12px',
-  borderRadius: '8px',
-  background: 'rgba(27, 58, 75, 0.055)',
-  borderLeft: '3px solid rgba(52, 152, 219, 0.5)',
-  boxShadow: 'inset 0 1px 2px rgba(255, 255, 255, 0.55)',
-};
-
-const criticalInfraSublayerHeadingStyle = {
-  fontSize: '0.65em',
-  fontWeight: 700,
-  letterSpacing: '0.07em',
-  textTransform: 'uppercase',
-  color: '#607d8b',
-  marginBottom: '6px',
-};
 
 /** Matches filter sidebar frosted glass (map overlays). */
 const mapOverlayGlassStyle = {
@@ -464,11 +483,9 @@ const Dashboard = () => {
   const [selectedResultIndex, setSelectedResultIndex] = useState(-1);
   const [searchDropdownMaxHeightPx, setSearchDropdownMaxHeightPx] = useState(400);
 
-  const [criticalInfraSublayerKeys, setCriticalInfraSublayerKeys] = useState([]);
-  const [loadingOverlayLayer, setLoadingOverlayLayer] = useState(null);
   const enabledOverlayLayerIds = useMemo(
-    () => expandCriticalInfraSublayerKeys(criticalInfraSublayerKeys),
-    [criticalInfraSublayerKeys]
+    () => (activeCensusView === 'critical-infrastructure' ? expandCriticalInfraSublayerKeys(CRITICAL_INFRASTRUCTURE_DEFAULT_GROUP_KEYS) : []),
+    [activeCensusView]
   );
   const overlayDataCacheRef = useRef({});
 
@@ -524,7 +541,6 @@ const Dashboard = () => {
     showSearchResults,
     searchResults.length,
     activeCensusView,
-    criticalInfraSublayerKeys,
     enabledOverlayLayerIds,
   ]);
 
@@ -959,7 +975,14 @@ const Dashboard = () => {
     const layerMapId = layerId + '-layer';
     if (map.current.getSource(layerId)) {
       if (map.current.getLayer(layerMapId)) {
+        const config = OVERLAY_LAYERS_CONFIG.find((c) => c.id === layerId);
+        const styleCfg = config?.style || {};
         map.current.setLayoutProperty(layerMapId, 'visibility', 'visible');
+        if (styleCfg.type === 'symbol') {
+          registerOverlaySymbolImages(map.current);
+          if (styleCfg.iconImage) map.current.setLayoutProperty(layerMapId, 'icon-image', styleCfg.iconImage);
+          if (styleCfg.iconSize != null) map.current.setLayoutProperty(layerMapId, 'icon-size', styleCfg.iconSize);
+        }
       }
       return;
     }
@@ -970,7 +993,6 @@ const Dashboard = () => {
       addOverlaySourceAndLayer(map.current, layerId, config, cached);
       return;
     }
-    setLoadingOverlayLayer(layerId);
     try {
       const response = await fetch(config.url);
       if (!response.ok) throw new Error(`Failed to load ${config.label}`);
@@ -983,45 +1005,8 @@ const Dashboard = () => {
       addOverlaySourceAndLayer(map.current, layerId, config, geojson);
     } catch (err) {
       console.error('Error loading overlay layer:', layerId, err);
-    } finally {
-      setLoadingOverlayLayer(null);
     }
   }, [addOverlaySourceAndLayer]);
-
-  const MAX_CRITICAL_INFRASTRUCTURE_SUBLAYERS = 2;
-
-  /** Toggle one sublayer or combined group; max 2 logical selections — adding a third drops the first (FIFO). */
-  const handleCriticalInfraSublayerToggle = useCallback((key) => {
-    setCriticalInfraSublayerKeys((prev) => {
-      let next;
-      if (prev.includes(key)) {
-        next = prev.filter((k) => k !== key);
-      } else if (prev.length < MAX_CRITICAL_INFRASTRUCTURE_SUBLAYERS) {
-        next = [...prev, key];
-      } else {
-        next = [prev[1], key];
-      }
-      next = [...new Set(next)].slice(0, MAX_CRITICAL_INFRASTRUCTURE_SUBLAYERS);
-
-      const prevLayerIds = expandCriticalInfraSublayerKeys(prev);
-      const nextLayerIds = expandCriticalInfraSublayerKeys(next);
-
-      prevLayerIds.forEach((id) => {
-        if (!nextLayerIds.includes(id) && map.current?.getLayer(`${id}-layer`)) {
-          map.current.setLayoutProperty(`${id}-layer`, 'visibility', 'none');
-        }
-      });
-
-      const toAdd = nextLayerIds.filter((id) => !prevLayerIds.includes(id));
-      if (toAdd.length) {
-        queueMicrotask(() => {
-          toAdd.forEach((id) => ensureOverlayLayerLoaded(id));
-        });
-      }
-
-      return next;
-    });
-  }, [ensureOverlayLayerLoaded]);
 
   const addCensusSourceAndLayers = useCallback(() => {
     if (!map.current || !censusDataRef.current) return;
@@ -1933,6 +1918,11 @@ const Dashboard = () => {
   useEffect(() => {
     if (!map.current) return;
     const isCriticalInfra = activeCensusView === 'critical-infrastructure';
+    if (isCriticalInfra) {
+      enabledOverlayLayerIds.forEach((id) => {
+        if (!map.current?.getSource(id)) ensureOverlayLayerLoaded(id);
+      });
+    }
     OVERLAY_LAYERS_CONFIG.forEach((config) => {
       const layerMapId = config.id + '-layer';
       if (map.current.getLayer(layerMapId)) {
@@ -1940,7 +1930,7 @@ const Dashboard = () => {
         map.current.setLayoutProperty(layerMapId, 'visibility', visible ? 'visible' : 'none');
       }
     });
-  }, [activeCensusView, enabledOverlayLayerIds]);
+  }, [activeCensusView, enabledOverlayLayerIds, ensureOverlayLayerLoaded]);
 
   useEffect(() => {
     if (censusStats) {
@@ -1957,7 +1947,7 @@ const Dashboard = () => {
     .filter(rating => legendRatings.includes(rating));
   const criticalInfraLegendItems = useMemo(
     () =>
-      criticalInfraSublayerKeys
+      CRITICAL_INFRASTRUCTURE_DEFAULT_GROUP_KEYS
         .map((key) => {
           const group = CRITICAL_INFRASTRUCTURE_SUBLAYER_GROUPS.find((g) => g.id === key);
           if (group) {
@@ -1971,46 +1961,83 @@ const Dashboard = () => {
           return { id: key, label: config.label, config };
         })
         .filter(Boolean),
-    [criticalInfraSublayerKeys]
+    []
   );
 
   const renderOverlayLegendSymbol = (config) => {
     if (!config?.style) return null;
+    const legendMarkerSize = 18;
     const { type, paint, iconImage } = config.style;
     if (type === 'line') {
       const color = paint?.['line-color'] ?? '#666';
-      return <div style={{ width: '16px', height: '3px', backgroundColor: color, borderRadius: 2, flexShrink: 0 }} />;
+      return (
+        <div style={{ width: `${legendMarkerSize}px`, height: `${legendMarkerSize}px`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <div style={{ width: '16px', height: '3px', backgroundColor: color, borderRadius: 2 }} />
+        </div>
+      );
     }
     if (type === 'fill') {
       const color = paint?.['fill-color'] ?? '#666';
       const border = paint?.['fill-outline-color'] ?? paint?.['line-color'] ?? '#4d4d4d';
-      return <div style={{ width: '12px', height: '12px', backgroundColor: color, border: `1px solid ${border}`, borderRadius: 2, flexShrink: 0 }} />;
+      return <div style={{ width: `${legendMarkerSize}px`, height: `${legendMarkerSize}px`, backgroundColor: color, border: `1px solid ${border}`, borderRadius: 2, flexShrink: 0 }} />;
     }
     if (type === 'symbol') {
       // Keep legend icons visually aligned with map symbology.
       if (iconImage === OVERLAY_SYMBOL_IMAGES.medicalCross || iconImage === OVERLAY_SYMBOL_IMAGES.eocCross) {
-        const cross = iconImage === OVERLAY_SYMBOL_IMAGES.medicalCross ? '#c0392b' : '#f39c12';
+        const src = iconImage === OVERLAY_SYMBOL_IMAGES.medicalCross ? getMedicalLegendIconDataUrl() : '';
+        if (src) {
+          return (
+            <div style={{ width: `${legendMarkerSize}px`, height: `${legendMarkerSize}px`, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'visible', flexShrink: 0 }}>
+              <img src={src} alt="" aria-hidden style={{ width: `${legendMarkerSize}px`, height: `${legendMarkerSize}px` }} />
+            </div>
+          );
+        }
+        const cross = iconImage === OVERLAY_SYMBOL_IMAGES.medicalCross ? '#ffffff' : '#f39c12';
+        const circle = iconImage === OVERLAY_SYMBOL_IMAGES.medicalCross ? '#c0392b' : '#ffffff';
+        const border = iconImage === OVERLAY_SYMBOL_IMAGES.medicalCross ? 'rgba(255,255,255,0.36)' : 'rgba(0,0,0,0.28)';
         return (
-          <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#fff', border: '1px solid rgba(0,0,0,0.28)', position: 'relative', flexShrink: 0 }}>
+          <div style={{ width: `${legendMarkerSize}px`, height: `${legendMarkerSize}px`, borderRadius: '50%', backgroundColor: circle, border: `1px solid ${border}`, position: 'relative', flexShrink: 0 }}>
             <div style={{ position: 'absolute', left: '50%', top: '20%', transform: 'translateX(-50%)', width: '3px', height: '60%', borderRadius: 1, backgroundColor: cross }} />
             <div style={{ position: 'absolute', left: '20%', top: '50%', transform: 'translateY(-50%)', width: '60%', height: '3px', borderRadius: 1, backgroundColor: cross }} />
           </div>
         );
       }
       if (iconImage === OVERLAY_SYMBOL_IMAGES.community) {
-        return <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#e67e22', border: '1px solid #d35400', flexShrink: 0 }} />;
+        const src = getCommunityLegendIconDataUrl();
+        if (src) {
+          return (
+            <div style={{ width: `${legendMarkerSize}px`, height: `${legendMarkerSize}px`, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'visible', flexShrink: 0 }}>
+              <img src={src} alt="" aria-hidden style={{ width: `${legendMarkerSize}px`, height: `${legendMarkerSize}px` }} />
+            </div>
+          );
+        }
+        return <div style={{ width: `${legendMarkerSize}px`, height: `${legendMarkerSize}px`, borderRadius: '50%', backgroundColor: '#5b61d6', border: '1px solid #454fbd', flexShrink: 0 }} />;
       }
       if (iconImage === OVERLAY_SYMBOL_IMAGES.disasterRecovery) {
-        return <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#1abc9c', border: '1px solid #16a085', flexShrink: 0 }} />;
+        return <div style={{ width: `${legendMarkerSize}px`, height: `${legendMarkerSize}px`, borderRadius: '50%', backgroundColor: '#1abc9c', border: '1px solid #16a085', flexShrink: 0 }} />;
       }
       if (iconImage === OVERLAY_SYMBOL_IMAGES.riskShelter) {
-        return <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#d35400', border: '1px solid #a04000', flexShrink: 0 }} />;
+        const src = getRiskLegendIconDataUrl();
+        if (src) {
+          return (
+            <div style={{ width: `${legendMarkerSize}px`, height: `${legendMarkerSize}px`, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'visible', flexShrink: 0 }}>
+              <img src={src} alt="" aria-hidden style={{ width: `${legendMarkerSize}px`, height: `${legendMarkerSize}px` }} />
+            </div>
+          );
+        }
+        return (
+          <div style={{ width: `${legendMarkerSize}px`, height: `${legendMarkerSize}px`, borderRadius: '50%', backgroundColor: '#169f89', border: '1px solid #0f7665', position: 'relative', flexShrink: 0 }}>
+            <div style={{ position: 'absolute', left: '22%', top: '46%', width: '56%', height: '30%', backgroundColor: '#ffffff', borderRadius: '1px' }} />
+            <div style={{ position: 'absolute', left: '50%', top: '25%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderBottom: '5px solid #ffffff' }} />
+            <div style={{ position: 'absolute', left: '50%', top: '54%', transform: 'translateX(-50%)', width: '12%', height: '20%', backgroundColor: '#169f89', borderRadius: '1px' }} />
+          </div>
+        );
       }
-      return <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#666', border: '1px solid #555', flexShrink: 0 }} />;
+      return <div style={{ width: `${legendMarkerSize}px`, height: `${legendMarkerSize}px`, borderRadius: '50%', backgroundColor: '#666', border: '1px solid #555', flexShrink: 0 }} />;
     }
     const color = paint?.['circle-color'] ?? '#666';
     const border = paint?.['circle-stroke-color'] ?? color;
-    return <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: color, border: `1px solid ${border}`, flexShrink: 0 }} />;
+    return <div style={{ width: `${legendMarkerSize}px`, height: `${legendMarkerSize}px`, borderRadius: '50%', backgroundColor: color, border: `1px solid ${border}`, flexShrink: 0 }} />;
   };
 
   // Extract unique values for filters
@@ -3016,66 +3043,6 @@ const Dashboard = () => {
                     <div role="group" aria-label="Modelling layer">
                       {MODELLING_LAYER_OPTIONS.map(({ view, label, ariaLabel }) => {
                         const checked = isModellingLayerSwitchOn(view);
-                        if (view === 'critical-infrastructure') {
-                          return (
-                            <React.Fragment key={view}>
-                              <div
-                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '4px' }}
-                              >
-                                <span style={{ fontSize: '0.85em', fontWeight: 500, color: '#1b3a4b', flex: 1, minWidth: 0 }}>{label}</span>
-                                <button
-                                  type="button"
-                                  role="switch"
-                                  className="modelling-switch-track"
-                                  aria-checked={checked}
-                                  aria-label={ariaLabel}
-                                  onClick={() => handleModellingLayerSwitch(view)}
-                                >
-                                  <span className="modelling-switch-thumb" aria-hidden />
-                                </button>
-                              </div>
-                              <div style={criticalInfraSublayerNestStyle}>
-                                <div style={criticalInfraSublayerHeadingStyle}>Sublayers</div>
-                                <div style={{ fontSize: '0.68em', color: '#78909c', marginBottom: '8px', lineHeight: 1.4 }}>
-                                  Max 2 at a time. Each combined group counts as one. Shown when Critical Infrastructure is on.
-                                </div>
-                                <div role="group" aria-label="Critical infrastructure sublayers">
-                                  {CRITICAL_INFRASTRUCTURE_SUBLAYER_UI_ITEMS.map((item) => {
-                                    const subOn = criticalInfraSublayerKeys.includes(item.id);
-                                    return (
-                                      <div
-                                        key={item.id}
-                                        style={{
-                                          display: 'flex',
-                                          alignItems: 'center',
-                                          justifyContent: 'space-between',
-                                          gap: '8px',
-                                          marginBottom: '6px',
-                                          paddingLeft: '2px',
-                                        }}
-                                      >
-                                        <span style={{ fontSize: '0.76em', fontWeight: 500, color: '#455a64', flex: 1, minWidth: 0, lineHeight: 1.25 }}>{item.label}</span>
-                                        <button
-                                          type="button"
-                                          role="switch"
-                                          className="modelling-switch-track modelling-switch-track--nested"
-                                          aria-checked={subOn}
-                                          aria-label={`${item.label} sublayer`}
-                                          onClick={() => handleCriticalInfraSublayerToggle(item.id)}
-                                        >
-                                          <span className="modelling-switch-thumb modelling-switch-thumb--nested" aria-hidden />
-                                        </button>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                                {loadingOverlayLayer && (
-                                  <div style={{ fontSize: '0.72em', color: '#78909c', marginTop: '4px' }}>Loading layer…</div>
-                                )}
-                              </div>
-                            </React.Fragment>
-                          );
-                        }
                         return (
                           <div
                             key={view}
@@ -3167,66 +3134,6 @@ const Dashboard = () => {
                     <div role="group" aria-label="Modelling layer">
                       {MODELLING_LAYER_OPTIONS.map(({ view, label, ariaLabel }) => {
                         const checked = isModellingLayerSwitchOn(view);
-                        if (view === 'critical-infrastructure') {
-                          return (
-                            <React.Fragment key={view}>
-                              <div
-                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', marginBottom: '4px' }}
-                              >
-                                <span style={{ fontSize: '0.95em', fontWeight: 500, color: '#2c3e50', flex: 1, minWidth: 0 }}>{label}</span>
-                                <button
-                                  type="button"
-                                  role="switch"
-                                  className="modelling-switch-track"
-                                  aria-checked={checked}
-                                  aria-label={ariaLabel}
-                                  onClick={() => handleModellingLayerSwitch(view)}
-                                >
-                                  <span className="modelling-switch-thumb" aria-hidden />
-                                </button>
-                              </div>
-                              <div style={criticalInfraSublayerNestStyle}>
-                                <div style={{ ...criticalInfraSublayerHeadingStyle, fontSize: '0.68em' }}>Sublayers</div>
-                                <div style={{ fontSize: '0.72em', color: '#78909c', marginBottom: '10px', lineHeight: 1.4 }}>
-                                  Max 2 at a time. Each combined group counts as one. Shown when Critical Infrastructure is on.
-                                </div>
-                                <div role="group" aria-label="Critical infrastructure sublayers">
-                                  {CRITICAL_INFRASTRUCTURE_SUBLAYER_UI_ITEMS.map((item) => {
-                                    const subOn = criticalInfraSublayerKeys.includes(item.id);
-                                    return (
-                                      <div
-                                        key={item.id}
-                                        style={{
-                                          display: 'flex',
-                                          alignItems: 'center',
-                                          justifyContent: 'space-between',
-                                          gap: '6px',
-                                          marginBottom: '6px',
-                                          paddingLeft: '2px',
-                                        }}
-                                      >
-                                        <span style={{ fontSize: '0.84em', fontWeight: 500, color: '#455a64', flex: 1, minWidth: 0, lineHeight: 1.3 }}>{item.label}</span>
-                                        <button
-                                          type="button"
-                                          role="switch"
-                                          className="modelling-switch-track modelling-switch-track--nested"
-                                          aria-checked={subOn}
-                                          aria-label={`${item.label} sublayer`}
-                                          onClick={() => handleCriticalInfraSublayerToggle(item.id)}
-                                        >
-                                          <span className="modelling-switch-thumb modelling-switch-thumb--nested" aria-hidden />
-                                        </button>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                                {loadingOverlayLayer && (
-                                  <div style={{ fontSize: '0.78em', color: '#78909c', marginTop: '4px' }}>Loading layer…</div>
-                                )}
-                              </div>
-                            </React.Fragment>
-                          );
-                        }
                         return (
                           <div
                             key={view}
@@ -3445,28 +3352,13 @@ const Dashboard = () => {
           transform: translateY(-50%) scale(1);
           box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
         }
-        .modelling-switch-track--nested {
-          width: 28px;
-          height: 16px;
-          border-radius: 8px;
-        }
-        .modelling-switch-thumb--nested {
-          width: 12px;
-          height: 12px;
-          left: 2px;
-        }
-        .modelling-switch-track--nested[aria-checked="true"] .modelling-switch-thumb--nested {
-          left: 14px;
-        }
         .modelling-switch-track:focus-visible {
           outline: 2px solid #3498db;
           outline-offset: 2px;
         }
         @media (prefers-reduced-motion: reduce) {
           .modelling-switch-track,
-          .modelling-switch-thumb,
-          .modelling-switch-track--nested,
-          .modelling-switch-thumb--nested {
+          .modelling-switch-thumb {
             transition-duration: 0.01ms !important;
           }
         }

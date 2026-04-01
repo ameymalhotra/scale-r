@@ -150,8 +150,9 @@
 }
 .about-pillars-grid {
   display: grid;
-  grid-template-columns: repeat(12, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1.5rem;
+  align-items: stretch;
 }
 .pillar-card {
   background: #01321e;
@@ -164,6 +165,9 @@
     background 0.45s ease;
   position: relative;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
 }
 /* Shared hover shell for all three pillar tiles */
 .pillar-card:hover {
@@ -173,13 +177,13 @@
     0 0 52px -10px rgba(158, 67, 0, 0.38);
 }
 .pillar-card-large {
-  grid-column: span 7;
+  grid-column: span 1;
 }
 .pillar-card-large:hover {
   background: linear-gradient(148deg, #022a1a 0%, #01321e 48%, #034028 100%);
 }
 .pillar-card-small {
-  grid-column: span 5;
+  grid-column: span 1;
   background: rgba(255,255,255,0.04);
   backdrop-filter: blur(4px);
 }
@@ -192,11 +196,10 @@
   );
 }
 .pillar-card-wide {
-  grid-column: span 12;
+  grid-column: span 1;
   background: linear-gradient(90deg, #001b0e, #01321e);
-  display: flex;
-  align-items: center;
-  gap: 2rem;
+  align-items: flex-start;
+  gap: 1.5rem;
   padding: 3rem;
 }
 .pillar-card-wide:hover {
@@ -287,17 +290,20 @@
   color: rgba(255,255,255,0.65);
   line-height: 1.65;
   font-size: 1.05rem;
-  max-width: 520px;
+  max-width: none;
   transition: color 0.35s ease;
+  flex: 1;
 }
 .pillar-card:hover p {
   color: rgba(255, 255, 255, 0.78);
 }
 .pillar-card-wide p {
   font-size: 1.1rem;
-  max-width: 780px;
 }
-.pillar-card-wide .pillar-text { flex: 1; }
+.pillar-card-wide .pillar-text {
+  flex: 1;
+  width: 100%;
+}
 .pillar-bg-icon {
   position: absolute;
   bottom: 0; right: 0;
@@ -312,7 +318,7 @@
 }
 .pillar-card:hover .pillar-bg-icon { opacity: 0.16; }
 .pillar-trailing-icon {
-  margin-left: auto;
+  margin-top: auto;
   opacity: 0.18;
   color: #fff;
   transition: opacity 0.35s ease, transform 0.35s ease, color 0.35s ease;
@@ -601,8 +607,12 @@
 
 /* ── Responsive ─────────────────────────────────────────────── */
 @media (max-width: 1024px) {
-  .pillar-card-large { grid-column: span 12; }
-  .pillar-card-small { grid-column: span 12; }
+  .about-pillars-grid {
+    grid-template-columns: 1fr;
+  }
+  .pillar-card-large,
+  .pillar-card-small,
+  .pillar-card-wide { grid-column: span 1; }
   .marquee-container { width: 100%; }
   .about-footer-inner {
     grid-template-columns: repeat(2, 1fr);
