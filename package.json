@@ -11,8 +11,10 @@
     "test:coverage": "vitest --coverage",
     "seed": "node --env-file=.env scripts/js/seed-supabase.js",
     "seed-merged": "node --env-file=.env scripts/js/seed-supabase-merged.js",
+    "seed-merged-conf1": "node --env-file=.env scripts/js/seed-supabase-merged-conf1.js",
     "upload-geojson": "node --env-file=.env scripts/js/upload-projects-geojson.js",
-    "upload-geojson-merged": "node --env-file=.env scripts/js/upload-projects-merged-geojson.js"
+    "upload-geojson-merged": "node --env-file=.env scripts/js/upload-projects-merged-geojson.js",
+    "upload-geojson-merged-conf1": "node --env-file=.env scripts/js/upload-projects-merged-conf1-geojson.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.95.3",

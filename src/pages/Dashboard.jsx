@@ -165,7 +165,7 @@ const formatCityName = (cityName) => {
 };
 
 const SUPABASE_STORAGE = 'https://mmlqltdcpsuxirbqhugw.supabase.co/storage/v1/object/public/project-data';
-const PROJECTS_GEOJSON_FILE = 'projects.geojson';
+const PROJECTS_GEOJSON_FILE = 'projects_merged_conf1.geojson';
 
 /** Raster size for overlay glyphs; paired with pixelRatio 2 in addImage for crisp symbols. */
 const OVERLAY_SYMBOL_ICON_PX = 128;
@@ -1599,19 +1599,36 @@ const Dashboard = () => {
         }
 
         const data = await response.json();
-        console.log('[Projects] Loaded Storage', PROJECTS_GEOJSON_FILE + ':', data.features?.length ?? 0, 'features');
-        console.log('[Projects] Sample properties:', data.features[0]?.properties ? Object.keys(data.features[0].properties).slice(0, 10) : 'No properties');
-        console.log('[Projects] Sample Infrastruc value:', data.features[0]?.properties?.Infrastruc);
-        console.log('[Projects] Sample NAME (city) value:', data.features[0]?.properties?.NAME);
-        setAllProjectsData(data);
+        const allFeatures = data.features || [];
+
+        // Temporary dashboard-level filter for testing:
+        // show only projects with an estimated cost greater than zero.
+        const costFilteredFeatures = allFeatures.filter((feature) => {
+          const props = feature?.properties || {};
+          const rawCost = props['Estimated_'] ?? props['Estimated Project Cost'];
+          if (rawCost == null || rawCost === '') return false;
+          const numericCost = typeof rawCost === 'string'
+            ? parseFloat(rawCost.replace(/[$,]/g, ''))
+            : parseFloat(rawCost);
+          return Number.isFinite(numericCost) && numericCost > 0;
+        });
+
+        const filteredData = { ...data, features: costFilteredFeatures };
+
+        console.log('[Projects] Loaded Storage', PROJECTS_GEOJSON_FILE + ':', allFeatures.length, 'features');
+        console.log('[Projects] Non-zero cost filter kept:', costFilteredFeatures.length, 'features');
+        console.log('[Projects] Sample properties:', costFilteredFeatures[0]?.properties ? Object.keys(costFilteredFeatures[0].properties).slice(0, 10) : 'No properties');
+        console.log('[Projects] Sample Infrastruc value:', costFilteredFeatures[0]?.properties?.Infrastruc);
+        console.log('[Projects] Sample NAME (city) value:', costFilteredFeatures[0]?.properties?.NAME);
+        setAllProjectsData(filteredData);
 
         map.current.addSource('projects', {
           type: 'geojson',
-          data: data
+          data: filteredData
         });
 
         // Create invisible buffer zones around each marker
-        const bufferFeatures = data.features.map((feature, index) => {
+        const bufferFeatures = costFilteredFeatures.map((feature, index) => {
           const coordinates = feature.geometry.coordinates;
           const circleCoords = createCircleBuffer(coordinates, 30); // 30 meter radius buffer
           return {
@@ -1641,7 +1658,7 @@ const Dashboard = () => {
         // Buffer layer will be added in addCensusSourceAndLayers after census layers
 
         const markers = [];
-        data.features.forEach(feature => {
+        costFilteredFeatures.forEach(feature => {
           const geometry = feature.geometry;
           const coordinates = geometry && geometry.coordinates;
           // Skip features without valid point coordinates
