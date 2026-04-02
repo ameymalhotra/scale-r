@@ -179,6 +179,15 @@ const OVERLAY_SYMBOL_IMAGES = {
   riskShelter: 'cr-overlay-risk-shelter',
 };
 
+const CRITICAL_INFRA_NEUTRAL = {
+  black: '#111111',
+  white: '#ffffff',
+  darkGray: '#2f2f2f',
+  midGray: '#6f6f6f',
+  lightGray: '#d9d9d9',
+  borderGray: '#4a4a4a',
+};
+
 function createImageDataFromCanvas(draw) {
   const s = OVERLAY_SYMBOL_ICON_PX;
   const canvas = document.createElement('canvas');
@@ -190,8 +199,8 @@ function createImageDataFromCanvas(draw) {
   return ctx.getImageData(0, 0, s, s);
 }
 
-/** Red disk + white medical cross; primary symbol for Emergency & Medical Services. */
-function imageDataMedicalCross(fillHex) {
+/** Circular cross icon used by emergency layers; palette can be swapped per layer. */
+function imageDataMedicalCross(fillHex, crossHex = '#ffffff', strokeHex = 'rgba(255, 255, 255, 0.42)') {
   return createImageDataFromCanvas((ctx, s) => {
     const cx = s / 2;
     const cy = s / 2;
@@ -200,18 +209,18 @@ function imageDataMedicalCross(fillHex) {
     ctx.arc(cx, cy, r, 0, Math.PI * 2);
     ctx.fillStyle = fillHex;
     ctx.fill();
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.42)';
+    ctx.strokeStyle = strokeHex;
     ctx.lineWidth = Math.max(1, s * 0.02);
     ctx.stroke();
     const arm = s * 0.3;
     const thick = s * 0.11;
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = crossHex;
     ctx.fillRect(cx - thick / 2, cy - arm / 2, thick, arm);
     ctx.fillRect(cx - arm / 2, cy - thick / 2, arm, thick);
   });
 }
 
-/** Indigo disk + people glyph for community-serving sites. */
+/** Neutral disk + people glyph for community-serving sites. */
 function imageDataCommunityCenter() {
   return createImageDataFromCanvas((ctx, s) => {
     const cx = s / 2;
@@ -219,12 +228,12 @@ function imageDataCommunityCenter() {
     const r = s * 0.42;
     ctx.beginPath();
     ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.fillStyle = '#5b61d6';
+    ctx.fillStyle = CRITICAL_INFRA_NEUTRAL.black;
     ctx.fill();
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.32)';
     ctx.lineWidth = Math.max(1, s * 0.018);
     ctx.stroke();
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = CRITICAL_INFRA_NEUTRAL.white;
     const headR = s * 0.08;
     const shoulderW = s * 0.2;
     const shoulderH = s * 0.09;
@@ -244,7 +253,7 @@ function imageDataCommunityCenter() {
   });
 }
 
-/** Teal disk + shield + check (recovery / assistance). */
+/** Neutral disk + shield + check (recovery / assistance). */
 function imageDataDisasterRecovery() {
   return createImageDataFromCanvas((ctx, s) => {
     const cx = s / 2;
@@ -252,12 +261,12 @@ function imageDataDisasterRecovery() {
     const r = s * 0.42;
     ctx.beginPath();
     ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.fillStyle = '#1abc9c';
+    ctx.fillStyle = CRITICAL_INFRA_NEUTRAL.darkGray;
     ctx.fill();
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.28)';
     ctx.lineWidth = Math.max(1, s * 0.018);
     ctx.stroke();
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = CRITICAL_INFRA_NEUTRAL.white;
     ctx.beginPath();
     ctx.moveTo(cx, cy - s * 0.26);
     ctx.lineTo(cx + s * 0.22, cy - s * 0.08);
@@ -266,7 +275,7 @@ function imageDataDisasterRecovery() {
     ctx.lineTo(cx - s * 0.22, cy - s * 0.08);
     ctx.closePath();
     ctx.fill();
-    ctx.strokeStyle = '#1abc9c';
+    ctx.strokeStyle = CRITICAL_INFRA_NEUTRAL.black;
     ctx.lineWidth = s * 0.05;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
@@ -278,7 +287,7 @@ function imageDataDisasterRecovery() {
   });
 }
 
-/** Teal disk + home glyph for risk and recovery centers. */
+/** Neutral disk + home glyph for risk and recovery centers. */
 function imageDataRiskShelter() {
   return createImageDataFromCanvas((ctx, s) => {
     const cx = s / 2;
@@ -287,12 +296,12 @@ function imageDataRiskShelter() {
     const r = s * 0.42;
     ctx.beginPath();
     ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.fillStyle = '#169f89';
+    ctx.fillStyle = CRITICAL_INFRA_NEUTRAL.darkGray;
     ctx.fill();
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.28)';
     ctx.lineWidth = Math.max(1, s * 0.018);
     ctx.stroke();
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = CRITICAL_INFRA_NEUTRAL.white;
     const hw = s * 0.26;
     const hh = s * 0.2;
     const baseY = cy + s * 0.02 + houseYOffset;
@@ -303,7 +312,7 @@ function imageDataRiskShelter() {
     ctx.lineTo(cx + hw / 2 + s * 0.02, baseY);
     ctx.closePath();
     ctx.fill();
-    ctx.fillStyle = '#169f89';
+    ctx.fillStyle = CRITICAL_INFRA_NEUTRAL.black;
     ctx.fillRect(cx - s * 0.035, cy + s * 0.09 + houseYOffset, s * 0.07, s * 0.1);
   });
 }
@@ -319,7 +328,11 @@ function getMedicalLegendIconDataUrl() {
   canvas.width = s;
   canvas.height = s;
   const ctx = canvas.getContext('2d');
-  const imageData = imageDataMedicalCross('#c0392b');
+  const imageData = imageDataMedicalCross(
+    CRITICAL_INFRA_NEUTRAL.black,
+    CRITICAL_INFRA_NEUTRAL.white,
+    'rgba(255, 255, 255, 0.32)',
+  );
   if (!ctx || !imageData) return '';
   ctx.putImageData(imageData, 0, 0);
   medicalLegendIconDataUrl = canvas.toDataURL('image/png');
@@ -364,8 +377,22 @@ function registerOverlaySymbolImages(mapInstance) {
       console.warn('[Overlay] addImage failed', id, e);
     }
   };
-  reg(OVERLAY_SYMBOL_IMAGES.medicalCross, imageDataMedicalCross('#c0392b'));
-  reg(OVERLAY_SYMBOL_IMAGES.eocCross, imageDataMedicalCross('#f39c12'));
+  reg(
+    OVERLAY_SYMBOL_IMAGES.medicalCross,
+    imageDataMedicalCross(
+      CRITICAL_INFRA_NEUTRAL.black,
+      CRITICAL_INFRA_NEUTRAL.white,
+      'rgba(255, 255, 255, 0.32)',
+    ),
+  );
+  reg(
+    OVERLAY_SYMBOL_IMAGES.eocCross,
+    imageDataMedicalCross(
+      CRITICAL_INFRA_NEUTRAL.white,
+      CRITICAL_INFRA_NEUTRAL.black,
+      'rgba(17, 17, 17, 0.24)',
+    ),
+  );
   reg(OVERLAY_SYMBOL_IMAGES.community, imageDataCommunityCenter());
   reg(OVERLAY_SYMBOL_IMAGES.disasterRecovery, imageDataDisasterRecovery());
   reg(OVERLAY_SYMBOL_IMAGES.riskShelter, imageDataRiskShelter());
@@ -377,7 +404,7 @@ const OVERLAY_LAYERS_CONFIG = [
   { id: 'overlay-emergency-medical', label: 'Emergency Medical', url: `${SUPABASE_STORAGE}/EmergencyMedical_FeaturesToJSO.geojson`, style: { type: 'symbol', iconImage: OVERLAY_SYMBOL_IMAGES.medicalCross, iconSize: 0.42 }, popupTitleField: 'Name', popupFields: ['Address', 'City'], pointLonLatFields: ['X', 'Y'] },
   { id: 'overlay-emergency-ops', label: 'Emergency Operations Centers', url: `${SUPABASE_STORAGE}/Emergency%20Oper_FeaturesToJSO.geojson`, style: { type: 'symbol', iconImage: OVERLAY_SYMBOL_IMAGES.eocCross, iconSize: 0.42 } },
   { id: 'overlay-evacuation-routes', label: 'Evacuation Routes', url: `${SUPABASE_STORAGE}/Evacuation%20Rou_FeaturesToJSO.geojson`, style: { type: 'line', paint: { 'line-color': '#34495e', 'line-width': 3 } } },
-  { id: 'overlay-military', label: 'Military Installations', url: `${SUPABASE_STORAGE}/MILITARY_FeaturesToJSO.geojson`, style: { type: 'fill', paint: { 'fill-color': '#2c3e50', 'fill-opacity': 0.35, 'fill-outline-color': '#1a252f', 'line-color': '#1a252f' } }, popupTitleField: 'NAME', popupFields: ['GEOID', 'FEMAIndexR'] },
+  { id: 'overlay-military', label: 'Military Installations', url: `${SUPABASE_STORAGE}/MILITARY_FeaturesToJSO.geojson`, style: { type: 'fill', paint: { 'fill-color': CRITICAL_INFRA_NEUTRAL.lightGray, 'fill-opacity': 0.42, 'fill-outline-color': CRITICAL_INFRA_NEUTRAL.black, 'line-color': CRITICAL_INFRA_NEUTRAL.black } }, popupTitleField: 'NAME', popupFields: ['GEOID', 'FEMAIndexR'] },
   { id: 'overlay-risk-shelters', label: 'Risk Shelters', url: `${SUPABASE_STORAGE}/Risk%20Shelter%20I_FeaturesToJSO.geojson`, style: { type: 'symbol', iconImage: OVERLAY_SYMBOL_IMAGES.riskShelter, iconSize: 0.42 }, popupTitleField: 'Name', popupFields: ['Address', 'City'] },
 ];
 
@@ -1992,9 +2019,9 @@ const Dashboard = () => {
             </div>
           );
         }
-        const cross = iconImage === OVERLAY_SYMBOL_IMAGES.medicalCross ? '#ffffff' : '#f39c12';
-        const circle = iconImage === OVERLAY_SYMBOL_IMAGES.medicalCross ? '#c0392b' : '#ffffff';
-        const border = iconImage === OVERLAY_SYMBOL_IMAGES.medicalCross ? 'rgba(255,255,255,0.36)' : 'rgba(0,0,0,0.28)';
+        const cross = iconImage === OVERLAY_SYMBOL_IMAGES.medicalCross ? CRITICAL_INFRA_NEUTRAL.white : CRITICAL_INFRA_NEUTRAL.black;
+        const circle = iconImage === OVERLAY_SYMBOL_IMAGES.medicalCross ? CRITICAL_INFRA_NEUTRAL.black : CRITICAL_INFRA_NEUTRAL.white;
+        const border = iconImage === OVERLAY_SYMBOL_IMAGES.medicalCross ? 'rgba(255,255,255,0.32)' : 'rgba(0,0,0,0.24)';
         return (
           <div style={{ width: `${legendMarkerSize}px`, height: `${legendMarkerSize}px`, borderRadius: '50%', backgroundColor: circle, border: `1px solid ${border}`, position: 'relative', flexShrink: 0 }}>
             <div style={{ position: 'absolute', left: '50%', top: '20%', transform: 'translateX(-50%)', width: '3px', height: '60%', borderRadius: 1, backgroundColor: cross }} />
@@ -2011,10 +2038,10 @@ const Dashboard = () => {
             </div>
           );
         }
-        return <div style={{ width: `${legendMarkerSize}px`, height: `${legendMarkerSize}px`, borderRadius: '50%', backgroundColor: '#5b61d6', border: '1px solid #454fbd', flexShrink: 0 }} />;
+        return <div style={{ width: `${legendMarkerSize}px`, height: `${legendMarkerSize}px`, borderRadius: '50%', backgroundColor: CRITICAL_INFRA_NEUTRAL.black, border: '1px solid rgba(255,255,255,0.32)', flexShrink: 0 }} />;
       }
       if (iconImage === OVERLAY_SYMBOL_IMAGES.disasterRecovery) {
-        return <div style={{ width: `${legendMarkerSize}px`, height: `${legendMarkerSize}px`, borderRadius: '50%', backgroundColor: '#1abc9c', border: '1px solid #16a085', flexShrink: 0 }} />;
+        return <div style={{ width: `${legendMarkerSize}px`, height: `${legendMarkerSize}px`, borderRadius: '50%', backgroundColor: CRITICAL_INFRA_NEUTRAL.darkGray, border: `1px solid ${CRITICAL_INFRA_NEUTRAL.borderGray}`, flexShrink: 0 }} />;
       }
       if (iconImage === OVERLAY_SYMBOL_IMAGES.riskShelter) {
         const src = getRiskLegendIconDataUrl();
@@ -2026,10 +2053,10 @@ const Dashboard = () => {
           );
         }
         return (
-          <div style={{ width: `${legendMarkerSize}px`, height: `${legendMarkerSize}px`, borderRadius: '50%', backgroundColor: '#169f89', border: '1px solid #0f7665', position: 'relative', flexShrink: 0 }}>
-            <div style={{ position: 'absolute', left: '22%', top: '46%', width: '56%', height: '30%', backgroundColor: '#ffffff', borderRadius: '1px' }} />
-            <div style={{ position: 'absolute', left: '50%', top: '25%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderBottom: '5px solid #ffffff' }} />
-            <div style={{ position: 'absolute', left: '50%', top: '54%', transform: 'translateX(-50%)', width: '12%', height: '20%', backgroundColor: '#169f89', borderRadius: '1px' }} />
+          <div style={{ width: `${legendMarkerSize}px`, height: `${legendMarkerSize}px`, borderRadius: '50%', backgroundColor: CRITICAL_INFRA_NEUTRAL.darkGray, border: `1px solid ${CRITICAL_INFRA_NEUTRAL.borderGray}`, position: 'relative', flexShrink: 0 }}>
+            <div style={{ position: 'absolute', left: '22%', top: '46%', width: '56%', height: '30%', backgroundColor: CRITICAL_INFRA_NEUTRAL.white, borderRadius: '1px' }} />
+            <div style={{ position: 'absolute', left: '50%', top: '25%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderBottom: `5px solid ${CRITICAL_INFRA_NEUTRAL.white}` }} />
+            <div style={{ position: 'absolute', left: '50%', top: '54%', transform: 'translateX(-50%)', width: '12%', height: '20%', backgroundColor: CRITICAL_INFRA_NEUTRAL.black, borderRadius: '1px' }} />
           </div>
         );
       }
