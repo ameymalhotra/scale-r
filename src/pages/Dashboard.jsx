@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import mapboxgl from 'https://cdn.skypack.dev/mapbox-gl@2.15.0';
+import mapboxgl from 'mapbox-gl';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import { searchProjects } from '../utils/searchProjects.js';
 import { highlightText } from '../utils/highlightText.jsx';
@@ -3108,9 +3108,7 @@ const Dashboard = () => {
                       })}
                     </div>
                     {censusVisible && activeCensusView === 'critical-infrastructure' && criticalInfraLegendItems.length > 0 && (
-                      <>
-                        <div style={{ borderTop: '1px solid rgba(0,0,0,0.08)', marginTop: '10px', paddingTop: '10px', fontSize: '0.88em', fontWeight: 600, color: '#1b3a4b', marginBottom: '6px' }}>Data markers</div>
-                        <div style={{ maxHeight: '100px', overflowY: 'auto' }}>
+                      <div style={{ borderTop: '1px solid rgba(0,0,0,0.08)', marginTop: '10px', paddingTop: '10px' }}>
                         {criticalInfraLegendItems.map((item) => {
                           const { id, label, config } = item;
                           return (
@@ -3120,8 +3118,7 @@ const Dashboard = () => {
                             </div>
                           );
                         })}
-                        </div>
-                      </>
+                      </div>
                     )}
                   </div>
                   {/* Mobile: Legend always visible when layer is active (above Layers dropdown) */}
@@ -3200,16 +3197,16 @@ const Dashboard = () => {
                     </div>
                   </div>
 
-              {/* Legend: single fixed-size container so position/size stay constant */}
+              {/* Legend: fixed height for risk/pred3pe; taller for critical infra (4 symbol rows, no scroll) */}
               <div style={{
                 ...mapOverlayGlassStyle,
                 padding: '10px 12px 4px',
                 borderRadius: '12px',
                 width: '320px',
-                minHeight: '96px',
-                height: '96px',
+                ...(censusVisible && activeCensusView === 'critical-infrastructure' && criticalInfraLegendItems.length > 0
+                  ? { minHeight: '124px', height: 'auto', overflow: 'visible' }
+                  : { minHeight: '96px', height: '96px', overflow: 'hidden' }),
                 boxSizing: 'border-box',
-                overflow: 'hidden',
                 display: 'flex',
                 flexDirection: 'column',
               }}>
@@ -3273,22 +3270,17 @@ const Dashboard = () => {
                   </>
                 )}
                 {censusVisible && activeCensusView === 'critical-infrastructure' && criticalInfraLegendItems.length > 0 && (
-                  <>
-                    <div style={{ fontSize: '0.95em', fontWeight: 600, color: '#1b3a4b', marginBottom: '6px', flexShrink: 0 }}>
-                      Data markers
-                    </div>
-                    <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-                      {criticalInfraLegendItems.map((item) => {
-                        const { id, label, config } = item;
-                        return (
-                          <div key={id} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', fontSize: '0.82em', color: '#1b3a4b' }}>
-                            {renderOverlayLegendSymbol(config)}
-                            <span>{label}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </>
+                  <div>
+                    {criticalInfraLegendItems.map((item) => {
+                      const { id, label, config } = item;
+                      return (
+                        <div key={id} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', fontSize: '0.82em', color: '#1b3a4b' }}>
+                          {renderOverlayLegendSymbol(config)}
+                          <span>{label}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
 
