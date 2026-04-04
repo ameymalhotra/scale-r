@@ -81,7 +81,7 @@ html, body {
   left: max(10px, env(safe-area-inset-left, 0px));
 }
 
-/* Site navbar — Stitch-aligned glass bar (below app header; header unchanged) */
+/* Site navbar — dark green bar; white links, orange on hover / current page */
 .site-navbar {
   flex-shrink: 0;
   display: flex;
@@ -89,10 +89,8 @@ html, body {
   align-items: stretch;
   gap: 0;
   padding: 0 1.75rem;
-  background: rgba(232, 255, 238, 0.78);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(11, 31, 21, 0.1);
+  background: #01321e;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .site-navbar-link {
@@ -104,26 +102,27 @@ html, body {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   text-decoration: none;
-  color: rgba(11, 31, 21, 0.72);
+  color: #fff;
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
   transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
 }
 
 .site-navbar-link:hover {
-  color: #9e4300;
-  background: rgba(158, 67, 0, 0.06);
+  color: #e8a060;
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .site-navbar-link--active {
-  color: #9e4300;
-  border-bottom-color: #9e4300;
+  color: #e8a060;
+  border-bottom-color: #e8a060;
   background: transparent;
 }
 
 .site-navbar-link--active:hover {
-  color: #9e4300;
-  background: rgba(158, 67, 0, 0.06);
+  color: #e8a060;
+  border-bottom-color: #e8a060;
+  background: rgba(255, 255, 255, 0.08);
 }
 
 /* Page content container for About, Team, Partners, etc. */
