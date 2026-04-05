@@ -213,8 +213,13 @@
 .about-science.about-section--on-um-green .about-science-block-heading {
   color: var(--um-text-on-green);
 }
-.about-science.about-section--on-um-green .about-science-subtitle {
-  color: rgba(255, 255, 255, 0.72);
+.about-science.about-section--on-um-green .about-science-title {
+  text-shadow: 0 2px 28px rgba(0, 0, 0, 0.22);
+}
+.about-science.about-section--on-um-green .about-science-subsection-heading {
+  color: rgba(255, 255, 255, 0.92);
+  font-weight: 700;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.22);
 }
 .about-science.about-section--on-um-green .body-text {
   color: var(--um-text-on-green-muted);
@@ -656,20 +661,66 @@
 }
 .about-science-title {
   font-family: 'Manrope', sans-serif;
-  font-size: clamp(2rem, 3.5vw, 3rem);
-  font-weight: 700;
-  margin: 0 0 0.75rem;
+  font-size: clamp(2.35rem, 4vw, 3.5rem);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.08;
+  margin: 0 0 0.25rem;
   color: var(--about-text-green);
 }
-.about-science-subtitle {
-  font-family: 'Manrope', 'Inter', sans-serif;
-  font-size: clamp(1.05rem, 2vw, 1.25rem);
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  line-height: 1.45;
-  color: var(--about-text-muted);
-  margin: 0 auto 3rem;
-  max-width: min(var(--about-copy-max-width), 100%);
+/* Section hero: orange rule separates this h2 from subsection / block headings */
+.about-science-title::after {
+  content: '';
+  display: block;
+  width: min(4.5rem, 22vw);
+  height: 3px;
+  margin: 1.1rem auto 0;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--um-orange),
+    transparent
+  );
+}
+.about-science-inner > .about-science-subsection:first-of-type {
+  margin-top: 3rem;
+}
+.about-science-subsection + .about-science-subsection {
+  margin-top: 3.5rem;
+}
+.about-science-subsection-heading-wrap {
+  display: flex;
+  justify-content: center;
+  margin: 0 auto 2.25rem;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+.about-science-subsection-heading-wrap::-webkit-scrollbar {
+  height: 5px;
+}
+.about-science-subsection-heading-wrap::-webkit-scrollbar-thumb {
+  background: rgba(26, 67, 52, 0.35);
+  border-radius: 999px;
+}
+.about-science.about-section--on-um-green
+  .about-science-subsection-heading-wrap::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.35);
+}
+.about-science-subsection-heading {
+  flex: 0 0 auto;
+  font-family: 'Manrope', sans-serif;
+  font-size: clamp(1.35rem, 2.1vw + 0.5rem, 1.95rem);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.22;
+  color: var(--about-text-green);
+  margin: 0;
+  padding-inline: 0.75rem;
+  white-space: nowrap;
 }
 .about-science-block {
   margin-bottom: 3.5rem;
@@ -679,12 +730,18 @@
 }
 .about-science-block-heading {
   font-family: 'Manrope', sans-serif;
-  font-size: clamp(1.25rem, 2.2vw, 1.65rem);
+  font-size: clamp(1rem, 1.25vw + 0.65rem, 1.45rem);
   font-weight: 700;
-  line-height: 1.35;
+  line-height: 1.25;
   margin: 0 auto 1rem;
   color: var(--about-text-green);
-  max-width: min(var(--about-copy-max-width), 100%);
+  max-width: 100%;
+  padding-inline: 0;
+}
+@media (min-width: 900px) {
+  .about-science-block-heading {
+    white-space: nowrap;
+  }
 }
 .about-science .body-text {
   color: var(--about-text-muted);
@@ -715,6 +772,39 @@
   width: min(1055px, 100%);
   aspect-ratio: 1055 / 699;
 }
+.about-flourish-frame--1076-678 {
+  width: min(1076px, 100%);
+  aspect-ratio: 1076 / 678;
+}
+/* Tableau embed: design frame 850 × 927 */
+.about-flourish-frame.about-tableau-frame--850-927 {
+  width: min(850px, 100%);
+  max-width: 850px;
+  aspect-ratio: 850 / 927;
+}
+/* Clip + slight scale: Tableau’s embed page is often a few px larger than the
+   iframe, which shows both scrollbars; scaling removes them without changing the outer frame size. */
+.about-flourish-frame.about-tableau-frame--850-927 .about-tableau-scale-wrap {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+}
+.about-flourish-frame.about-tableau-frame--850-927 .about-tableau-embed-iframe {
+  position: absolute;
+  /* Override .about-flourish-frame iframe { inset: 0 } so centering + scale work */
+  inset: unset;
+  left: 50%;
+  top: 50%;
+  width: 104%;
+  height: 104%;
+  margin: 0;
+  border: 0;
+  display: block;
+  overflow: hidden;
+  transform: translate(-50%, -50%) scale(0.96);
+  transform-origin: center center;
+}
 .about-flourish-frame iframe {
   position: absolute;
   inset: 0;
@@ -722,6 +812,26 @@
   height: 100%;
   border: 0;
   display: block;
+}
+.about-flourish-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.12);
+}
+.about-flourish-placeholder p {
+  margin: 0;
+  font-family: 'Manrope', 'Inter', sans-serif;
+  font-size: 1.05rem;
+  line-height: 1.5;
+  color: var(--about-text-muted);
+}
+.about-science.about-section--on-um-green .about-flourish-placeholder p {
+  color: var(--um-text-on-green-muted);
 }
 
 /* ── Plan & Policy ──────────────────────────────────────────── */
@@ -950,18 +1060,31 @@
   line-height: 1.7;
   margin: 0;
 }
+.about-ack-disclaimer {
+  margin-top: 1rem !important;
+}
 .about-ack strong {
   color: var(--about-text);
   font-weight: 700;
 }
-.about-ack a {
-  color: #c2410c;
-  text-decoration: none;
-  font-weight: 600;
-}
-.about-ack a:hover {
+.about-ack a.about-ack-nsf-link {
+  color: #2563eb;
+  font-weight: 500;
   text-decoration: underline;
-  color: #9a3412;
+}
+.about-ack a.about-ack-nsf-link:hover {
+  color: #1d4ed8;
+}
+.about-ack-dashboard-link {
+  display: inline-block;
+  margin-top: 1.35rem;
+  color: #6b2d5c;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: underline;
+}
+.about-ack-dashboard-link:hover {
+  color: #4a1f42;
 }
 
 /* ── Footer (Stitch shell) ──────────────────────────────────── */
