@@ -55,12 +55,13 @@
     rgba(var(--about-bg-rgb), 0.04) 72%,
     transparent 100%
   );
+  /* No fade to page bg at bottom — keeps a hard edge between hero photo and next section */
   --about-hero-scrim-vertical: linear-gradient(
     to bottom,
     rgba(var(--about-bg-rgb), 0.06) 0%,
     rgba(var(--about-bg-rgb), 0.12) 45%,
-    rgba(var(--about-bg-rgb), 0.28) 78%,
-    var(--about-bg) 100%
+    rgba(var(--about-bg-rgb), 0.22) 78%,
+    transparent 100%
   );
   overflow-y: auto;
   overflow-x: hidden;
@@ -420,21 +421,6 @@
 .about-hero-cta:hover {
   transform: scale(1.04);
   box-shadow: 0 0 60px -8px rgba(158,67,0,0.65);
-}
-.about-hero-bottom-fade {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  width: 100%;
-  height: 120px;
-  pointer-events: none;
-  z-index: 0;
-  background: linear-gradient(
-    to bottom,
-    transparent 0%,
-    var(--um-green) 100%
-  );
 }
 /* ── The SCALE-R Difference (centered title + copy) ─────────── */
 .about-difference {

@@ -193,7 +193,6 @@ export default function About() {
             </Link>
           </div>
         </div>
-        <div className="about-hero-bottom-fade" aria-hidden="true" />
       </header>
 
       {/* ── The SCALE-R Difference ─────────────────────────────── */}
