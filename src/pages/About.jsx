@@ -5,6 +5,7 @@ import './About.css';
 const goals = [
   {
     title: 'Cross-Sector Partnerships',
+    icon: 'groups',
     body: (
       <>
         Fostering meaningful collaborations among academia, communities, and
@@ -15,6 +16,7 @@ const goals = [
   },
   {
     title: 'Mapping the Resilience Landscape',
+    icon: 'hub',
     body: (
       <>
         Systematically mapping the network of resilience plans, projects, and
@@ -25,6 +27,7 @@ const goals = [
   },
   {
     title: 'Decision-Support Tools',
+    icon: 'analytics',
     body: (
       <>
         Designing an integrated dashboard that supports the collaborative
@@ -195,7 +198,7 @@ export default function About() {
 
       {/* ── The SCALE-R Difference ─────────────────────────────── */}
       <section
-        className="about-difference"
+        className="about-difference about-section--on-um-green"
         aria-labelledby="about-difference-heading"
       >
         <div className="about-difference-inner">
@@ -216,18 +219,29 @@ export default function About() {
       </section>
 
       {/* ── Goals ──────────────────────────────────────────────── */}
-      <section className="about-pillars" aria-labelledby="about-goals-heading">
+      <section
+        className="about-pillars about-section--on-um-orange"
+        aria-labelledby="about-goals-heading"
+      >
         <div className="about-pillars-inner">
           <h2 id="about-goals-heading" className="about-goals-heading">
             Our Goals
           </h2>
 
-          <div className="about-goals-list" ref={goalsListRef}>
+          <div className="about-goals-grid" ref={goalsListRef}>
             {goals.map((g, i) => (
               <article
-                className={`goal-reveal ${i % 2 === 0 ? 'goal-reveal--from-left' : 'goal-reveal--from-right'}`}
                 key={g.title}
+                className={`goal-reveal about-goal-card ${i % 2 === 0 ? 'goal-reveal--from-left' : 'goal-reveal--from-right'}`}
               >
+                <div className="about-goal-bg-icon" aria-hidden>
+                  <span className="material-symbols-outlined">{g.icon}</span>
+                </div>
+                <div className="about-goal-icon">
+                  <span className="material-symbols-outlined" aria-hidden>
+                    {g.icon}
+                  </span>
+                </div>
                 <h3>{g.title}</h3>
                 <p>{g.body}</p>
               </article>
@@ -238,10 +252,11 @@ export default function About() {
 
       {/* ── Rigorous science (Flourish) ───────────────────────── */}
       <section
-        className="about-science"
+        className="about-science about-section--on-um-green"
         aria-labelledby="about-science-heading"
       >
         <div className="about-science-inner">
+          <span className="about-label">Research &amp; analysis</span>
           <h2 id="about-science-heading" className="about-science-title">
             A Tool Informed by Rigorous Science
           </h2>
@@ -277,10 +292,13 @@ export default function About() {
       </section>
 
       {/* ── Plan & Policy Context ────────────────────────────── */}
-      <section className="about-policy">
+      <section
+        className="about-policy about-section--on-um-orange"
+        aria-labelledby="about-policy-heading"
+      >
         <div className="about-policy-inner">
           <span className="about-label">Research Foundation</span>
-          <h2>Plan and policy context</h2>
+          <h2 id="about-policy-heading">Plan and policy context</h2>
           <p className="body-text">
             The team has systematically reviewed{' '}
             <strong>22 resilience plans</strong>{' '}
@@ -312,16 +330,19 @@ export default function About() {
       </section>
 
       {/* ── Community Engagement ─────────────────────────────── */}
-      <section className="about-engagement">
+      <section
+        className="about-engagement about-section--on-um-green"
+        aria-labelledby="about-engagement-heading"
+      >
         <div className="about-engagement-inner">
           <span className="about-label">Outreach & Impact</span>
-          <h2>Community engagement</h2>
+          <h2 id="about-engagement-heading">Community engagement</h2>
           <div className="engagement-grid">
             {engagementItems.map((e, i) => (
               <div className="engagement-card" key={i}>
                 <div className="engagement-num">{i + 1}</div>
                 <div>
-                  <h4>{e.title}</h4>
+                  <h3>{e.title}</h3>
                   <p>{e.detail}</p>
                 </div>
               </div>
@@ -331,7 +352,10 @@ export default function About() {
       </section>
 
       {/* ── Scrolling Partners ───────────────────────────────── */}
-      <section className="about-partners" aria-labelledby="strategic-partners-heading">
+      <section
+        className="about-partners about-section--on-light-um"
+        aria-labelledby="strategic-partners-heading"
+      >
         <div className="about-partners-header">
           <h2 id="strategic-partners-heading" className="about-partners-title">
             Strategic Partners
@@ -340,42 +364,46 @@ export default function About() {
         <div className="about-partners-marquee">
           <div className="marquee-container">
             <div className="marquee-track">
-              {/* original set */}
-              {partners.map((p) => (
-                <div className="partner-item" key={p.alt}>
-                  <img
-                    className={['partner-logo', p.logoClass].filter(Boolean).join(' ')}
-                    src={p.src}
-                    alt={p.alt}
-                    loading="lazy"
-                    decoding="async"
-                  />
-                </div>
-              ))}
-              {/* duplicate for seamless loop */}
-              {partners.map((p) => (
-                <div
-                  className="partner-item"
-                  key={`dup-${p.alt}`}
-                  aria-hidden="true"
-                >
-                  <img
-                    className={['partner-logo', p.logoClass].filter(Boolean).join(' ')}
-                    src={p.src}
-                    alt=""
-                    loading="lazy"
-                    decoding="async"
-                  />
-                </div>
-              ))}
+              <div className="marquee-group">
+                {partners.map((p) => (
+                  <div className="partner-item" key={p.alt}>
+                    <img
+                      className={['partner-logo', p.logoClass].filter(Boolean).join(' ')}
+                      src={p.src}
+                      alt={p.alt}
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  </div>
+                ))}
+              </div>
+              <div className="marquee-group" aria-hidden="true">
+                {partners.map((p) => (
+                  <div className="partner-item" key={`dup-${p.alt}`}>
+                    <img
+                      className={['partner-logo', p.logoClass].filter(Boolean).join(' ')}
+                      src={p.src}
+                      alt=""
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       {/* ── Acknowledgment ───────────────────────────────────── */}
-      <section className="about-ack">
+      <section
+        className="about-ack about-section--on-um-green"
+        aria-labelledby="about-ack-heading"
+      >
         <div className="about-ack-inner">
+          <h2 id="about-ack-heading" className="about-ack-heading">
+            Funding acknowledgment
+          </h2>
           <p>
             This material is based upon work supported by the{' '}
             <strong>National Science Foundation</strong>{' '}
@@ -394,7 +422,7 @@ export default function About() {
       </section>
 
       {/* ── Footer ───────────────────────────────────────────── */}
-      <footer className="about-footer">
+      <footer className="about-footer about-section--on-um-green">
         <div className="about-footer-inner">
           <div className="about-footer-brand">
             <div className="about-footer-logo">SCALE-R</div>

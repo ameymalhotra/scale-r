@@ -18,24 +18,48 @@
 
 /* Fonts loaded via index.html <link> */
 .about-root {
-  --about-bg: #f0fff5;
-  --about-text: #0d2818;
-  --about-text-muted: #5a6d64;
+  --about-bg: #fafaf9;
+  /* Matches --about-bg (#fafaf9) for rgba(var(--about-bg-rgb), α) */
+  --about-bg-rgb: 250, 250, 249;
+  /* Light-background copy: green-tinted, WCAG-friendly on cream */
+  --about-text-green: #1a4334;
+  --about-text-green-muted: #4d6b60;
+  --about-text: var(--about-text-green);
+  --about-text-muted: var(--about-text-green-muted);
   --about-card-dark: #01321e;
+  --about-accent: #9e4300;
+  --about-diagram-bg: #ffffff;
+  --about-diagram-border: rgba(26, 67, 52, 0.14);
+  --about-diagram-shadow: 0 4px 28px rgba(11, 31, 21, 0.08),
+    0 0 0 1px var(--about-diagram-border);
+  /* Section rhythm */
+  --about-section-pad-x: 4rem;
+  --about-section-pad-y: 7rem;
+  --about-section-pad-y-tight: 5.5rem;
+  --about-copy-max-width: 51.25rem; /* 820px */
+  /* University of Miami brand (Pantone 158 / 3435) */
+  --um-orange: #f47321;
+  --um-green: #005030;
+  --um-orange-soft: #fff3ea;
+  --um-green-soft: #e6f0eb;
+  --um-text-on-green: #f7faf8;
+  --um-text-on-green-muted: rgba(255, 255, 255, 0.86);
+  --um-text-on-orange: #0d2a1f;
+  --um-text-on-orange-muted: #1f3d32;
   /* Hero scrims — lighter so the photo shows through; text-shadow keeps copy legible */
   --about-hero-scrim-left: linear-gradient(
     to right,
-    rgba(232, 255, 238, 0.62) 0%,
-    rgba(232, 255, 238, 0.42) 28%,
-    rgba(232, 255, 238, 0.16) 52%,
-    rgba(232, 255, 238, 0.04) 72%,
+    rgba(var(--about-bg-rgb), 0.62) 0%,
+    rgba(var(--about-bg-rgb), 0.42) 28%,
+    rgba(var(--about-bg-rgb), 0.16) 52%,
+    rgba(var(--about-bg-rgb), 0.04) 72%,
     transparent 100%
   );
   --about-hero-scrim-vertical: linear-gradient(
     to bottom,
-    rgba(232, 255, 238, 0.06) 0%,
-    rgba(232, 255, 238, 0.12) 45%,
-    rgba(232, 255, 238, 0.28) 78%,
+    rgba(var(--about-bg-rgb), 0.06) 0%,
+    rgba(var(--about-bg-rgb), 0.12) 45%,
+    rgba(var(--about-bg-rgb), 0.28) 78%,
     var(--about-bg) 100%
   );
   overflow-y: auto;
@@ -45,6 +69,236 @@
   color: var(--about-text);
 }
 
+/* ── UM section surfaces (patterns + shadow motifs) ───────────── */
+/* Difference + Goals: line/grid patterns. Others: shadow-style gradients. */
+
+/* Coastal ripples + bay glow (pattern, not shadow stack) */
+.about-difference.about-section--on-um-green {
+  background-color: var(--um-green);
+  background-image:
+    radial-gradient(ellipse 130% 90% at 50% 108%, rgba(244, 115, 33, 0.14) 0%, transparent 52%),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 10px,
+      rgba(255, 255, 255, 0.038) 10px,
+      rgba(255, 255, 255, 0.038) 11px
+    );
+  color: var(--um-text-on-green-muted);
+}
+
+/* Mapping / network grid (pattern) */
+.about-pillars.about-section--on-um-orange {
+  background-color: var(--um-orange);
+  background-image:
+    linear-gradient(rgba(0, 80, 48, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 80, 48, 0.07) 1px, transparent 1px);
+  background-size: 26px 26px;
+  color: var(--um-text-on-orange-muted);
+}
+
+/* Topographic relief: nested contour shadows (landscape / analysis layers) */
+.about-science.about-section--on-um-green {
+  background-color: var(--um-green);
+  background-image:
+    radial-gradient(ellipse 85% 70% at 50% 48%, transparent 30%, rgba(0, 0, 0, 0.14) 70%, transparent 72%),
+    radial-gradient(ellipse 70% 58% at 50% 48%, transparent 38%, rgba(0, 0, 0, 0.1) 78%, transparent 80%),
+    radial-gradient(ellipse 55% 46% at 50% 48%, transparent 48%, rgba(255, 255, 255, 0.05) 85%, transparent 88%),
+    radial-gradient(ellipse 110% 90% at 20% 15%, rgba(244, 115, 33, 0.1) 0%, transparent 42%);
+  color: var(--um-text-on-green-muted);
+}
+
+/* Policy stack: horizontal shadow bands (layered plans / protective strata) */
+.about-policy.about-section--on-um-orange {
+  background-color: var(--um-orange);
+  background-image:
+    linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.1) 0%,
+      transparent 8%,
+      transparent 92%,
+      rgba(0, 80, 48, 0.16) 100%
+    ),
+    linear-gradient(
+      rgba(0, 80, 48, 0.07) 0%,
+      transparent 14%,
+      transparent 38%,
+      rgba(0, 0, 0, 0.06) 50%,
+      transparent 62%,
+      transparent 86%,
+      rgba(0, 80, 48, 0.08) 100%
+    );
+  color: var(--um-text-on-orange-muted);
+}
+
+/* Canopy shade: dappled pools (trees, gathering places) */
+.about-engagement.about-section--on-um-green {
+  background-color: var(--um-green);
+  background-image:
+    radial-gradient(circle 28% at 22% 28%, rgba(0, 0, 0, 0.2) 0%, transparent 55%),
+    radial-gradient(circle 22% at 68% 18%, rgba(255, 255, 255, 0.06) 0%, transparent 50%),
+    radial-gradient(circle 35% at 88% 62%, rgba(0, 0, 0, 0.16) 0%, transparent 52%),
+    radial-gradient(circle 26% at 40% 78%, rgba(244, 115, 33, 0.12) 0%, transparent 48%),
+    radial-gradient(circle 20% at 55% 45%, rgba(255, 255, 255, 0.04) 0%, transparent 45%);
+  color: var(--um-text-on-green-muted);
+}
+
+/* Partnership depth: corner vignettes + ground-plane shadow */
+.about-partners.about-section--on-light-um {
+  background-color: var(--about-bg);
+  background-image:
+    radial-gradient(ellipse 70% 55% at 0% 0%, rgba(0, 80, 48, 0.09) 0%, transparent 58%),
+    radial-gradient(ellipse 65% 50% at 100% 100%, rgba(244, 115, 33, 0.1) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 40% at 50% 100%, rgba(0, 0, 0, 0.04) 0%, transparent 50%);
+  border-bottom-color: rgba(0, 80, 48, 0.1);
+  color: var(--about-text);
+}
+
+/* Slatted shade / rain: soft vertical shadow ribs (shelter, weather) */
+.about-ack.about-section--on-um-green {
+  background-color: var(--um-green);
+  background-image:
+    repeating-linear-gradient(
+      92deg,
+      transparent,
+      transparent 48px,
+      rgba(0, 0, 0, 0.07) 52px,
+      rgba(0, 0, 0, 0.07) 56px,
+      transparent 60px
+    ),
+    radial-gradient(ellipse 80% 60% at 50% -10%, rgba(255, 255, 255, 0.06) 0%, transparent 45%);
+  color: var(--um-text-on-green-muted);
+}
+
+/* Ground plane: overhead shadow + floor depth */
+.about-footer.about-section--on-um-green {
+  background-color: var(--um-green);
+  background-image:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.22) 0%, transparent 38%),
+    radial-gradient(ellipse 90% 45% at 50% 0%, rgba(0, 0, 0, 0.12) 0%, transparent 50%);
+  border-top-color: rgba(255, 255, 255, 0.12);
+  color: var(--um-text-on-green-muted);
+}
+
+/* UM copy & components on brand backgrounds */
+.about-difference.about-section--on-um-green .about-difference-copy {
+  border-color: rgba(255, 255, 255, 0.22);
+  box-shadow: 0 8px 36px rgba(0, 0, 0, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+}
+.about-difference.about-section--on-um-green .about-goals-heading {
+  color: var(--um-text-on-green);
+}
+.about-difference.about-section--on-um-green .body-text {
+  color: var(--um-text-on-green-muted);
+}
+.about-difference.about-section--on-um-green .body-text strong {
+  color: var(--um-text-on-green);
+}
+
+.about-pillars.about-section--on-um-orange .about-goals-heading {
+  color: var(--um-green);
+}
+.about-pillars.about-section--on-um-orange .about-goal-card {
+  box-shadow:
+    0 12px 44px rgba(0, 40, 24, 0.38),
+    0 0 0 1px rgba(0, 0, 0, 0.14);
+}
+
+.about-science.about-section--on-um-green .about-label {
+  color: var(--um-orange);
+}
+.about-science.about-section--on-um-green .about-science-title,
+.about-science.about-section--on-um-green .about-science-block-heading {
+  color: var(--um-text-on-green);
+}
+.about-science.about-section--on-um-green .about-science-subtitle {
+  color: rgba(255, 255, 255, 0.72);
+}
+.about-science.about-section--on-um-green .body-text {
+  color: var(--um-text-on-green-muted);
+}
+.about-science.about-section--on-um-green .body-text strong {
+  color: var(--um-text-on-green);
+}
+
+.about-policy.about-section--on-um-orange .about-label {
+  color: var(--um-green);
+}
+.about-policy.about-section--on-um-orange h2 {
+  color: var(--um-green);
+}
+.about-policy.about-section--on-um-orange .body-text {
+  color: var(--um-text-on-orange-muted);
+}
+.about-policy.about-section--on-um-orange .body-text strong {
+  color: var(--um-text-on-orange);
+}
+.about-policy.about-section--on-um-orange .about-badge {
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.4),
+    0 2px 10px rgba(0, 40, 24, 0.22);
+}
+
+.about-engagement.about-section--on-um-green .about-label {
+  color: var(--um-orange);
+}
+.about-engagement.about-section--on-um-green h2 {
+  color: var(--um-text-on-green);
+}
+.about-engagement.about-section--on-um-green .engagement-card {
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.about-partners.about-section--on-light-um .about-partners-title {
+  color: var(--um-green);
+}
+
+.about-ack.about-section--on-um-green .about-ack-inner {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-left: 3px solid var(--um-orange);
+}
+.about-ack.about-section--on-um-green .about-ack-heading {
+  color: var(--um-text-on-green);
+}
+.about-ack.about-section--on-um-green p {
+  color: var(--um-text-on-green-muted);
+}
+.about-ack.about-section--on-um-green strong {
+  color: var(--um-text-on-green);
+}
+.about-ack.about-section--on-um-green a {
+  color: #ffc9a8;
+}
+.about-ack.about-section--on-um-green a:hover {
+  color: #fff;
+}
+
+.about-footer.about-section--on-um-green .about-footer-logo {
+  color: var(--um-text-on-green);
+}
+.about-footer.about-section--on-um-green .about-footer-brand p {
+  color: var(--um-text-on-green-muted);
+}
+.about-footer.about-section--on-um-green .about-footer-heading {
+  color: var(--um-orange);
+}
+.about-footer.about-section--on-um-green .about-footer-col > a {
+  color: rgba(255, 255, 255, 0.85);
+}
+.about-footer.about-section--on-um-green .about-footer-col > a:hover {
+  color: var(--um-orange);
+}
+.about-footer.about-section--on-um-green .about-footer-social a {
+  color: rgba(255, 255, 255, 0.55);
+}
+.about-footer.about-section--on-um-green .about-footer-social a:hover {
+  color: var(--um-orange);
+}
+
 /* ── Shared ─────────────────────────────────────────────────── */
 .about-label {
   font-family: 'Manrope', 'Inter', sans-serif;
@@ -52,7 +306,7 @@
   font-weight: 700;
   letter-spacing: 0.4em;
   text-transform: uppercase;
-  color: #9e4300;
+  color: var(--about-accent);
   margin-bottom: 1.25rem;
   display: block;
 }
@@ -63,7 +317,7 @@
   min-height: 100vh;
   display: flex;
   align-items: center;
-  padding: 120px 4rem 80px;
+  padding: 120px var(--about-section-pad-x) 80px;
   background: var(--about-bg);
   color: var(--about-text);
   overflow: visible;
@@ -80,8 +334,6 @@
   object-fit: cover;
   object-position: center 28%;
   opacity: 1;
-  transform: scale(1.08) translateY(-5%);
-  transform-origin: center center;
 }
 .about-hero-bg-overlay {
   position: absolute;
@@ -116,7 +368,7 @@
   color: var(--about-text);
   text-shadow:
     0 0 0.08em rgba(255, 255, 255, 0.95),
-    0 0 0.35em rgba(232, 255, 238, 0.9),
+    0 0 0.35em rgba(var(--about-bg-rgb), 0.9),
     0 1px 2px rgba(255, 255, 255, 0.6);
 }
 .about-hero-tagline {
@@ -133,7 +385,7 @@
   text-align: left;
   text-shadow:
     0 0 0.12em rgba(255, 255, 255, 0.92),
-    0 0 0.4em rgba(232, 255, 238, 0.85);
+    0 0 0.4em rgba(var(--about-bg-rgb), 0.85);
 }
 .about-hero-sub {
   font-size: clamp(1.1rem, 2.5vw, 1.55rem);
@@ -147,13 +399,13 @@
   text-align: left;
   text-shadow:
     0 0 0.12em rgba(255, 255, 255, 0.92),
-    0 0 0.45em rgba(232, 255, 238, 0.88);
+    0 0 0.45em rgba(var(--about-bg-rgb), 0.88);
 }
 .about-hero-cta {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  background: #9e4300;
+  background: var(--um-orange);
   color: #fff;
   padding: 1rem 2rem;
   border-radius: 9999px;
@@ -181,14 +433,15 @@
   background: linear-gradient(
     to bottom,
     transparent 0%,
-    var(--about-bg) 100%
+    var(--um-green) 100%
   );
 }
 /* ── The SCALE-R Difference (centered title + copy) ─────────── */
 .about-difference {
   background: var(--about-bg);
   color: var(--about-text);
-  padding: 5.5rem 4rem 3rem;
+  padding: var(--about-section-pad-y-tight) var(--about-section-pad-x)
+    var(--about-section-pad-y-tight);
 }
 .about-difference-inner {
   max-width: 1280px;
@@ -210,15 +463,14 @@
   margin-bottom: 1.25rem;
   margin-top: 0;
   text-align: center;
-  /* Distinct from Goals section heading (#9e4300) */
-  color: #0e7490;
+  color: var(--about-text-green);
 }
 .about-difference .body-text {
   color: var(--about-text);
   font-size: clamp(1.08rem, 1.25vw, 1.22rem);
   font-weight: 500;
   line-height: 1.7;
-  max-width: min(56rem, 100%);
+  max-width: min(var(--about-copy-max-width), 100%);
   margin: 0 auto;
   opacity: 0.92;
   text-align: center;
@@ -227,11 +479,12 @@
   color: var(--about-text);
   font-weight: 700;
 }
-/* ── Goals (scroll-reveal text) ─────────────────────────────── */
+/* ── Goals (three equal cards + scroll-reveal) ──────────────── */
 .about-pillars {
   position: relative;
   margin-top: 0;
-  padding: 4rem 4rem 8rem;
+  padding: var(--about-section-pad-y-tight) var(--about-section-pad-x)
+    var(--about-section-pad-y);
   background: var(--about-bg);
   color: var(--about-text);
 }
@@ -248,83 +501,155 @@
   letter-spacing: -0.03em;
   line-height: 1.1;
   margin: 0 0 3.5rem;
-  color: #9e4300;
+  color: var(--about-text-green);
 }
-.about-goals-list {
+.about-goals-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(1.25rem, 3vw, 1.75rem);
+  align-items: stretch;
+}
+.about-goal-card {
+  position: relative;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: clamp(2.5rem, 5vw, 4rem);
+  height: 100%;
+  box-sizing: border-box;
+  background: var(--about-card-dark);
+  border-radius: 1.5rem;
+  padding: clamp(1.75rem, 3vw, 2.25rem);
+  /* Room below copy so watermark sits under the paragraph, not behind it */
+  padding-bottom: clamp(5.25rem, 13vw, 8rem);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: #fff;
+  transition:
+    border-color 0.35s ease,
+    box-shadow 0.35s ease,
+    background 0.35s ease;
 }
-.goal-reveal {
-  max-width: 52rem;
+.about-goal-bg-icon {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  padding: 0 clamp(0.5rem, 2vw, 1rem) clamp(0.65rem, 1.75vw, 1.1rem);
+  pointer-events: none;
+  color: rgba(255, 255, 255, 0.14);
+  opacity: 1;
+  transition: opacity 0.35s ease, color 0.35s ease;
+  z-index: 0;
+}
+.about-goal-bg-icon .material-symbols-outlined {
+  font-size: clamp(5.5rem, 12vw, 7.5rem);
+  display: block;
+  line-height: 1;
+  flex-shrink: 0;
+  filter: drop-shadow(0 12px 28px rgba(0, 0, 0, 0.45));
+}
+.about-goal-card:hover {
+  border-color: rgba(158, 67, 0, 0.35);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 12px 40px -12px rgba(11, 31, 21, 0.35);
+  background: linear-gradient(165deg, #0a3d2a 0%, #01321e 52%, #022a1c 100%);
+}
+.about-goal-card:hover .about-goal-bg-icon {
+  color: rgba(255, 255, 255, 0.22);
+}
+.about-goal-card:hover .about-goal-bg-icon .material-symbols-outlined {
+  filter:
+    drop-shadow(0 14px 32px rgba(0, 0, 0, 0.5))
+    drop-shadow(0 0 40px rgba(249, 115, 22, 0.12));
+}
+.about-goal-icon,
+.about-goal-card h3,
+.about-goal-card p {
+  position: relative;
+  z-index: 1;
+}
+.about-goal-icon {
+  width: 3.75rem;
+  height: 3.75rem;
+  border-radius: 1rem;
+  background: rgba(158, 67, 0, 0.14);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.35rem;
+  color: #f97316;
+  flex-shrink: 0;
+  box-shadow:
+    0 6px 22px rgba(158, 67, 0, 0.2),
+    0 0 0 1px rgba(158, 67, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.about-goal-icon .material-symbols-outlined {
+  font-size: 1.85rem;
+  filter: drop-shadow(0 0 8px rgba(249, 115, 22, 0.35));
+}
+.about-goal-card:hover .about-goal-icon {
+  transform: scale(1.06);
+  box-shadow:
+    0 10px 32px rgba(158, 67, 0, 0.35),
+    0 0 0 1px rgba(249, 115, 22, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+.about-goal-card h3 {
+  font-family: 'Manrope', sans-serif;
+  font-size: clamp(1.15rem, 1.5vw, 1.35rem);
+  font-weight: 700;
+  line-height: 1.3;
+  margin: 0 0 0.85rem;
+  color: rgba(255, 255, 255, 0.96);
+  /* Same title block height so body copy starts on one line across cards */
+  min-height: 2.6em;
+  min-height: 2lh;
+}
+.about-goal-card p {
+  margin: 0;
+  flex: 0 0 auto;
+  color: rgba(255, 255, 255, 0.68);
+  line-height: 1.65;
+  font-size: clamp(0.95rem, 1.05vw, 1.02rem);
+  transition: color 0.3s ease;
+}
+.about-goal-card:hover p {
+  color: rgba(255, 255, 255, 0.82);
+}
+.about-goals-grid .goal-reveal {
+  max-width: none;
+  width: 100%;
   opacity: 0;
-  transform: translate3d(0, 0, 0);
+  transform: translate3d(0, 1.25rem, 0);
   transition:
     opacity 0.65s cubic-bezier(0.22, 1, 0.36, 1),
     transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
   will-change: opacity, transform;
 }
-.goal-reveal--from-left {
-  transform: translate3d(calc(-1 * min(2.5rem, 8vw)), 0, 0);
-  margin-right: auto;
+.about-goals-grid .goal-reveal--from-left,
+.about-goals-grid .goal-reveal--from-right {
+  margin-left: 0;
+  margin-right: 0;
 }
-.goal-reveal--from-right {
-  transform: translate3d(min(2.5rem, 8vw), 0, 0);
-  margin-left: auto;
-}
-.goal-reveal--visible {
+.about-goals-grid .goal-reveal.goal-reveal--visible {
   opacity: 1;
   transform: translate3d(0, 0, 0);
 }
-.goal-reveal h3 {
-  font-family: 'Manrope', sans-serif;
-  font-size: clamp(1.35rem, 2.2vw, 1.75rem);
-  font-weight: 700;
-  margin: 0 0 0.85rem;
-  color: var(--about-text);
-}
-.about-goals-list > .goal-reveal:nth-child(1) h3 {
-  color: #c2410c;
-}
-.about-goals-list > .goal-reveal:nth-child(2) h3 {
-  color: #166534;
-}
-.about-goals-list > .goal-reveal:nth-child(3) h3 {
-  color: #0e7490;
-}
-.goal-reveal p {
-  color: var(--about-text-muted);
-  line-height: 1.7;
-  font-size: clamp(1rem, 1.15vw, 1.08rem);
-  margin: 0;
-}
-.about-goals-list > .goal-reveal:nth-child(1) p {
-  color: #5c4336;
-}
-.about-goals-list > .goal-reveal:nth-child(2) p {
-  color: #3d5248;
-}
-.about-goals-list > .goal-reveal:nth-child(3) p {
-  color: #365056;
-}
-.goal-reveal p strong {
-  color: var(--about-text);
-  font-weight: 700;
-}
-.about-goals-list > .goal-reveal:nth-child(1) p strong {
-  color: #9a3412;
-}
-.about-goals-list > .goal-reveal:nth-child(2) p strong {
-  color: #14532d;
-}
-.about-goals-list > .goal-reveal:nth-child(3) p strong {
-  color: #0f766e;
-}
 @media (prefers-reduced-motion: reduce) {
-  .goal-reveal {
+  .about-goals-grid .goal-reveal {
     opacity: 1;
     transform: none;
     transition: none;
+  }
+}
+@media (max-width: 900px) {
+  .about-goals-grid {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -332,19 +657,23 @@
 .about-science {
   background: transparent;
   color: var(--about-text);
-  padding: 7rem 4rem;
+  padding: var(--about-section-pad-y) var(--about-section-pad-x);
 }
 .about-science-inner {
   max-width: 1280px;
   margin: 0 auto;
   text-align: center;
 }
+.about-science-inner > .about-label {
+  margin-left: auto;
+  margin-right: auto;
+}
 .about-science-title {
   font-family: 'Manrope', sans-serif;
   font-size: clamp(2rem, 3.5vw, 3rem);
   font-weight: 700;
   margin: 0 0 0.75rem;
-  color: var(--about-text);
+  color: var(--about-text-green);
 }
 .about-science-subtitle {
   font-family: 'Manrope', 'Inter', sans-serif;
@@ -354,7 +683,7 @@
   line-height: 1.45;
   color: var(--about-text-muted);
   margin: 0 auto 3rem;
-  max-width: 52rem;
+  max-width: min(var(--about-copy-max-width), 100%);
 }
 .about-science-block {
   margin-bottom: 3.5rem;
@@ -368,14 +697,14 @@
   font-weight: 700;
   line-height: 1.35;
   margin: 0 auto 1rem;
-  color: var(--about-text);
-  max-width: 52rem;
+  color: var(--about-text-green);
+  max-width: min(var(--about-copy-max-width), 100%);
 }
 .about-science .body-text {
   color: var(--about-text-muted);
   font-size: 1.1rem;
   line-height: 1.75;
-  max-width: 820px;
+  max-width: var(--about-copy-max-width);
   margin: 0 auto 1.5rem;
 }
 .about-science .body-text strong {
@@ -389,10 +718,9 @@
   margin: 0 auto;
   border-radius: 1rem;
   overflow: hidden;
-  background: rgba(13, 40, 28, 0.06);
-  box-shadow:
-    0 4px 24px rgba(0, 27, 14, 0.08),
-    0 0 0 1px rgba(0, 27, 14, 0.06);
+  background: var(--about-diagram-bg);
+  box-shadow: var(--about-diagram-shadow);
+  border: 1px solid var(--about-diagram-border);
 }
 .about-flourish-frame--1076-650 {
   aspect-ratio: 1076 / 650;
@@ -414,7 +742,7 @@
 .about-policy {
   background: transparent;
   color: var(--about-text);
-  padding: 7rem 4rem;
+  padding: var(--about-section-pad-y) var(--about-section-pad-x);
 }
 .about-policy-inner {
   max-width: 1280px;
@@ -425,13 +753,13 @@
   font-size: clamp(2rem, 3.5vw, 3rem);
   font-weight: 700;
   margin: 0 0 1.5rem;
-  color: var(--about-text);
+  color: var(--about-text-green);
 }
 .about-policy .body-text {
   color: var(--about-text-muted);
   font-size: 1.1rem;
   line-height: 1.75;
-  max-width: 820px;
+  max-width: var(--about-copy-max-width);
   margin-bottom: 2.5rem;
 }
 .about-policy .body-text strong {
@@ -459,7 +787,7 @@
 .about-engagement {
   background: transparent;
   color: var(--about-text);
-  padding: 7rem 4rem;
+  padding: var(--about-section-pad-y) var(--about-section-pad-x);
 }
 .about-engagement-inner {
   max-width: 1280px;
@@ -470,7 +798,7 @@
   font-size: clamp(2rem, 3.5vw, 3rem);
   font-weight: 700;
   margin: 0 0 3rem;
-  color: var(--about-text);
+  color: var(--about-text-green);
 }
 .engagement-grid {
   display: grid;
@@ -509,11 +837,12 @@
   font-size: 0.9rem;
   flex-shrink: 0;
 }
-.engagement-card h4 {
+.engagement-card h3 {
+  font-family: 'Manrope', 'Inter', sans-serif;
   font-weight: 600;
   font-size: 0.97rem;
   margin: 0 0 0.4rem;
-  color: white;
+  color: rgba(255, 255, 255, 0.96);
 }
 .engagement-card p {
   color: rgba(255, 255, 255, 0.6);
@@ -527,14 +856,14 @@
   width: 100%;
   margin: 0;
   padding: 3.5rem 0 4rem;
-  background: linear-gradient(180deg, var(--about-bg) 0%, #e8f6ee 50%, var(--about-bg) 100%);
+  background: linear-gradient(180deg, var(--about-bg) 0%, #ebebea 50%, var(--about-bg) 100%);
   border-bottom: 1px solid rgba(15, 40, 28, 0.06);
   box-sizing: border-box;
 }
 .about-partners-header {
   max-width: 1280px;
   margin: 0 auto;
-  padding: 0 4rem 2.25rem;
+  padding: 0 var(--about-section-pad-x) 2.25rem;
   text-align: center;
 }
 .about-partners-title {
@@ -543,7 +872,7 @@
   font-weight: 700;
   margin: 0;
   letter-spacing: -0.03em;
-  color: #0d2818;
+  color: var(--about-text-green);
 }
 .about-partners-marquee {
   width: 100%;
@@ -561,10 +890,17 @@
   100% { transform: translateX(-50%); }
 }
 .marquee-track {
-  display: inline-flex;
-  gap: 5rem;
+  display: flex;
+  width: max-content;
   align-items: center;
   animation: scroll 35s linear infinite;
+}
+/* One group per duplicated strip — gap lives inside groups only so -50% === one full cycle */
+.marquee-group {
+  display: flex;
+  gap: 5rem;
+  align-items: center;
+  flex-shrink: 0;
 }
 .partner-item {
   display: flex;
@@ -602,16 +938,25 @@
 /* ── Acknowledgment ─────────────────────────────────────────── */
 .about-ack {
   background: transparent;
-  padding: 3.5rem 4rem 4rem;
+  padding: var(--about-section-pad-y-tight) var(--about-section-pad-x)
+    var(--about-section-pad-y);
 }
 .about-ack-inner {
   max-width: 1280px;
   margin: 0 auto;
   background: rgba(11, 31, 21, 0.04);
   border: 1px solid rgba(11, 31, 21, 0.08);
-  border-left: 3px solid #9e4300;
+  border-left: 3px solid var(--about-accent);
   border-radius: 0.75rem;
   padding: 1.75rem 2rem;
+}
+.about-ack-heading {
+  font-family: 'Manrope', sans-serif;
+  font-size: clamp(1.15rem, 2vw, 1.35rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--about-text-green);
+  margin: 0 0 0.85rem;
 }
 .about-ack p {
   color: var(--about-text-muted);
@@ -636,7 +981,7 @@
 /* ── Footer (Stitch shell) ──────────────────────────────────── */
 .about-footer {
   width: 100%;
-  padding: 3.5rem 4rem 5rem;
+  padding: var(--about-section-pad-y-tight) var(--about-section-pad-x) 5rem;
   background: var(--about-bg);
   border-top: 1px solid rgba(11, 31, 21, 0.08);
   color: var(--about-text);
@@ -665,7 +1010,7 @@
 .about-footer-heading {
   font-family: 'Manrope', sans-serif;
   font-weight: 700;
-  color: #9e4300;
+  color: var(--about-accent);
   text-transform: uppercase;
   font-size: 0.75rem;
   letter-spacing: 0.2em;
@@ -677,13 +1022,13 @@
   gap: 1rem;
 }
 .about-footer-col > a {
-  color: rgba(13, 40, 28, 0.78);
+  color: rgba(26, 67, 52, 0.78);
   text-decoration: none;
   font-size: 0.9375rem;
   transition: color 0.2s;
 }
 .about-footer-col > a:hover {
-  color: #9e4300;
+  color: var(--about-accent);
 }
 .about-footer-social {
   display: flex;
@@ -691,14 +1036,14 @@
   margin-top: 0.25rem;
 }
 .about-footer-social a {
-  color: rgba(13, 40, 28, 0.45);
+  color: rgba(26, 67, 52, 0.45);
   text-decoration: none;
   display: inline-flex;
   align-items: center;
   transition: color 0.2s;
 }
 .about-footer-social a:hover {
-  color: #9e4300;
+  color: var(--about-accent);
 }
 .about-footer-social .material-symbols-outlined {
   font-size: 1.5rem;
@@ -712,10 +1057,13 @@
   }
 }
 @media (max-width: 768px) {
+  .about-root {
+    --about-section-pad-x: 1.5rem;
+  }
   .about-hero, .about-difference, .about-pillars,
   .about-science, .about-policy, .about-engagement, .about-ack, .about-footer {
-    padding-left: 1.5rem;
-    padding-right: 1.5rem;
+    padding-left: var(--about-section-pad-x);
+    padding-right: var(--about-section-pad-x);
   }
   .about-partners-header {
     padding-left: 1.5rem;
