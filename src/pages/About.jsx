@@ -213,7 +213,7 @@ export default function About() {
       <header className="about-hero">
         <div className="about-hero-bg">
           <img
-            src="/Images/about-scale-r-hero.png"
+            src="/Images/about-scale-r-hero.jpg"
             alt="Aerial view of Biscayne Bay with boats and the Miami skyline"
           />
           <div className="about-hero-bg-overlay" />
@@ -274,7 +274,14 @@ export default function About() {
             {goals.map((g, i) => (
               <article
                 key={g.title}
-                className={`goal-reveal about-goal-card ${i % 2 === 0 ? 'goal-reveal--from-left' : 'goal-reveal--from-right'}`}
+                className={[
+                  'goal-reveal',
+                  'about-goal-card',
+                  i === 0 ? 'about-goal-card--brickell' : '',
+                  i % 2 === 0 ? 'goal-reveal--from-left' : 'goal-reveal--from-right',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
               >
                 <div className="about-goal-bg-icon" aria-hidden>
                   <span className="material-symbols-outlined">{g.icon}</span>
