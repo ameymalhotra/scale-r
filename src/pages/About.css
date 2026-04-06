@@ -28,7 +28,8 @@
   --about-text-muted: var(--about-text-green-muted);
   --about-card-dark: #01321e;
   --about-accent: #9e4300;
-  --about-diagram-bg: #ffffff;
+  /* Slightly green-tinted (not pure #fff) so large embeds don’t flash bright white over green sections while scrolling */
+  --about-diagram-bg: #ecf2ef;
   --about-diagram-border: rgba(26, 67, 52, 0.14);
   --about-diagram-shadow: 0 4px 28px rgba(11, 31, 21, 0.08),
     0 0 0 1px var(--about-diagram-border);
@@ -46,25 +47,8 @@
   --um-text-on-green-muted: rgba(255, 255, 255, 0.86);
   --um-text-on-orange: #0d2a1f;
   --um-text-on-orange-muted: #1f3d32;
-  /* Hero scrims — lighter so the photo shows through; text-shadow keeps copy legible */
-  --about-hero-scrim-left: linear-gradient(
-    to right,
-    rgba(var(--about-bg-rgb), 0.62) 0%,
-    rgba(var(--about-bg-rgb), 0.42) 28%,
-    rgba(var(--about-bg-rgb), 0.16) 52%,
-    rgba(var(--about-bg-rgb), 0.04) 72%,
-    transparent 100%
-  );
-  /* No fade to page bg at bottom — keeps a hard edge between hero photo and next section */
-  --about-hero-scrim-vertical: linear-gradient(
-    to bottom,
-    rgba(var(--about-bg-rgb), 0.06) 0%,
-    rgba(var(--about-bg-rgb), 0.12) 45%,
-    rgba(var(--about-bg-rgb), 0.22) 78%,
-    transparent 100%
-  );
-  overflow-y: auto;
   overflow-x: hidden;
+  overflow-anchor: none;
   background: var(--about-bg);
   font-family: 'Inter', 'Segoe UI', sans-serif;
   color: var(--about-text);
@@ -331,14 +315,6 @@
   object-position: center 30%;
   opacity: 1;
 }
-.about-hero-bg-overlay {
-  position: absolute;
-  inset: 0;
-  /* Left-weighted scrim (readability) + vertical fade into page bg */
-  background:
-    var(--about-hero-scrim-left),
-    var(--about-hero-scrim-vertical);
-}
 .about-hero-inner {
   max-width: 1280px;
   margin: 0 auto;
@@ -500,8 +476,6 @@
   background: var(--about-card-dark);
   border-radius: 1.5rem;
   padding: clamp(1.75rem, 3vw, 2.25rem);
-  /* Room below copy so watermark sits under the paragraph, not behind it */
-  padding-bottom: clamp(5.25rem, 13vw, 8rem);
   border: 1px solid rgba(255, 255, 255, 0.06);
   color: #fff;
   transition:
@@ -509,42 +483,12 @@
     box-shadow 0.35s ease,
     background 0.35s ease;
 }
-.about-goal-bg-icon {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  align-items: flex-end;
-  justify-content: flex-end;
-  padding: 0 clamp(0.5rem, 2vw, 1rem) clamp(0.65rem, 1.75vw, 1.1rem);
-  pointer-events: none;
-  color: rgba(255, 255, 255, 0.14);
-  opacity: 1;
-  transition: opacity 0.35s ease, color 0.35s ease;
-  z-index: 0;
-}
-.about-goal-bg-icon .material-symbols-outlined {
-  font-size: clamp(5.5rem, 12vw, 7.5rem);
-  display: block;
-  line-height: 1;
-  flex-shrink: 0;
-  filter: drop-shadow(0 12px 28px rgba(0, 0, 0, 0.45));
-}
 .about-goal-card:hover {
   border-color: rgba(158, 67, 0, 0.35);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.07),
     0 12px 40px -12px rgba(11, 31, 21, 0.35);
   background: linear-gradient(165deg, #0a3d2a 0%, #01321e 52%, #022a1c 100%);
-}
-.about-goal-card:hover .about-goal-bg-icon {
-  color: rgba(255, 255, 255, 0.22);
-}
-.about-goal-card:hover .about-goal-bg-icon .material-symbols-outlined {
-  filter:
-    drop-shadow(0 14px 32px rgba(0, 0, 0, 0.5))
-    drop-shadow(0 0 40px rgba(249, 115, 22, 0.12));
 }
 .about-goal-icon,
 .about-goal-card h3,
@@ -603,29 +547,40 @@
   color: rgba(255, 255, 255, 0.82);
 }
 
-/* First goal card: Brickell photo bg + sliding green tint on hover */
-.about-goal-card--brickell {
+/* Goal cards with photo bg (<img> + scrim) + sliding green tint on hover */
+.about-goal-card--photo {
   background: transparent;
 }
-.about-goal-card--brickell::before {
-  content: '';
+.about-goal-card__media {
   position: absolute;
   inset: 0;
   z-index: 0;
   border-radius: inherit;
-  background-image:
-    linear-gradient(
-      165deg,
-      rgba(1, 50, 30, 0.88) 0%,
-      rgba(1, 50, 30, 0.62) 42%,
-      rgba(1, 50, 30, 0.82) 100%
-    ),
-    url('/Images/Brickell_Water.jpeg');
-  background-size: cover;
-  background-position: center;
+  overflow: hidden;
+  pointer-events: none;
+}
+.about-goal-card__media-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
   transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
 }
-.about-goal-card--brickell::after {
+.about-goal-card__media-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    165deg,
+    rgba(1, 50, 30, 0.88) 0%,
+    rgba(1, 50, 30, 0.62) 42%,
+    rgba(1, 50, 30, 0.82) 100%
+  );
+}
+.about-goal-card--photo:hover .about-goal-card__media-img {
+  transform: scale(1.02);
+}
+.about-goal-card--photo::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -633,44 +588,40 @@
   border-radius: inherit;
   background: linear-gradient(
     115deg,
-    rgba(0, 80, 48, 0.94) 0%,
-    rgba(0, 96, 58, 0.88) 48%,
-    rgba(0, 64, 42, 0.92) 100%
+    rgba(0, 80, 48, 0.752) 0%,
+    rgba(0, 96, 58, 0.704) 48%,
+    rgba(0, 64, 42, 0.736) 100%
   );
   transform: translateX(-100%);
   transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
   pointer-events: none;
 }
-.about-goal-card--brickell:hover::after {
+.about-goal-card--photo:hover::after {
   transform: translateX(0);
 }
-.about-goal-card--brickell:hover {
+.about-goal-card--photo:hover {
   background: transparent;
   /* Keep photo visible; green layer handles hover emphasis */
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.07),
     0 12px 40px -12px rgba(11, 31, 21, 0.45);
 }
-.about-goal-card--brickell:hover::before {
-  transform: scale(1.02);
-}
-.about-goal-card--brickell .about-goal-icon,
-.about-goal-card--brickell h3,
-.about-goal-card--brickell p,
-.about-goal-card--brickell .about-goal-bg-icon {
+.about-goal-card--photo .about-goal-icon,
+.about-goal-card--photo h3,
+.about-goal-card--photo p {
   z-index: 2;
 }
 @media (prefers-reduced-motion: reduce) {
-  .about-goal-card--brickell::after {
+  .about-goal-card--photo::after {
     transform: none;
     opacity: 0;
     transition: opacity 0.25s ease;
   }
-  .about-goal-card--brickell:hover::after {
+  .about-goal-card--photo:hover::after {
     opacity: 1;
   }
-  .about-goal-card--brickell::before,
-  .about-goal-card--brickell:hover::before {
+  .about-goal-card--photo .about-goal-card__media-img,
+  .about-goal-card--photo:hover .about-goal-card__media-img {
     transform: none;
   }
 }
@@ -678,11 +629,10 @@
   max-width: none;
   width: 100%;
   opacity: 0;
-  transform: translate3d(0, 1.25rem, 0);
+  transform: translateY(1.25rem);
   transition:
     opacity 0.65s cubic-bezier(0.22, 1, 0.36, 1),
     transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
-  will-change: opacity, transform;
 }
 .about-goals-grid .goal-reveal--from-left,
 .about-goals-grid .goal-reveal--from-right {
@@ -691,7 +641,7 @@
 }
 .about-goals-grid .goal-reveal.goal-reveal--visible {
   opacity: 1;
-  transform: translate3d(0, 0, 0);
+  transform: translateY(0);
 }
 @media (prefers-reduced-motion: reduce) {
   .about-goals-grid .goal-reveal {
@@ -874,6 +824,7 @@
   height: 100%;
   border: 0;
   display: block;
+  background-color: var(--about-diagram-bg);
 }
 .about-flourish-placeholder {
   position: absolute;

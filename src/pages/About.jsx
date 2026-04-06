@@ -6,6 +6,7 @@ const goals = [
   {
     title: 'Cross-Sector Partnerships',
     icon: 'groups',
+    photoSrc: '/Images/goals/cross-sector.jpg',
     body: (
       <>
         Fostering meaningful collaborations among academia, communities, and
@@ -17,6 +18,7 @@ const goals = [
   {
     title: 'Mapping the Resilience Landscape',
     icon: 'hub',
+    photoSrc: '/Images/goals/mapping.jpg',
     body: (
       <>
         Systematically mapping the network of resilience plans, projects, and
@@ -28,6 +30,7 @@ const goals = [
   {
     title: 'Decision-Support Tools',
     icon: 'analytics',
+    photoSrc: '/Images/goals/tools-dashboard.jpg',
     body: (
       <>
         Designing an integrated dashboard that supports the collaborative
@@ -191,6 +194,12 @@ export default function About() {
       return;
     }
 
+    const scrollRoot =
+      typeof document !== 'undefined' &&
+      document.documentElement.classList.contains('route-dashboard')
+        ? document.querySelector('main.app-main-scroll')
+        : null;
+
     const io = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -200,7 +209,11 @@ export default function About() {
           }
         });
       },
-      { threshold: 0.2, rootMargin: '0px 0px -8% 0px' },
+      {
+        ...(scrollRoot ? { root: scrollRoot } : {}),
+        threshold: 0.2,
+        rootMargin: '0px 0px -8% 0px',
+      },
     );
     items.forEach((el) => io.observe(el));
     return () => io.disconnect();
@@ -216,7 +229,6 @@ export default function About() {
             src="/Images/about-scale-r-hero.jpg"
             alt="Aerial view of Biscayne Bay with boats and the Miami skyline"
           />
-          <div className="about-hero-bg-overlay" />
         </div>
 
         <div className="about-hero-inner">
@@ -277,14 +289,19 @@ export default function About() {
                 className={[
                   'goal-reveal',
                   'about-goal-card',
-                  i === 0 ? 'about-goal-card--brickell' : '',
+                  'about-goal-card--photo',
                   i % 2 === 0 ? 'goal-reveal--from-left' : 'goal-reveal--from-right',
-                ]
-                  .filter(Boolean)
-                  .join(' ')}
+                ].join(' ')}
               >
-                <div className="about-goal-bg-icon" aria-hidden>
-                  <span className="material-symbols-outlined">{g.icon}</span>
+                <div className="about-goal-card__media" aria-hidden>
+                  <img
+                    className="about-goal-card__media-img"
+                    src={g.photoSrc}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                  />
+                  <div className="about-goal-card__media-scrim" />
                 </div>
                 <div className="about-goal-icon">
                   <span className="material-symbols-outlined" aria-hidden>

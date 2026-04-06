@@ -1,5 +1,5 @@
-import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import React, { useLayoutEffect } from 'react';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar.jsx';
 import About from './pages/About.jsx';
 import Dashboard from './pages/Dashboard.jsx';
@@ -9,32 +9,20 @@ import TechnicalDocs from './pages/TechnicalDocs.jsx';
 import Outputs from './pages/Outputs.jsx';
 
 export default function App() {
+  const location = useLocation();
+
+  useLayoutEffect(() => {
+    document.documentElement.classList.toggle(
+      'route-dashboard',
+      location.pathname.startsWith('/dashboard'),
+    );
+  }, [location.pathname]);
+
   return (
-    <div
-      style={{
-        margin: 0,
-        padding: 0,
-        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-        backgroundColor: 'white',
-        height: '100%',
-        width: '100%',
-        overflow: 'hidden',
-        boxSizing: 'border-box',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
+    <div className="app-shell">
       <Navbar />
 
-      <main
-        style={{
-          flex: 1,
-          minHeight: 0,
-          overflow: 'auto',
-          display: 'flex',
-          flexDirection: 'column',
-        }}
-      >
+      <main className="app-main-scroll">
         <Routes>
           <Route path="/" element={<Navigate to="/about" replace />} />
           <Route path="/about" element={<About />} />

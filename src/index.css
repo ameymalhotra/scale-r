@@ -9,25 +9,102 @@
   display: none;                  /* Chrome / Safari */
 }
 
-html, body {
+html {
+  overflow-x: hidden;
+  background-color: #fafaf9;
+}
+
+body {
   margin: 0;
   padding: 0;
   width: 100%;
-  height: 100%;
   min-height: 100dvh;
   min-height: -webkit-fill-available;
-  overflow: hidden;
+  background-color: #fafaf9;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Marketing pages: window scroll (avoids inner overflow:auto edge flicker). Map page: locked + main fills viewport. */
+html:not(.route-dashboard) body {
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: none;
+}
+
+html.route-dashboard {
+  height: 100%;
+  overflow: hidden;
+}
+
+html.route-dashboard body {
+  height: 100%;
+  overflow: hidden;
+}
+
 #root {
   width: 100%;
-  height: 100%;
+  background-color: #fafaf9;
+}
+
+html:not(.route-dashboard) #root {
   min-height: 100dvh;
   min-height: -webkit-fill-available;
+}
+
+html.route-dashboard #root {
+  height: 100%;
+  min-height: 100%;
   overflow: hidden;
+}
+
+/* Shell: column flex; non-dashboard grows with content; dashboard fills window */
+.app-shell {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #fafaf9;
+}
+
+html:not(.route-dashboard) .app-shell {
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
+}
+
+html.route-dashboard .app-shell {
+  height: 100%;
+  min-height: 100%;
+  overflow: hidden;
+}
+
+.app-main-scroll {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  background-color: #fafaf9;
+}
+
+html:not(.route-dashboard) .app-main-scroll {
+  flex: 1 0 auto;
+  overflow: visible;
+}
+
+html.route-dashboard .app-main-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Sticky nav only when the page uses document scroll */
+html:not(.route-dashboard) .site-navbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
 /* Safe-area utilities for iOS Safari (notch, home indicator) */
@@ -83,6 +160,7 @@ html, body {
 
 /* Site navbar — dark green bar; white links, orange on hover / current page */
 .site-navbar {
+  position: relative;
   flex-shrink: 0;
   display: flex;
   flex-wrap: wrap;
