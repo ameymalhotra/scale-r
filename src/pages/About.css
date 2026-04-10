@@ -335,7 +335,7 @@
   font-size: clamp(1.1rem, 2.5vw, 1.55rem);
   color: #fff;
   /* Tight line-height: cloned inline highlights don’t overlap; gaps stay minimal. */
-  line-height: 1.57;
+  line-height: 1.6;
   font-weight: 400;
   max-width: min(38em, 100%);
   margin: 0 0 1.25rem;

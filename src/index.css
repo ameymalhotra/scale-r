@@ -209,8 +209,9 @@ html:not(.route-dashboard) .site-navbar {
 
 /* Page content container for About, Team, Partners, etc. */
 .page-content {
-  flex: 1;
-  overflow-y: auto;
+  /* Use document scroll on non-dashboard pages to avoid nested scroll traps. */
+  flex: 1 0 auto;
+  overflow: visible;
 }
 
 /* ── Full-width page shells ───────────────────────────────── */
