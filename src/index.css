@@ -20,11 +20,15 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Marketing pages: window scroll (avoids inner overflow:auto edge flicker). Map page: locked + main fills viewport. */
-html:not(.route-dashboard) body {
+/* Marketing pages: use document scroll on the root element for consistent browser behavior. */
+html:not(.route-dashboard) {
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior-y: none;
+}
+
+html:not(.route-dashboard) body {
+  overflow: visible;
 }
 
 html.route-dashboard {
