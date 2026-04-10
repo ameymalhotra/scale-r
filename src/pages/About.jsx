@@ -2,6 +2,9 @@ import React, { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import './About.css';
 
+/** Shared with footer / contact blocks */
+const SCALE_R_CONTACT_EMAIL = 'spraharaj@miami.edu';
+
 const goals = [
   {
     title: 'Cross-Sector Partnerships',
@@ -30,7 +33,7 @@ const goals = [
   {
     title: 'Decision-Support Tools',
     icon: 'analytics',
-    photoSrc: '/Images/goals/cross-sector.jpg',
+    photoSrc: '/Images/goals/Decision-Support.jpg',
     body: (
       <>
         Designing an integrated dashboard that supports the collaborative
@@ -131,6 +134,31 @@ const engagementItems = [
     title: 'Habitat UNI Roundtable',
     detail:
       'Research and Academia Roundtable at WUF 2024, focused on urban climate resilience through interdisciplinary education.',
+  },
+];
+
+const recentEvents = [
+  {
+    datetime: 'March 17, 2026 | 8:30 am to 9:50 am',
+    session: 'Environmental Justice and Coastal Inequities',
+    presentation:
+      'Simulating Coastal Adaptation and Local Exposure for Enhanced Resilience (SCALE-R) — Dr. Sarbeswar Praharaj',
+    location:
+      'American Association of Geographers – AAG Annual Meeting, Union Square 12, 4th Floor, Hilton, Tower 3, San Francisco',
+    imageSrc: '/Images/recent-events/aag-2026-session.png',
+    imageAlt:
+      'AAG 2026 San Francisco promotional graphic for the core session Environmental Justice and Coastal Inequities',
+  },
+  {
+    datetime: 'October 15, 2025 | 11:00 am to 12:30 pm',
+    session: 'Geospatial Workflows for a Safe and Equitable World',
+    presentation:
+      'Using geospatial information dashboards to advance urban resilience — Dr. Sarbeswar Praharaj',
+    location:
+      'ESRI and University of Southern California, USC Spatial Sciences Institute, Los Angeles',
+    imageSrc: '/Images/recent-events/security-first-book.png',
+    imageAlt:
+      'Book cover for Security First: Geospatial Workflows for a Safe and Equitable World, Esri Press',
   },
 ];
 
@@ -245,7 +273,9 @@ export default function About() {
               id="about-difference-heading"
               className="about-goals-heading"
             >
-              The SCALE-R Difference
+              <span className="about-heading-highlight">
+                The SCALE-R Difference
+              </span>
             </h2>
             <p className="body-text">
               While conventional resilience tools highlight risk and
@@ -263,7 +293,7 @@ export default function About() {
       >
         <div className="about-pillars-inner">
           <h2 id="about-goals-heading" className="about-goals-heading">
-            Our Goals
+            <span className="about-heading-highlight">Our Goals</span>
           </h2>
 
           <div className="about-goals-grid" ref={goalsListRef}>
@@ -307,7 +337,9 @@ export default function About() {
       >
         <div className="about-science-inner">
           <h2 id="about-science-heading" className="about-science-title">
-            A Tool Informed by Rigorous Science
+            <span className="about-heading-highlight">
+              A Tool Informed by Rigorous Science
+            </span>
           </h2>
 
           <div className="about-science-blocks">
@@ -371,39 +403,75 @@ export default function About() {
         </div>
       </section>
 
-      {/* ── Plan & Policy Context ────────────────────────────── */}
+      {/* ── Recent events ─────────────────────────────────────── */}
       <section
-        className="about-policy about-section--on-um-orange"
-        aria-labelledby="about-policy-heading"
+        className="about-recent-events about-section--on-um-orange"
+        aria-labelledby="about-recent-events-heading"
       >
-        <div className="about-policy-inner">
-          <span className="about-label">Research Foundation</span>
-          <h2 id="about-policy-heading">Plan and policy context</h2>
-          <p className="body-text">
-            The team has systematically reviewed{' '}
-            <strong>22 resilience plans</strong>{' '}
-            across the Greater Miami region — including those from the South
-            Florida Water Management District, Southeast Florida Regional
-            Climate Change Compact, Miami-Dade County, the City of Miami, Miami
-            Beach, and other local jurisdictions. The analysis reveals how plans
-            emphasize themes across six major clusters:
-          </p>
-          <div className="about-badges">
-            {[
-              { label: 'Governance & Society', color: '#455a64' },
-              { label: 'Environment & Climate', color: '#2e7d32' },
-              { label: 'Infrastructure & Mobility', color: '#1565c0' },
-              { label: 'Land & Housing', color: '#6d4c41' },
-              { label: 'Water & Energy', color: '#00838f' },
-              { label: 'Health & Equity', color: '#ad1457' },
-            ].map((b) => (
-              <span
-                key={b.label}
-                className="about-badge"
-                style={{ background: b.color }}
+        <div className="about-recent-events-inner">
+          <h2 id="about-recent-events-heading">
+            <span className="about-heading-highlight">Recent events</span>
+          </h2>
+          <div className="recent-events-list">
+            {recentEvents.map((event, i) => (
+              <article
+                key={i}
+                className={[
+                  'recent-event-card',
+                  event.imageSrc ? 'recent-event-card--has-image' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
               >
-                {b.label}
-              </span>
+                {event.imageSrc ? (
+                  <div className="recent-event-card__media">
+                    <img
+                      className="recent-event-card__img"
+                      src={event.imageSrc}
+                      alt={event.imageAlt ?? ''}
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  </div>
+                ) : null}
+                <div className="recent-event-card__body">
+                  <h3 className="recent-event-presentation">{event.presentation}</h3>
+                  <div className="recent-event-card__details">
+                    <p className="recent-event-meta-row recent-event-meta-row--datetime">
+                      <span
+                        className="material-symbols-outlined recent-event-meta-icon"
+                        aria-hidden
+                      >
+                        calendar_month
+                      </span>
+                      <span className="recent-event-datetime-chip">{event.datetime}</span>
+                    </p>
+                    <p className="recent-event-session">
+                      <span className="recent-event-session-label">Session</span>
+                      {': '}
+                      {event.session}
+                    </p>
+                    <p className="recent-event-meta-row recent-event-meta-row--location">
+                      <span
+                        className="material-symbols-outlined recent-event-meta-icon"
+                        aria-hidden
+                      >
+                        location_on
+                      </span>
+                      <span className="recent-event-meta-text">{event.location}</span>
+                    </p>
+                  </div>
+                  <a
+                    className="recent-event-contact-btn"
+                    href={`mailto:${SCALE_R_CONTACT_EMAIL}`}
+                  >
+                    <span className="material-symbols-outlined" aria-hidden>
+                      mail
+                    </span>
+                    Contact us
+                  </a>
+                </div>
+              </article>
             ))}
           </div>
         </div>
@@ -415,8 +483,11 @@ export default function About() {
         aria-labelledby="about-engagement-heading"
       >
         <div className="about-engagement-inner">
-          <span className="about-label">Outreach & Impact</span>
-          <h2 id="about-engagement-heading">Community engagement</h2>
+          <h2 id="about-engagement-heading">
+            <span className="about-heading-highlight">
+              Community engagement
+            </span>
+          </h2>
           <div className="engagement-grid">
             {engagementItems.map((e, i) => (
               <div className="engagement-card" key={i}>
@@ -438,7 +509,7 @@ export default function About() {
       >
         <div className="about-partners-header">
           <h2 id="strategic-partners-heading" className="about-partners-title">
-            Strategic Partners
+            <span className="about-heading-highlight">Strategic Partners</span>
           </h2>
         </div>
         <div className="about-partners-marquee">
@@ -534,7 +605,7 @@ export default function About() {
           </div>
           <div className="about-footer-col">
             <h5 className="about-footer-heading">Connect</h5>
-            <a href="mailto:spraharaj@miami.edu">Contact Us</a>
+            <a href={`mailto:${SCALE_R_CONTACT_EMAIL}`}>Contact Us</a>
             <div className="about-footer-social">
               <a
                 href="https://geography.as.miami.edu/research/geo_labs/scale-r/index.html"
@@ -546,7 +617,10 @@ export default function About() {
                   public
                 </span>
               </a>
-              <a href="mailto:spraharaj@miami.edu" aria-label="Email SCALE-R">
+              <a
+                href={`mailto:${SCALE_R_CONTACT_EMAIL}`}
+                aria-label="Email SCALE-R"
+              >
                 <span className="material-symbols-outlined" aria-hidden>
                   mail
                 </span>

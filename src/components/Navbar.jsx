@@ -4,10 +4,6 @@ import { NavLink } from 'react-router-dom';
 const navLinks = [
   { to: '/about', label: 'About the project' },
   { to: '/dashboard', label: 'Dashboard' },
-  { to: '/team', label: 'Team' },
-  { to: '/partners', label: 'Partners' },
-  { to: '/docs', label: 'Technical Documentation' },
-  { to: '/outputs', label: 'Outputs' },
 ];
 
 export default function Navbar() {
