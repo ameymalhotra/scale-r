@@ -30,7 +30,7 @@ const goals = [
   {
     title: 'Decision-Support Tools',
     icon: 'analytics',
-    photoSrc: '/Images/goals/tools-dashboard.jpg',
+    photoSrc: '/Images/goals/cross-sector.jpg',
     body: (
       <>
         Designing an integrated dashboard that supports the collaborative
@@ -41,81 +41,63 @@ const goals = [
   },
 ];
 
-const scienceSubsections = [
+const scienceBlocks = [
   {
-    id: 'about-science-sub-decoding',
-    subsectionHeading:
-      'Decoding Urban Climate Resilience Planning in Miami-Dade County',
-    blocks: [
-      {
-        id: 'about-science-block-concepts',
-        heading:
-          'Most Prominent Concepts Within the Greater Miami Resilience Plans',
-        body:
-          'We have systematically reviewed 22 resilience plans in the Greater Miami region, including those from the South Florida Water Management District, Southeast Florida Regional Climate Change Compact, Miami-Dade County, City of Miami, Miami Beach, and other local Councils. The diagram features the most prominent concepts from across these plans, revealing the overarching sentiments and priorities of local and regional authorities.',
-        embedSrc:
-          'https://flo.uri.sh/visualisation/23520251/embed?auto=1',
-        iframeTitle:
-          'Word cloud of prominent concepts in Greater Miami resilience plans',
-        frameClass: 'about-flourish-frame--1076-650',
-      },
-      {
-        id: 'about-science-block-clusters',
-        heading:
-          'Clusters of Concepts Reveal Sectoral Orientation of the Resilience Plans',
-        body:
-          'While analyzing the 22 resilience plans in the Greater Miami region, we identified major clusters based on their core characteristics and associations. This interactive chart helps improve understanding of which sectors and themes (e.g., environment and climate, infrastructure and mobility, land and housing, health and equity, water and energy, governance) these plans focus on, as well as those that receive less emphasis.',
-        embedSrc:
-          'https://flo.uri.sh/visualisation/23521400/embed?auto=1',
-        iframeTitle:
-          'Hierarchy chart of concept clusters in Greater Miami resilience plans',
-      },
-      {
-        id: 'about-science-block-strategies',
-        heading:
-          'Key Strategies and Solutions Proposed through Resilience Plans',
-        body:
-          'We analyzed the range of strategies and solutions proposed in the resilience plans and ranked them based on frequency of occurrence. Given that drivers of resilience are complex, interconnected, and mutually reinforcing, we deconstruct the relationships and flows between resilience solutions. These resilience strategies encompass both nature-based solutions (e.g., expanding tree canopy, water conservation, restoring critical habitats, and beach nourishment) and re-engineering infrastructure systems (installing flood barriers, raising roads, and improving stormwater drainage). The dynamic chart reinforces that climate adaptation is not a linear process, and the complex dependencies and trade-offs involved across systems and strategies in resilience planning.',
-        embedSrc:
-          'https://flo.uri.sh/visualisation/23575745/embed?auto=1',
-        iframeTitle:
-          'Sankey diagram of relationships between resilience strategies and solutions',
-        frameClass: 'about-flourish-frame--1055-699',
-      },
-    ],
+    id: 'about-science-block-concepts',
+    heading:
+      'Most Prominent Concepts Within the Greater Miami Resilience Plans',
+    body:
+      'We have systematically reviewed 22 resilience plans in the Greater Miami region, including those from the South Florida Water Management District, Southeast Florida Regional Climate Change Compact, Miami-Dade County, City of Miami, Miami Beach, and other local Councils. The diagram features the most prominent concepts from across these plans, revealing the overarching sentiments and priorities of local and regional authorities.',
+    embedSrc: 'https://flo.uri.sh/visualisation/23520251/embed?auto=1',
+    iframeTitle:
+      'Word cloud of prominent concepts in Greater Miami resilience plans',
+    frameClass: 'about-flourish-frame--1076-650',
   },
   {
-    id: 'about-science-sub-gaps',
-    subsectionHeading:
-      'Revealing Gaps in Resilience Tools and Decision-Support Systems',
-    blocks: [
-      {
-        id: 'about-science-block-indicators',
-        heading:
-          'Which Indicators Would be Useful to Visualize in the New Resilience Tool',
-        body:
-          'To address the knowledge gap in reconciling the diverse capabilities, goals, scope, and limitations of various resilience decision-support tools, we performed a critical assessment of 30 selected climate resilience tools in the U.S. We identified over 264 indicators across these tools and organized those into six domains (social, economic, environmental, institutional, infrastructure, and health). The Radar chart shows the percentage of indicators falling into each domain. It provides essential guidance for designing future resilience tools, outlining the types of indicators that should be prioritized while addressing existing knowledge gaps.',
-        embedSrc:
-          'https://flo.uri.sh/visualisation/23183668/embed?auto=1',
-        iframeTitle:
-          'Radar chart of resilience indicator domains across U.S. climate resilience tools',
-        frameClass: 'about-flourish-frame--1076-678',
-      },
-      {
-        id: 'about-science-block-decision-support',
-        heading:
-          'Ensuring a Robust Decision-Support Capability on the Resilience Tool',
-        body:
-          'Analyzing the 30 selected climate resilience tools in the U.S., we are examining which features enhance user engagement and trust with resilience tools that could support collaborative decision-making. Assessment of existing tools on a range of decision-support criteria informs our design framework and the scope for innovation in the new resilience tool we are developing through this project.',
-        embedSrc:
-          'https://public.tableau.com/views/AnalysisofResilienceTools/Dashboard1?:embed=y&:showVizHome=no&:hideTabs=y&:toolbar=yes&:origin=viz_share_link',
-        iframeTitle:
-          'Tableau dashboard: analysis of U.S. climate resilience tools',
-        frameClass: 'about-tableau-frame--850-927',
-        iframeWidth: 850,
-        iframeHeight: 927,
-      },
-    ],
+    id: 'about-science-block-clusters',
+    heading:
+      'Clusters of Concepts Reveal Sectoral Orientation of the Resilience Plans',
+    body:
+      'While analyzing the 22 resilience plans in the Greater Miami region, we identified major clusters based on their core characteristics and associations. This interactive chart helps improve understanding of which sectors and themes (e.g., environment and climate, infrastructure and mobility, land and housing, health and equity, water and energy, governance) these plans focus on, as well as those that receive less emphasis.',
+    embedSrc: 'https://flo.uri.sh/visualisation/23521400/embed?auto=1',
+    iframeTitle:
+      'Hierarchy chart of concept clusters in Greater Miami resilience plans',
+  },
+  {
+    id: 'about-science-block-strategies',
+    heading:
+      'Key Strategies and Solutions Proposed through Resilience Plans',
+    body:
+      'We analyzed the range of strategies and solutions proposed in the resilience plans and ranked them based on frequency of occurrence. Given that drivers of resilience are complex, interconnected, and mutually reinforcing, we deconstruct the relationships and flows between resilience solutions. These resilience strategies encompass both nature-based solutions (e.g., expanding tree canopy, water conservation, restoring critical habitats, and beach nourishment) and re-engineering infrastructure systems (installing flood barriers, raising roads, and improving stormwater drainage). The dynamic chart reinforces that climate adaptation is not a linear process, and the complex dependencies and trade-offs involved across systems and strategies in resilience planning.',
+    embedSrc: 'https://flo.uri.sh/visualisation/23575745/embed?auto=1',
+    iframeTitle:
+      'Sankey diagram of relationships between resilience strategies and solutions',
+    frameClass: 'about-flourish-frame--1055-699',
+  },
+  {
+    id: 'about-science-block-indicators',
+    heading:
+      'Which Indicators Would be Useful to Visualize in the New Resilience Tool',
+    body:
+      'To address the knowledge gap in reconciling the diverse capabilities, goals, scope, and limitations of various resilience decision-support tools, we performed a critical assessment of 30 selected climate resilience tools in the U.S. We identified over 264 indicators across these tools and organized those into six domains (social, economic, environmental, institutional, infrastructure, and health). The Radar chart shows the percentage of indicators falling into each domain. It provides essential guidance for designing future resilience tools, outlining the types of indicators that should be prioritized while addressing existing knowledge gaps.',
+    embedSrc: 'https://flo.uri.sh/visualisation/23183668/embed?auto=1',
+    iframeTitle:
+      'Radar chart of resilience indicator domains across U.S. climate resilience tools',
+    frameClass: 'about-flourish-frame--1076-678',
+  },
+  {
+    id: 'about-science-block-decision-support',
+    heading:
+      'Ensuring a Robust Decision-Support Capability on the Resilience Tool',
+    body:
+      'Analyzing the 30 selected climate resilience tools in the U.S., we are examining which features enhance user engagement and trust with resilience tools that could support collaborative decision-making. Assessment of existing tools on a range of decision-support criteria informs our design framework and the scope for innovation in the new resilience tool we are developing through this project.',
+    embedSrc:
+      'https://public.tableau.com/views/AnalysisofResilienceTools/Dashboard1?:embed=y&:showVizHome=no&:hideTabs=y&:toolbar=yes&:origin=viz_share_link',
+    iframeTitle:
+      'Tableau dashboard: analysis of U.S. climate resilience tools',
+    frameClass: 'about-tableau-frame--850-927',
+    iframeWidth: 850,
+    iframeHeight: 927,
   },
 ];
 
@@ -233,15 +215,17 @@ export default function About() {
 
         <div className="about-hero-inner">
           <div className="about-hero-copy">
-            <h1 className="about-hero-title">SCALE-R</h1>
-            <p className="about-hero-tagline">
+            <h1 className="about-hero-title about-hero-frost">SCALE-R</h1>
+            <p className="about-hero-tagline about-hero-frost">
               Simulating Coastal Adaptation and Local Exposure for Enhanced Resilience
             </p>
             <p className="about-hero-sub">
-              SCALE-R is an NSF-funded initiative at the University of Miami that
-              advances a new paradigm for coastal adaptation — systematically
-              mapping interventions and modeling their impact on disaster risk
-              reduction across Miami-Dade County
+              <span className="about-hero-sub-highlight about-hero-frost">
+                SCALE-R is an NSF-funded initiative at the University of Miami that
+                advances a new paradigm for coastal adaptation — systematically
+                mapping interventions and modeling their impact on disaster risk
+                reduction across Miami-Dade County
+              </span>
             </p>
             <Link className="about-hero-cta" to="/dashboard">
               Visit the tool →
@@ -322,83 +306,68 @@ export default function About() {
         aria-labelledby="about-science-heading"
       >
         <div className="about-science-inner">
-          <span className="about-label">Research &amp; analysis</span>
           <h2 id="about-science-heading" className="about-science-title">
             A Tool Informed by Rigorous Science
           </h2>
 
-          {scienceSubsections.map((sub) => (
-            <section
-              key={sub.id}
-              className="about-science-subsection"
-              aria-labelledby={sub.id}
-            >
-              <div className="about-science-subsection-heading-wrap">
+          <div className="about-science-blocks">
+            {scienceBlocks.map((block) => (
+              <article
+                key={block.id}
+                className="about-science-block"
+                aria-labelledby={block.id}
+              >
                 <h3
-                  id={sub.id}
-                  className="about-science-subsection-heading"
+                  id={block.id}
+                  className="about-science-block-heading"
                 >
-                  {sub.subsectionHeading}
+                  {block.heading}
                 </h3>
-              </div>
-              {sub.blocks.map((block) => (
-                <article
-                  key={block.id}
-                  className="about-science-block"
-                  aria-labelledby={block.id}
+                <p className="body-text">{block.body}</p>
+                <div
+                  className={['about-flourish-frame', block.frameClass]
+                    .filter(Boolean)
+                    .join(' ')}
                 >
-                  <h4
-                    id={block.id}
-                    className="about-science-block-heading"
-                  >
-                    {block.heading}
-                  </h4>
-                  <p className="body-text">{block.body}</p>
-                  <div
-                    className={['about-flourish-frame', block.frameClass]
-                      .filter(Boolean)
-                      .join(' ')}
-                  >
-                    {block.embedSrc ? (
-                      block.frameClass?.includes('tableau-frame') ? (
-                        <div className="about-tableau-scale-wrap">
-                          <iframe
-                            className="about-tableau-embed-iframe"
-                            src={block.embedSrc}
-                            title={block.iframeTitle}
-                            loading="lazy"
-                            referrerPolicy="no-referrer-when-downgrade"
-                            scrolling="no"
-                          />
-                        </div>
-                      ) : (
+                  {block.embedSrc ? (
+                    block.frameClass?.includes('tableau-frame') ? (
+                      <div className="about-tableau-scale-wrap">
                         <iframe
+                          className="about-tableau-embed-iframe"
                           src={block.embedSrc}
                           title={block.iframeTitle}
                           loading="lazy"
                           referrerPolicy="no-referrer-when-downgrade"
-                          {...(block.iframeWidth != null && block.iframeHeight != null
-                            ? {
-                                width: block.iframeWidth,
-                                height: block.iframeHeight,
-                              }
-                            : {})}
+                          scrolling="no"
                         />
-                      )
-                    ) : (
-                      <div
-                        className="about-flourish-placeholder"
-                        role="status"
-                        aria-label={block.iframeTitle}
-                      >
-                        <p>Visualization coming soon</p>
                       </div>
-                    )}
-                  </div>
-                </article>
-              ))}
-            </section>
-          ))}
+                    ) : (
+                      <iframe
+                        src={block.embedSrc}
+                        title={block.iframeTitle}
+                        loading="lazy"
+                        referrerPolicy="no-referrer-when-downgrade"
+                        {...(block.iframeWidth != null && block.iframeHeight != null
+                          ? {
+                              width: block.iframeWidth,
+                              height: block.iframeHeight,
+                            }
+                          : {})}
+                      />
+                    )
+                  ) : (
+                    <div
+                      className="about-flourish-placeholder"
+                      role="status"
+                      aria-label={block.iframeTitle}
+                    >
+                      <p>Visualization coming soon</p>
+                    </div>
+                  )}
+                </div>
+              </article>
+            ))}
+          </div>
         </div>
       </section>
 

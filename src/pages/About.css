@@ -28,16 +28,16 @@
   --about-text-muted: var(--about-text-green-muted);
   --about-card-dark: #01321e;
   --about-accent: #9e4300;
-  /* Slightly green-tinted (not pure #fff) so large embeds don’t flash bright white over green sections while scrolling */
-  --about-diagram-bg: #ecf2ef;
-  --about-diagram-border: rgba(26, 67, 52, 0.14);
+  /* Same as Flourish / Tableau embed chart area (live viz uses #fff) */
+  --about-diagram-bg: #ffffff;
+  --about-diagram-border: rgba(0, 0, 0, 0.1);
   --about-diagram-shadow: 0 4px 28px rgba(11, 31, 21, 0.08),
     0 0 0 1px var(--about-diagram-border);
   /* Section rhythm */
   --about-section-pad-x: 4rem;
   --about-section-pad-y: 7rem;
   --about-section-pad-y-tight: 5.5rem;
-  --about-copy-max-width: 51.25rem; /* 820px */
+  --about-copy-max-width: 68rem; /* ~1088px */
   /* University of Miami brand (Pantone 158 / 3435) */
   --um-orange: #f47321;
   --um-green: #005030;
@@ -47,6 +47,8 @@
   --um-text-on-green-muted: rgba(255, 255, 255, 0.86);
   --um-text-on-orange: #0d2a1f;
   --um-text-on-orange-muted: #1f3d32;
+  --about-section-white: #ffffff;
+  --about-section-gray: #eef0f4;
   overflow-x: hidden;
   overflow-anchor: none;
   background: var(--about-bg);
@@ -57,68 +59,34 @@
 /* ── UM section surfaces (patterns + shadow motifs) ───────────── */
 /* Difference + Goals: line/grid patterns. Others: shadow-style gradients. */
 
-/* Coastal ripples + bay glow (pattern, not shadow stack) */
+/* Flat light gray */
 .about-difference.about-section--on-um-green {
-  background-color: var(--um-green);
-  background-image:
-    radial-gradient(ellipse 130% 90% at 50% 108%, rgba(244, 115, 33, 0.14) 0%, transparent 52%),
-    repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 10px,
-      rgba(255, 255, 255, 0.038) 10px,
-      rgba(255, 255, 255, 0.038) 11px
-    );
-  color: var(--um-text-on-green-muted);
+  background: var(--about-section-white);
+  color: var(--about-text);
 }
 
-/* Mapping / network grid (pattern) */
+/* Flat white */
 .about-pillars.about-section--on-um-orange {
-  background-color: var(--about-bg);
-  background-image:
-    linear-gradient(rgba(0, 80, 48, 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 80, 48, 0.06) 1px, transparent 1px);
-  background-size: 26px 26px;
+  background: var(--about-section-gray);
   color: var(--about-text);
 }
 
-/* Topographic relief: nested contour shadows (landscape / analysis layers) */
+/* Flat light gray */
 .about-science.about-section--on-um-green {
-  background-color: var(--um-green);
-  background-image:
-    radial-gradient(ellipse 85% 70% at 50% 48%, transparent 30%, rgba(0, 0, 0, 0.14) 70%, transparent 72%),
-    radial-gradient(ellipse 70% 58% at 50% 48%, transparent 38%, rgba(0, 0, 0, 0.1) 78%, transparent 80%),
-    radial-gradient(ellipse 55% 46% at 50% 48%, transparent 48%, rgba(255, 255, 255, 0.05) 85%, transparent 88%),
-    radial-gradient(ellipse 110% 90% at 20% 15%, rgba(244, 115, 33, 0.1) 0%, transparent 42%);
-  color: var(--um-text-on-green-muted);
-}
-
-/* Policy stack: soft bands on off-white (layered plans / protective strata) */
-.about-policy.about-section--on-um-orange {
-  background-color: var(--about-bg);
-  background-image:
-    radial-gradient(ellipse 80% 60% at 0% 0%, rgba(0, 80, 48, 0.06) 0%, transparent 55%),
-    radial-gradient(ellipse 75% 55% at 100% 100%, rgba(244, 115, 33, 0.06) 0%, transparent 52%),
-    linear-gradient(
-      180deg,
-      rgba(0, 0, 0, 0.02) 0%,
-      transparent 10%,
-      transparent 90%,
-      rgba(0, 80, 48, 0.04) 100%
-    );
+  background: var(--about-section-white);
   color: var(--about-text);
 }
 
-/* Canopy shade: dappled pools (trees, gathering places) */
+/* Flat white */
+.about-policy.about-section--on-um-orange {
+  background: var(--about-section-gray);
+  color: var(--about-text);
+}
+
+/* Flat light gray */
 .about-engagement.about-section--on-um-green {
-  background-color: var(--um-green);
-  background-image:
-    radial-gradient(circle 28% at 22% 28%, rgba(0, 0, 0, 0.2) 0%, transparent 55%),
-    radial-gradient(circle 22% at 68% 18%, rgba(255, 255, 255, 0.06) 0%, transparent 50%),
-    radial-gradient(circle 35% at 88% 62%, rgba(0, 0, 0, 0.16) 0%, transparent 52%),
-    radial-gradient(circle 26% at 40% 78%, rgba(244, 115, 33, 0.12) 0%, transparent 48%),
-    radial-gradient(circle 20% at 55% 45%, rgba(255, 255, 255, 0.04) 0%, transparent 45%);
-  color: var(--um-text-on-green-muted);
+  background: var(--about-section-white);
+  color: var(--about-text);
 }
 
 /* Partnership depth: corner vignettes + ground-plane shadow */
@@ -160,44 +128,34 @@
 
 /* UM copy & components on brand backgrounds */
 .about-difference.about-section--on-um-green .about-difference-copy {
-  border-color: rgba(255, 255, 255, 0.22);
-  box-shadow: 0 8px 36px rgba(0, 0, 0, 0.18);
-  background: rgba(255, 255, 255, 0.06);
+  background: transparent;
 }
 .about-difference.about-section--on-um-green .about-goals-heading {
-  color: var(--um-text-on-green);
+  color: var(--about-text-green);
 }
 .about-difference.about-section--on-um-green .body-text {
-  color: var(--um-text-on-green-muted);
+  color: var(--about-text-green);
 }
 .about-difference.about-section--on-um-green .body-text strong {
-  color: var(--um-text-on-green);
+  color: var(--about-text);
 }
 
 .about-pillars.about-section--on-um-orange .about-goals-heading {
   color: var(--um-green);
 }
 
-.about-science.about-section--on-um-green .about-label {
-  color: var(--um-orange);
-}
 .about-science.about-section--on-um-green .about-science-title,
 .about-science.about-section--on-um-green .about-science-block-heading {
-  color: var(--um-text-on-green);
+  color: var(--about-text-green);
 }
 .about-science.about-section--on-um-green .about-science-title {
-  text-shadow: 0 2px 28px rgba(0, 0, 0, 0.22);
-}
-.about-science.about-section--on-um-green .about-science-subsection-heading {
-  color: rgba(255, 255, 255, 0.92);
-  font-weight: 700;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.22);
+  text-shadow: none;
 }
 .about-science.about-section--on-um-green .body-text {
-  color: var(--um-text-on-green-muted);
+  color: var(--about-text-green);
 }
 .about-science.about-section--on-um-green .body-text strong {
-  color: var(--um-text-on-green);
+  color: var(--about-text);
 }
 
 .about-policy.about-section--on-um-orange .about-label {
@@ -207,7 +165,7 @@
   color: var(--um-green);
 }
 .about-policy.about-section--on-um-orange .body-text {
-  color: var(--about-text-muted);
+  color: var(--about-text-green);
 }
 .about-policy.about-section--on-um-orange .body-text strong {
   color: var(--about-text);
@@ -219,15 +177,15 @@
 }
 
 .about-engagement.about-section--on-um-green .about-label {
-  color: var(--um-orange);
+  color: var(--about-accent);
 }
 .about-engagement.about-section--on-um-green h2 {
-  color: var(--um-text-on-green);
+  color: var(--about-text-green);
 }
 .about-engagement.about-section--on-um-green .engagement-card {
   box-shadow:
-    0 12px 40px rgba(0, 0, 0, 0.3),
-    0 0 0 1px rgba(255, 255, 255, 0.1);
+    0 4px 20px rgba(0, 27, 14, 0.1),
+    0 0 0 1px rgba(0, 27, 14, 0.05);
 }
 
 .about-partners.about-section--on-light-um .about-partners-title {
@@ -297,7 +255,7 @@
   align-items: center;
   padding: 120px var(--about-section-pad-x) 80px;
   background: var(--about-bg);
-  color: var(--about-text);
+  color: #fff;
   overflow: visible;
 }
 .about-hero-bg {
@@ -324,10 +282,28 @@
 }
 .about-hero-copy {
   --about-hero-title-size: clamp(3.5rem, 8vw, 7rem);
-  /* Optical match: body text starts flush; display cap “S” is inset in Manrope. */
-  --about-hero-text-inset: calc(var(--about-hero-title-size) * 0.048);
+  /*
+   * Horizontal padding in rem (not em): title uses a huge font-size, so 0.35em on the
+   * h1 was ~4× the physical inset of 0.35em on the tagline — misaligning the two “S”s.
+   */
+  --about-hero-pad-x: clamp(0.45rem, 1.1vw, 0.75rem);
+  /*
+   * Uniform “frost”: live backdrop-filter blurs whatever is *behind* each pixel, so
+   * wide boxes and per-line inline fragments pick up different water/sky/boat colors
+   * (horizontal bands + first line vs rest). A single tint paints the same everywhere.
+   */
+  --about-hero-frost-bg: rgba(0, 60, 36, 0.72);
+  /* Same physical frosted band height for title (huge em) vs tagline/sub (small em). */
+  --about-hero-frost-pad-y: clamp(0.2rem, 0.42vw, 0.32rem);
   width: 100%;
   max-width: 100%;
+}
+/* Single source of truth so title, tagline, and body copy share identical frost. */
+.about-hero-frost {
+  background: var(--about-hero-frost-bg);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  border-radius: 0;
+  box-sizing: border-box;
 }
 .about-hero-title {
   font-family: 'Manrope', sans-serif;
@@ -335,13 +311,11 @@
   font-weight: 800;
   letter-spacing: -0.03em;
   line-height: 0.92;
-  margin: 0 0 0.65rem;
-  padding: 0;
-  color: var(--about-text);
-  text-shadow:
-    0 0 0.08em rgba(255, 255, 255, 0.95),
-    0 0 0.35em rgba(var(--about-bg-rgb), 0.9),
-    0 1px 2px rgba(255, 255, 255, 0.6);
+  margin: 0 0 1.25rem;
+  padding: var(--about-hero-frost-pad-y) var(--about-hero-pad-x);
+  color: #fff;
+  text-shadow: none;
+  width: fit-content;
 }
 .about-hero-tagline {
   font-family: 'Manrope', 'Inter', sans-serif;
@@ -349,29 +323,32 @@
   font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1.3;
-  color: var(--about-text);
-  width: 100%;
+  color: #fff;
+  width: fit-content;
   max-width: none;
-  margin: 0 0 1.75rem;
-  padding: 0 0 0 var(--about-hero-text-inset);
+  margin: 0 0 2.1rem;
+  padding: var(--about-hero-frost-pad-y) var(--about-hero-pad-x);
   text-align: left;
-  text-shadow:
-    0 0 0.12em rgba(255, 255, 255, 0.92),
-    0 0 0.4em rgba(var(--about-bg-rgb), 0.85);
+  text-shadow: none;
 }
 .about-hero-sub {
   font-size: clamp(1.1rem, 2.5vw, 1.55rem);
   color: #fff;
-  line-height: 1.45;
+  /* Tight line-height: cloned inline highlights don’t overlap; gaps stay minimal. */
+  line-height: 1.57;
   font-weight: 400;
-  width: 100%;
-  max-width: none;
-  margin: 0 0 2.5rem;
-  padding: 0 0 0 var(--about-hero-text-inset);
+  max-width: min(38em, 100%);
+  margin: 0 0 1.25rem;
+  padding: 0;
   text-align: left;
-  text-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.45),
-    0 0 1.25em rgba(0, 0, 0, 0.35);
+  text-shadow: none;
+}
+/* Per-line bars that only span text width (not full paragraph block). */
+.about-hero-sub-highlight {
+  display: inline;
+  padding: var(--about-hero-frost-pad-y) var(--about-hero-pad-x);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
 }
 .about-hero-cta {
   display: inline-flex;
@@ -380,7 +357,7 @@
   background: var(--um-orange);
   color: #fff;
   padding: 1rem 2rem;
-  border-radius: 9999px;
+  border-radius: 4px;
   font-family: 'Manrope', sans-serif;
   font-weight: 700;
   font-size: 0.95rem;
@@ -393,7 +370,7 @@
   transform: scale(1.04);
   box-shadow: 0 0 60px -8px rgba(158,67,0,0.65);
 }
-/* ── The SCALE-R Difference (centered title + copy) ─────────── */
+/* ── The SCALE-R Difference (left-aligned title + copy + orange left rule) ─ */
 .about-difference {
   background: var(--about-bg);
   color: var(--about-text);
@@ -406,31 +383,30 @@
   box-sizing: border-box;
 }
 .about-difference-copy {
-  text-align: center;
+  text-align: left;
   max-width: min(72rem, 100%);
-  margin: 0 auto;
+  margin: 0;
   box-sizing: border-box;
+  border-left: 3px solid var(--um-orange);
   padding: clamp(1.75rem, 4vw, 2.75rem) clamp(1.75rem, 5vw, 3.5rem);
+  padding-left: clamp(2rem, 4.5vw, 3.25rem);
   background: transparent;
-  border: 1px solid rgba(11, 31, 21, 0.12);
-  border-radius: 9999px;
-  box-shadow: 0 4px 28px rgba(11, 31, 21, 0.05);
 }
 .about-difference .about-goals-heading {
   margin-bottom: 1.25rem;
   margin-top: 0;
-  text-align: center;
+  text-align: left;
   color: var(--about-text-green);
 }
 .about-difference .body-text {
-  color: var(--about-text);
-  font-size: clamp(1.08rem, 1.25vw, 1.22rem);
+  color: var(--about-text-green);
+  font-size: clamp(1.2rem, 1.5vw, 1.4rem);
   font-weight: 500;
   line-height: 1.7;
   max-width: min(var(--about-copy-max-width), 100%);
-  margin: 0 auto;
+  margin: 0;
   opacity: 0.92;
-  text-align: center;
+  text-align: left;
 }
 .about-difference .body-text strong {
   color: var(--about-text);
@@ -500,7 +476,7 @@
   width: 3.75rem;
   height: 3.75rem;
   border-radius: 1rem;
-  background: rgba(158, 67, 0, 0.14);
+  background: #3b1a00;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -508,9 +484,9 @@
   color: #f97316;
   flex-shrink: 0;
   box-shadow:
-    0 6px 22px rgba(158, 67, 0, 0.2),
-    0 0 0 1px rgba(158, 67, 0, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    0 6px 22px rgba(158, 67, 0, 0.4),
+    0 0 0 1px #6b3000,
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 .about-goal-icon .material-symbols-outlined {
@@ -520,9 +496,9 @@
 .about-goal-card:hover .about-goal-icon {
   transform: scale(1.06);
   box-shadow:
-    0 10px 32px rgba(158, 67, 0, 0.35),
-    0 0 0 1px rgba(249, 115, 22, 0.25),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    0 10px 32px rgba(158, 67, 0, 0.55),
+    0 0 0 1px #f97316,
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 .about-goal-card h3 {
   font-family: 'Manrope', sans-serif;
@@ -538,13 +514,9 @@
 .about-goal-card p {
   margin: 0;
   flex: 0 0 auto;
-  color: rgba(255, 255, 255, 0.68);
+  color: #fff;
   line-height: 1.65;
   font-size: clamp(0.95rem, 1.05vw, 1.02rem);
-  transition: color 0.3s ease;
-}
-.about-goal-card:hover p {
-  color: rgba(255, 255, 255, 0.82);
 }
 
 /* Goal cards with photo bg (<img> + scrim) + sliding green tint on hover */
@@ -572,9 +544,9 @@
   inset: 0;
   background: linear-gradient(
     165deg,
-    rgba(1, 50, 30, 0.88) 0%,
-    rgba(1, 50, 30, 0.62) 42%,
-    rgba(1, 50, 30, 0.82) 100%
+    rgba(1, 50, 30, 0.72) 0%,
+    rgba(1, 50, 30, 0.46) 42%,
+    rgba(1, 50, 30, 0.66) 100%
   );
 }
 .about-goal-card--photo:hover .about-goal-card__media-img {
@@ -665,11 +637,7 @@
 .about-science-inner {
   max-width: 1280px;
   margin: 0 auto;
-  text-align: center;
-}
-.about-science-inner > .about-label {
-  margin-left: auto;
-  margin-right: auto;
+  text-align: left;
 }
 .about-science-title {
   font-family: 'Manrope', sans-serif;
@@ -680,59 +648,18 @@
   margin: 0 0 0.25rem;
   color: var(--about-text-green);
 }
-/* Section hero: orange rule separates this h2 from subsection / block headings */
+/* Section hero: orange rule separates this h2 from block subheadings */
 .about-science-title::after {
   content: '';
   display: block;
   width: min(4.5rem, 22vw);
   height: 3px;
-  margin: 1.1rem auto 0;
+  margin: 1.1rem 0 0;
   border-radius: 999px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    var(--um-orange),
-    transparent
-  );
+  background: var(--um-orange);
 }
-.about-science-inner > .about-science-subsection:first-of-type {
+.about-science-inner > .about-science-blocks {
   margin-top: 3rem;
-}
-.about-science-subsection + .about-science-subsection {
-  margin-top: 3.5rem;
-}
-.about-science-subsection-heading-wrap {
-  display: flex;
-  justify-content: center;
-  margin: 0 auto 2.25rem;
-  max-width: 100%;
-  overflow-x: auto;
-  overflow-y: hidden;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
-}
-.about-science-subsection-heading-wrap::-webkit-scrollbar {
-  height: 5px;
-}
-.about-science-subsection-heading-wrap::-webkit-scrollbar-thumb {
-  background: rgba(26, 67, 52, 0.35);
-  border-radius: 999px;
-}
-.about-science.about-section--on-um-green
-  .about-science-subsection-heading-wrap::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.35);
-}
-.about-science-subsection-heading {
-  flex: 0 0 auto;
-  font-family: 'Manrope', sans-serif;
-  font-size: clamp(1.35rem, 2.1vw + 0.5rem, 1.95rem);
-  font-weight: 700;
-  letter-spacing: -0.025em;
-  line-height: 1.22;
-  color: var(--about-text-green);
-  margin: 0;
-  padding-inline: 0.75rem;
-  white-space: nowrap;
 }
 .about-science-block {
   margin-bottom: 3.5rem;
@@ -742,25 +669,21 @@
 }
 .about-science-block-heading {
   font-family: 'Manrope', sans-serif;
-  font-size: clamp(1rem, 1.25vw + 0.65rem, 1.45rem);
+  font-size: clamp(1.35rem, 2.1vw + 0.5rem, 1.95rem);
   font-weight: 700;
-  line-height: 1.25;
-  margin: 0 auto 1rem;
+  letter-spacing: -0.025em;
+  line-height: 1.22;
+  margin: 0 0 1rem;
   color: var(--about-text-green);
   max-width: 100%;
   padding-inline: 0;
 }
-@media (min-width: 900px) {
-  .about-science-block-heading {
-    white-space: nowrap;
-  }
-}
 .about-science .body-text {
-  color: var(--about-text-muted);
-  font-size: 1.1rem;
+  color: var(--about-text-green);
+  font-size: 1.25rem;
   line-height: 1.75;
-  max-width: var(--about-copy-max-width);
-  margin: 0 auto 1.5rem;
+  max-width: 100%;
+  margin: 0 0 1.5rem;
 }
 .about-science .body-text strong {
   color: var(--about-text);
@@ -844,7 +767,7 @@
   color: var(--about-text-muted);
 }
 .about-science.about-section--on-um-green .about-flourish-placeholder p {
-  color: var(--um-text-on-green-muted);
+  color: var(--about-text-muted);
 }
 
 /* ── Plan & Policy ──────────────────────────────────────────── */
@@ -865,8 +788,8 @@
   color: var(--about-text-green);
 }
 .about-policy .body-text {
-  color: var(--about-text-muted);
-  font-size: 1.1rem;
+  color: var(--about-text-green);
+  font-size: 1.25rem;
   line-height: 1.75;
   max-width: var(--about-copy-max-width);
   margin-bottom: 2.5rem;
@@ -1004,12 +927,13 @@
   align-items: center;
   animation: scroll 35s linear infinite;
 }
-/* One group per duplicated strip — gap lives inside groups only so -50% === one full cycle */
+/* One group per duplicated strip — gap + trailing padding so -50% === one full cycle */
 .marquee-group {
   display: flex;
   gap: 5rem;
   align-items: center;
   flex-shrink: 0;
+  padding-right: 5rem;
 }
 .partner-item {
   display: flex;
@@ -1028,20 +952,20 @@
 }
 .partner-logo {
   display: block;
-  height: clamp(2.25rem, 5vw, 3rem);
+  height: clamp(3.375rem, 7.5vw, 4.5rem);
   width: auto;
-  max-width: min(240px, 48vw);
+  max-width: min(360px, 72vw);
   object-fit: contain;
   object-position: center;
 }
 /* Files with lots of internal padding — bump size so the mark matches peers */
 .partner-logo.partner-logo--boost {
-  height: clamp(3.57rem, 8.34vw, 4.89rem);
-  max-width: min(368px, 71vw);
+  height: clamp(5.355rem, 12.51vw, 7.335rem);
+  max-width: min(552px, 106vw);
 }
 .partner-logo.partner-logo--boost.partner-logo--coral {
-  height: clamp(3.93rem, 9.17vw, 5.38rem);
-  max-width: min(405px, 78vw);
+  height: clamp(5.895rem, 13.755vw, 8.07rem);
+  max-width: min(607px, 117vw);
 }
 
 /* ── Acknowledgment ─────────────────────────────────────────── */
