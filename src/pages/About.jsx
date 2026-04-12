@@ -22,6 +22,7 @@ const goals = [
     title: 'Mapping the Resilience Landscape',
     icon: 'hub',
     photoSrc: '/Images/goals/mapping.png',
+    cardClassName: 'about-goal-card--scrim-middle',
     body: (
       <>
         Systematically mapping the network of resilience plans, projects, and
@@ -33,7 +34,7 @@ const goals = [
   {
     title: 'Decision-Support Tools',
     icon: 'analytics',
-    photoSrc: '/Images/goals/Decision-Support.jpg',
+    photoSrc: '/Images/goals/decision-support-tools.png',
     body: (
       <>
         Designing an integrated dashboard that supports the collaborative
@@ -350,7 +351,15 @@ export default function About() {
                   i % 2 === 0 ? 'goal-reveal--from-left' : 'goal-reveal--from-right',
                 ].join(' ')}
               >
-              <article className="about-goal-card about-goal-card--photo">
+              <article
+                className={[
+                  'about-goal-card',
+                  'about-goal-card--photo',
+                  g.cardClassName,
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+              >
                 <div className="about-goal-card__media" aria-hidden>
                   <img
                     className="about-goal-card__media-img"

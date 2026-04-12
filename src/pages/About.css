@@ -441,11 +441,17 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
+  /* Fill the grid row so % heights on the card resolve (desktop 3-col). */
+  align-self: stretch;
+  min-height: 100%;
 }
 .about-goals-grid > .about-goal-reveal-wrap > .about-goal-card {
   flex: 1 1 auto;
-  min-height: 0;
-  height: 100%;
+  width: 100%;
+  /* Default min-height:auto — avoid min-height:0 here; it let the flex item
+     shrink in the 3-column grid and collapse the absolute photo layer on some
+     desktop layouts while single-column mobile still looked fine. */
+  min-height: 100%;
 }
 .about-goal-card {
   position: relative;
@@ -527,6 +533,7 @@
 /* Goal cards with photo bg (<img> + scrim) + sliding green tint on hover */
 .about-goal-card--photo {
   background: transparent;
+  min-height: clamp(17rem, 30vw, 26rem);
 }
 .about-goal-card__media {
   position: absolute;
@@ -552,6 +559,15 @@
     rgba(1, 50, 30, 0.72) 0%,
     rgba(1, 50, 30, 0.46) 42%,
     rgba(1, 50, 30, 0.66) 100%
+  );
+}
+/* Middle goal only: lighter base scrim + matching hover tint */
+.about-goal-card--photo.about-goal-card--scrim-middle .about-goal-card__media-scrim {
+  background: linear-gradient(
+    165deg,
+    rgba(1, 50, 30, 0.48) 0%,
+    rgba(1, 50, 30, 0.3) 42%,
+    rgba(1, 50, 30, 0.44) 100%
   );
 }
 .about-goal-card--photo:hover .about-goal-card__media-img {
@@ -636,6 +652,16 @@
 @media (max-width: 900px) {
   .about-goals-grid {
     grid-template-columns: 1fr;
+  }
+  .about-goals-grid > .about-goal-reveal-wrap > .about-goal-card {
+    min-height: 0;
+  }
+}
+@media (min-width: 901px) {
+  /* 3-column row: ensure the card (and absolute photo layer) has a definite
+     min block size; max() beats fill-only % when the grid track is short. */
+  .about-goals-grid > .about-goal-reveal-wrap > .about-goal-card {
+    min-height: max(100%, clamp(16rem, 24vw, 26rem));
   }
 }
 
