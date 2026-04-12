@@ -4,8 +4,32 @@
   box-sizing: border-box;
 }
 html {
-  overflow-x: hidden;
-  background-color: #fafaf9;
+  /* Populated in index.html: innerWidth − clientWidth when a classic vertical scrollbar is present. */
+  --scrollbar-width: 0px;
+  /* Don’t clip full-bleed sections that extend by var(--scrollbar-width) into the gutter. */
+  overflow-x: visible;
+  background-color: transparent;
+  /* Subtle scrollbar: faint track so the gutter doesn’t read as a solid strip */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(1, 50, 30, 0.35) transparent;
+}
+
+html::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+html::-webkit-scrollbar-track {
+  background: transparent;
+}
+html::-webkit-scrollbar-thumb {
+  background: rgba(1, 50, 30, 0.28);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+html::-webkit-scrollbar-thumb:hover {
+  background: rgba(1, 50, 30, 0.42);
+  background-clip: padding-box;
 }
 
 body {
@@ -14,7 +38,7 @@ body {
   width: 100%;
   min-height: 100dvh;
   min-height: -webkit-fill-available;
-  background-color: #fafaf9;
+  background-color: transparent;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -22,12 +46,14 @@ body {
 
 /* Marketing pages: use document scroll on the root element for consistent browser behavior. */
 html:not(.route-dashboard) {
-  overflow-x: hidden;
+  overflow-x: visible;
   overflow-y: auto;
+  overflow-y: overlay;
   overscroll-behavior-y: none;
 }
 
 html:not(.route-dashboard) body {
+  /* Must stay visible so full-bleed sections can paint into the scrollbar gutter (see --scrollbar-width). */
   overflow: visible;
 }
 
@@ -42,8 +68,8 @@ html.route-dashboard body {
 }
 
 #root {
-  width: 100%;
-  background-color: #fafaf9;
+  width: calc(100% + var(--scrollbar-width, 0px));
+  background-color: transparent;
 }
 
 html:not(.route-dashboard) #root {
@@ -61,12 +87,12 @@ html.route-dashboard #root {
 .app-shell {
   margin: 0;
   padding: 0;
-  width: 100%;
+  width: calc(100% + var(--scrollbar-width, 0px));
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background-color: #fafaf9;
+  background-color: transparent;
 }
 
 html:not(.route-dashboard) .app-shell {
@@ -84,7 +110,7 @@ html.route-dashboard .app-shell {
   display: flex;
   flex-direction: column;
   width: 100%;
-  background-color: #fafaf9;
+  background-color: transparent;
 }
 
 html:not(.route-dashboard) .app-main-scroll {
@@ -160,6 +186,10 @@ html:not(.route-dashboard) .site-navbar {
 .site-navbar {
   position: relative;
   flex-shrink: 0;
+  /* Classic scrollbars: layout width is innerWidth − scrollbar; extend by measured --scrollbar-width. */
+  width: calc(100% + var(--scrollbar-width, 0px));
+  max-width: none;
+  box-sizing: border-box;
   display: flex;
   flex-wrap: wrap;
   align-items: stretch;

@@ -16,6 +16,20 @@
     <link href='https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css' rel='stylesheet' />
   </head>
   <body>
+    <!-- Set early so first paint can use full-bleed widths under classic scrollbars (100vw is often wrong). -->
+    <script>
+      (function () {
+        function syncScrollbarWidth() {
+          var d = document.documentElement;
+          d.style.setProperty(
+            '--scrollbar-width',
+            Math.max(0, window.innerWidth - d.clientWidth) + 'px',
+          );
+        }
+        syncScrollbarWidth();
+        window.addEventListener('resize', syncScrollbarWidth);
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

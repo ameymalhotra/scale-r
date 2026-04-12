@@ -16,14 +16,7 @@ export default function TeamPageFooter() {
         <div className="about-footer-col">
           <h5 className="about-footer-heading">Navigation</h5>
           <Link to="/about">About the project</Link>
-          <Link to="/docs">Technical Documentation</Link>
           <Link to="/dashboard">Dashboard</Link>
-        </div>
-        <div className="about-footer-col">
-          <h5 className="about-footer-heading">Legal &amp; Portal</h5>
-          <a href="#">Privacy Policy</a>
-          <a href="#">Terms of Service</a>
-          <a href="#">Partner Portal</a>
         </div>
         <div className="about-footer-col">
           <h5 className="about-footer-heading">Connect</h5>

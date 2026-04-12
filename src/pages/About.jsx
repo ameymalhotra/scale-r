@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import './About.css';
 
@@ -21,7 +21,7 @@ const goals = [
   {
     title: 'Mapping the Resilience Landscape',
     icon: 'hub',
-    photoSrc: '/Images/goals/mapping.jpg',
+    photoSrc: '/Images/goals/mapping.png',
     body: (
       <>
         Systematically mapping the network of resilience plans, projects, and
@@ -106,34 +106,61 @@ const scienceBlocks = [
 
 const engagementItems = [
   {
-    title: 'Miami-Dade Environmental Stewards Workshop',
+    kicker: 'Community engagement',
+    title: 'Miami-Dade Environmental Stewards workshop',
     detail:
-      'Stephen P. Clark Government Center, September 26 2024 — county experts from Planning, Resilience, Transportation, Historic Preservation, Planning Research, and Zoning.',
+      'A workshop was held at the Stephen P. Clark Government Center on 26/9/2024 with the Miami-Dade County experts, enabling a discussion between leaders from the Divisions of Planning, Resilience, Transportation, Historic Preservation, Planning Research, and Zoning with the researchers and students involved in this project.',
+    imageSrc: '/Images/community-engagement/workshop-new.png',
+    imageAlt:
+      'Meeting room workshop with participants seated around a long table facing a presentation screen',
+    imageObjectPosition: 'center center',
   },
   {
-    title: 'Palmer Trinity School Outreach',
+    kicker: 'Community engagement',
+    title: 'Awareness and engagement with high school students',
     detail:
-      'Interaction with Human Geography students and faculty (April 23 2025) to broaden awareness among younger learners.',
+      'An interaction with the Human Geography students and faculty was organized at the Palmer Trinity School on April 23, 2025, enabling greater awareness and knowledge dissemination among the young learners in the broader community.',
+    imageSrc: '/Images/community-engagement/workshop-replacement.png',
+    imageAlt:
+      'Classroom presentation with students seated at desks watching a climate change talk',
   },
   {
-    title: 'UN World Urban Forum (WUF12)',
+    kicker: 'Community engagement',
+    title: 'Presentation to leaders in the field at the UN World Urban Forum',
     detail:
-      'Cairo, Egypt, November 4–8 2024 — presentation of project findings by Dr. Sarbeswar Praharaj.',
+      'The PI, Dr. Sarbeswar Praharaj, shared the findings from this project at the World Urban Forum 2024 (WUF12) organized by the United Nations Human Settlement Program from 4-8 November 2024, in Cairo, Egypt.',
+    imageSrc: '/Images/community-engagement/presentation.jpg',
+    imageAlt:
+      'Presentation at the UN World Urban Forum with attendees facing a screen',
   },
   {
-    title: 'Historic Preservation Training',
+    kicker: 'Community engagement',
+    title: 'Hands-on training for the next generation of students',
     detail:
-      'Hands-on training with Miami-Dade Office of Historic Preservation on climate resilience, cultural landscapes, and conservation practice.',
+      'We partnered with the MDC Office of Historic Preservation, providing hands-on training for graduate researchers and students on how climate resilience impacts cultural landscapes and how conservation practices and advocacy can help address these challenges.',
+    imageSrc: '/Images/community-engagement/hands-on.jpg',
+    imageAlt:
+      'Hands-on student training session gathered around a table with materials',
   },
   {
-    title: 'Smart City Expo Miami',
+    kicker: 'Community engagement',
+    title: 'Global impact through interdisciplinary education and curricula',
     detail:
-      'September 23–25 2024 — talk titled "Anticipating Change and Designing Future-Ready Communities."',
+      "The PI joined a premier Research and Academia Roundtable at the UN-Habitat's World Urban Forum 2024, as a member of Habitat UNI (UN-Habitat's network for university/research partners), and his contribution was focused on advancing urban climate resilience through interdisciplinary education and curricula.",
+    imageSrc: '/Images/community-engagement/global-impact.jpg',
+    imageAlt:
+      'Roundtable and conference setting representing interdisciplinary education at the World Urban Forum',
+    imageObjectPosition: '78% center',
   },
   {
-    title: 'Habitat UNI Roundtable',
+    kicker: 'Community engagement',
+    title: 'Disseminating knowledge with the Greater Miami stakeholders',
     detail:
-      'Research and Academia Roundtable at WUF 2024, focused on urban climate resilience through interdisciplinary education.',
+      'We are making efforts to engage with key stakeholders and networks to share our findings from this project and gather valuable feedback. One such platform was the Smart City Expo Miami (23 – 25 September 2024), where the PI delivered a talk titled "Anticipating Change and Designing Future-Ready Communities."',
+    imageSrc: '/Images/community-engagement/disseminating.jpg',
+    imageAlt:
+      'Audience watching a presentation at Smart City Expo Miami',
+    imageObjectPosition: '32% center',
   },
 ];
 
@@ -159,6 +186,7 @@ const recentEvents = [
     imageSrc: '/Images/recent-events/security-first-book.png',
     imageAlt:
       'Book cover for Security First: Geospatial Workflows for a Safe and Equitable World, Esri Press',
+    ctaHref: 'https://indiepubs.com/products/security-first-9781589487857',
   },
 ];
 
@@ -189,6 +217,7 @@ const partners = [
 
 export default function About() {
   const goalsListRef = useRef(null);
+  const [activeEngagementIndex, setActiveEngagementIndex] = useState(0);
 
   useEffect(() => {
     const root = goalsListRef.current;
@@ -228,6 +257,19 @@ export default function About() {
     items.forEach((el) => io.observe(el));
     return () => io.disconnect();
   }, []);
+
+  const handleEngagementStep = (direction) => {
+    setActiveEngagementIndex((current) => {
+      const nextIndex = current + direction;
+      return Math.min(
+        Math.max(nextIndex, 0),
+        engagementItems.length - 1,
+      );
+    });
+  };
+  const canGoToPreviousEngagement = activeEngagementIndex > 0;
+  const canGoToNextEngagement =
+    activeEngagementIndex < engagementItems.length - 1;
 
   return (
     <div className="about-root">
@@ -403,9 +445,123 @@ export default function About() {
         </div>
       </section>
 
+      {/* ── Community Engagement ─────────────────────────────── */}
+      <section
+        className="about-engagement about-section--on-um-orange"
+        aria-labelledby="about-engagement-heading"
+      >
+        <div className="about-engagement-inner">
+          <h2 id="about-engagement-heading">
+            <span className="about-heading-highlight">
+              Community engagement
+            </span>
+          </h2>
+          <p className="engagement-intro">
+            Workshops, outreach, training, and public presentations that connect
+            SCALE-R research with practitioners, students, and decision-makers.
+          </p>
+
+          <article
+            className="engagement-spotlight"
+            aria-label="Community engagement highlights"
+          >
+            <div className="engagement-spotlight__topline">
+              <span className="engagement-spotlight__count" aria-live="polite">
+                {String(activeEngagementIndex + 1).padStart(2, '0')}
+                <span aria-hidden> / </span>
+                {String(engagementItems.length).padStart(2, '0')}
+              </span>
+              <div className="engagement-spotlight__rule" aria-hidden />
+              <div className="engagement-spotlight__controls">
+                <button
+                  type="button"
+                  className="engagement-spotlight__control"
+                  onClick={() => handleEngagementStep(-1)}
+                  aria-label="Show previous community engagement card"
+                  disabled={!canGoToPreviousEngagement}
+                >
+                  <span className="material-symbols-outlined" aria-hidden>
+                    arrow_back_ios_new
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  className="engagement-spotlight__control"
+                  onClick={() => handleEngagementStep(1)}
+                  aria-label="Show next community engagement card"
+                  disabled={!canGoToNextEngagement}
+                >
+                  <span className="material-symbols-outlined" aria-hidden>
+                    arrow_forward_ios
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            <div className="engagement-spotlight__viewport">
+              <div
+                className="engagement-spotlight__track"
+                style={{
+                  '--engagement-active': String(activeEngagementIndex),
+                }}
+              >
+                {engagementItems.map((item, index) => (
+                  <section
+                    key={item.title}
+                    className={[
+                      'engagement-card',
+                      index === activeEngagementIndex && 'engagement-card--active',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
+                    data-engagement-index={index}
+                    aria-hidden={index !== activeEngagementIndex}
+                  >
+                    <div className="engagement-card__media">
+                      {item.imageSrc ? (
+                        <img
+                          src={item.imageSrc}
+                          alt={item.imageAlt}
+                          loading={index === 0 ? 'eager' : 'lazy'}
+                          fetchPriority={index === 0 ? 'high' : 'auto'}
+                          decoding="async"
+                          style={
+                            item.imageObjectPosition
+                              ? { objectPosition: item.imageObjectPosition }
+                              : undefined
+                          }
+                        />
+                      ) : (
+                        <div
+                          className="engagement-card__media-placeholder"
+                          aria-label="Community engagement image placeholder"
+                        >
+                          <span className="material-symbols-outlined" aria-hidden>
+                            image
+                          </span>
+                          Image coming soon
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="engagement-card__content">
+                      <p className="engagement-card__kicker">{item.kicker}</p>
+                      <h3>{item.title}</h3>
+                      <blockquote className="engagement-card__quote">
+                        {item.detail}
+                      </blockquote>
+                    </div>
+                  </section>
+                ))}
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
       {/* ── Recent events ─────────────────────────────────────── */}
       <section
-        className="about-recent-events about-section--on-um-orange"
+        className="about-recent-events about-section--on-um-green"
         aria-labelledby="about-recent-events-heading"
       >
         <div className="about-recent-events-inner">
@@ -413,7 +569,11 @@ export default function About() {
             <span className="about-heading-highlight">Recent events</span>
           </h2>
           <div className="recent-events-list">
-            {recentEvents.map((event, i) => (
+            {recentEvents.map((event, i) => {
+              const ctaHref =
+                event.ctaHref ?? `mailto:${SCALE_R_CONTACT_EMAIL}`;
+              const ctaIsExternal = /^https?:\/\//.test(ctaHref);
+              return (
               <article
                 key={i}
                 className={[
@@ -463,41 +623,20 @@ export default function About() {
                   </div>
                   <a
                     className="recent-event-contact-btn"
-                    href={`mailto:${SCALE_R_CONTACT_EMAIL}`}
+                    href={ctaHref}
+                    {...(ctaIsExternal
+                      ? { target: '_blank', rel: 'noopener noreferrer' }
+                      : {})}
                   >
                     <span className="material-symbols-outlined" aria-hidden>
-                      mail
+                      {ctaIsExternal ? 'open_in_new' : 'mail'}
                     </span>
-                    Contact us
+                    Learn More
                   </a>
                 </div>
               </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Community Engagement ─────────────────────────────── */}
-      <section
-        className="about-engagement about-section--on-um-green"
-        aria-labelledby="about-engagement-heading"
-      >
-        <div className="about-engagement-inner">
-          <h2 id="about-engagement-heading">
-            <span className="about-heading-highlight">
-              Community engagement
-            </span>
-          </h2>
-          <div className="engagement-grid">
-            {engagementItems.map((e, i) => (
-              <div className="engagement-card" key={i}>
-                <div className="engagement-num">{i + 1}</div>
-                <div>
-                  <h3>{e.title}</h3>
-                  <p>{e.detail}</p>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>
@@ -594,14 +733,7 @@ export default function About() {
           <div className="about-footer-col">
             <h5 className="about-footer-heading">Navigation</h5>
             <Link to="/about">About the project</Link>
-            <Link to="/docs">Technical Documentation</Link>
             <Link to="/dashboard">Dashboard</Link>
-          </div>
-          <div className="about-footer-col">
-            <h5 className="about-footer-heading">Legal &amp; Portal</h5>
-            <a href="#">Privacy Policy</a>
-            <a href="#">Terms of Service</a>
-            <a href="#">Partner Portal</a>
           </div>
           <div className="about-footer-col">
             <h5 className="about-footer-heading">Connect</h5>

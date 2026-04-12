@@ -53,9 +53,10 @@
   --about-section-gray: #eef0f4;
   --about-heading-highlight-bg: #01321e;
   --about-heading-highlight-ink: #ffffff;
-  overflow-x: hidden;
+  /* Don’t clip horizontal breakout on the hero (html overflow-x contains page-wide overflow). */
   overflow-anchor: none;
   background: var(--about-bg);
+  width: calc(100% + var(--scrollbar-width, 0px));
   font-family: 'Inter', 'Segoe UI', sans-serif;
   color: var(--about-text);
 }
@@ -91,8 +92,8 @@
   color: var(--about-text);
 }
 
-/* Flat white + soft brand glow (depth without noise) */
-.about-recent-events.about-section--on-um-orange {
+/* Gray band + soft brand glow (depth without noise) */
+.about-engagement.about-section--on-um-orange {
   background-color: var(--about-section-gray);
   background-image:
     radial-gradient(ellipse 80% 50% at 0% 0%, rgba(244, 115, 33, 0.07) 0%, transparent 55%),
@@ -101,8 +102,8 @@
   color: var(--about-text);
 }
 
-/* Flat light gray */
-.about-engagement.about-section--on-um-green {
+/* Flat white */
+.about-recent-events.about-section--on-um-green {
   background: var(--about-section-white);
   color: var(--about-text);
 }
@@ -176,17 +177,12 @@
   color: var(--about-text);
 }
 
-.about-recent-events.about-section--on-um-orange h2 {
+.about-engagement.about-section--on-um-orange h2 {
   color: var(--um-green);
 }
 
-.about-engagement.about-section--on-um-green h2 {
+.about-recent-events.about-section--on-um-green h2 {
   color: var(--about-text-green);
-}
-.about-engagement.about-section--on-um-green .engagement-card {
-  box-shadow:
-    0 4px 20px rgba(0, 27, 14, 0.1),
-    0 0 0 1px rgba(0, 27, 14, 0.05);
 }
 
 .about-partners.about-section--on-light-um .about-partners-title {
@@ -240,6 +236,10 @@
 .about-hero {
   position: relative;
   min-height: 100vh;
+  /* Same as navbar: 100vw often equals the content column; use measured gutter (index.html). */
+  width: calc(100% + var(--scrollbar-width, 0px));
+  max-width: none;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   padding: 120px var(--about-section-pad-x) 80px;
@@ -413,6 +413,21 @@
   margin: 0 0 3.5rem;
   color: inherit;
 }
+
+.about-pillars .about-goals-heading,
+.about-science .about-science-title,
+.about-recent-events h2,
+.about-engagement h2,
+.about-ack .about-ack-heading {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  border-left: 3px solid var(--um-orange);
+  padding-top: var(--about-highlight-pad-y);
+  padding-bottom: var(--about-highlight-pad-y);
+  padding-left: clamp(1rem, 2.2vw, 1.5rem);
+}
+
 .about-goals-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1036,58 +1051,229 @@
   font-family: 'Manrope', sans-serif;
   font-size: clamp(2rem, 3.5vw, 3rem);
   font-weight: 700;
-  margin: 0 0 3rem;
+  margin: 0 0 1rem;
   color: inherit;
 }
-.engagement-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
-  gap: 1.5rem;
+.engagement-intro {
+  max-width: 54rem;
+  margin: 0 0 2.75rem;
+  color: var(--about-text-green-muted);
+  font-size: 1rem;
+  line-height: 1.7;
+}
+.engagement-spotlight {
+  --engagement-gap: clamp(1.5rem, 2.2vw, 2rem);
+  --engagement-peek: clamp(4.75rem, 12vw, 11rem);
+  /* Slide width matches transform stride (see .engagement-spotlight__track) */
+  --engagement-slide-duration: 0.55s;
+  --engagement-slide-ease: cubic-bezier(0.33, 1, 0.68, 1);
+  position: relative;
+}
+.engagement-spotlight__viewport {
+  container-type: inline-size;
+  container-name: engagement;
+  overflow: hidden;
+  width: 100%;
+}
+.engagement-spotlight__track {
+  display: flex;
+  gap: var(--engagement-gap);
+  align-items: stretch;
+  --slide-stride: calc((100cqi - var(--engagement-peek)) + var(--engagement-gap));
+  transform: translate3d(
+    calc(-1 * var(--engagement-active, 0) * var(--slide-stride)),
+    0,
+    0
+  );
+  transition: transform var(--engagement-slide-duration) var(--engagement-slide-ease);
+  backface-visibility: hidden;
 }
 .engagement-card {
-  background: var(--about-card-dark);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 1.25rem;
-  padding: 1.75rem;
+  flex: 0 0 calc(100cqi - var(--engagement-peek));
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+  gap: clamp(1.75rem, 3vw, 3.25rem);
+  align-items: stretch;
+  min-height: 36rem;
+  padding: clamp(1rem, 2vw, 1.4rem);
+  background: rgba(250, 250, 249, 0.72);
+  border: 1px solid rgba(15, 40, 28, 0.08);
+  box-shadow: 0 28px 50px rgba(16, 33, 24, 0.12);
+  opacity: 0.78;
+  transition:
+    opacity var(--engagement-slide-duration) var(--engagement-slide-ease),
+    box-shadow var(--engagement-slide-duration) var(--engagement-slide-ease);
+}
+.engagement-card--active {
+  opacity: 1;
+  box-shadow: 0 34px 64px rgba(16, 33, 24, 0.14);
+}
+.engagement-card__media {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  min-width: 0;
+  width: 100%;
+  height: 36rem;
+  background: #d9ddd8;
+}
+.engagement-card__media::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, transparent 18%),
+    linear-gradient(135deg, rgba(1, 50, 30, 0.08) 0%, transparent 45%);
+  pointer-events: none;
+}
+.engagement-card__media img {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+.engagement-card__media-placeholder {
+  width: 100%;
+  height: 100%;
+  min-height: 32rem;
   display: flex;
-  gap: 1.25rem;
-  align-items: flex-start;
-  box-shadow:
-    0 4px 20px rgba(0, 27, 14, 0.1),
-    0 0 0 1px rgba(0, 27, 14, 0.05);
-  transition: background 0.25s, border-color 0.25s, box-shadow 0.25s;
-}
-.engagement-card:hover {
-  background: linear-gradient(148deg, #022a1a 0%, #01321e 55%, #034028 100%);
-  border-color: rgba(158, 67, 0, 0.3);
-  box-shadow:
-    0 8px 32px rgba(0, 27, 14, 0.15),
-    0 0 40px -12px rgba(158, 67, 0, 0.25);
-}
-.engagement-num {
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 50%;
-  background: rgba(158,67,0,0.12);
-  color: #f97316;
-  display: flex; align-items: center; justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.9rem;
+  background:
+    linear-gradient(135deg, rgba(0, 80, 48, 0.08) 0%, rgba(244, 115, 33, 0.12) 100%),
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.28) 0,
+      rgba(255, 255, 255, 0.28) 18px,
+      rgba(255, 255, 255, 0.08) 18px,
+      rgba(255, 255, 255, 0.08) 36px
+    );
+  color: rgba(15, 40, 28, 0.62);
   font-family: 'Manrope', sans-serif;
+  font-size: 1rem;
   font-weight: 700;
-  font-size: 0.9rem;
-  flex-shrink: 0;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
-.engagement-card h3 {
-  font-family: 'Manrope', 'Inter', sans-serif;
-  font-weight: 600;
-  font-size: 0.97rem;
-  margin: 0 0 0.4rem;
-  color: rgba(255, 255, 255, 0.96);
+.engagement-card__media-placeholder .material-symbols-outlined {
+  font-size: 2.25rem;
 }
-.engagement-card p {
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 0.88rem;
-  line-height: 1.6;
+.engagement-card__content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  min-height: 36rem;
+  padding: clamp(0.5rem, 1vw, 0.9rem) clamp(0.25rem, 0.8vw, 0.65rem);
+}
+.engagement-spotlight__topline {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+.engagement-spotlight__count {
+  font-family: 'Manrope', sans-serif;
+  font-size: 1.85rem;
+  font-weight: 700;
+  color: var(--um-green);
+  letter-spacing: -0.04em;
+  white-space: nowrap;
+}
+.engagement-spotlight__rule {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    rgba(15, 40, 28, 0.12) 0%,
+    rgba(15, 40, 28, 0.24) 55%,
+    rgba(15, 40, 28, 0.12) 100%
+  );
+}
+.engagement-spotlight__controls {
+  display: inline-flex;
+}
+.engagement-spotlight__control {
+  border: 0;
+  border-radius: 0;
+  width: 3.1rem;
+  height: 3.1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--um-orange);
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+.engagement-spotlight__control:hover {
+  background: #db6317;
+  transform: translateY(-1px);
+}
+.engagement-spotlight__control:disabled {
+  background: rgba(244, 115, 33, 0.38);
+  cursor: not-allowed;
+  transform: none;
+}
+.engagement-spotlight__control:focus-visible {
+  outline: 2px solid rgba(244, 115, 33, 0.45);
+  outline-offset: 3px;
+}
+.engagement-spotlight__control .material-symbols-outlined {
+  font-size: 1.1rem;
+}
+.engagement-card__kicker {
+  margin: 0 0 1rem;
+  font-family: 'Manrope', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(15, 40, 28, 0.7);
+}
+.engagement-spotlight h3 {
+  margin: 0 0 1rem;
+  font-family: 'Manrope', sans-serif;
+  font-size: clamp(1.95rem, 4vw, 3.1rem);
+  line-height: 0.98;
+  letter-spacing: -0.05em;
+  color: #1e1e1e;
+  max-width: 14ch;
+}
+.engagement-card__quote {
+  position: relative;
+  max-width: 39rem;
   margin: 0;
+  padding-left: 3rem;
+  color: rgba(15, 40, 28, 0.88);
+  font-size: clamp(1.02rem, 1.6vw, 1.22rem);
+  line-height: 1.9;
+}
+.engagement-card__quote::before {
+  content: '“';
+  position: absolute;
+  left: 0;
+  top: -0.35rem;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 5rem;
+  line-height: 1;
+  color: color-mix(in srgb, var(--um-green) 28%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .engagement-spotlight__track {
+    transition: none;
+  }
+  .engagement-card {
+    transition: none;
+  }
 }
 
 /* ── Scrolling Partners (subtle band on flat mint page) ─────── */
@@ -1243,7 +1429,7 @@
   max-width: 1280px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 3rem;
 }
 .about-footer-logo {
@@ -1329,7 +1515,36 @@
   .about-difference .about-goals-heading {
     margin-bottom: 1.5rem;
   }
-  .engagement-grid { grid-template-columns: 1fr; }
+  .engagement-spotlight {
+    --engagement-peek: clamp(3.25rem, 16vw, 6.5rem);
+  }
+  .engagement-card {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    min-height: 0;
+  }
+  .engagement-card__media {
+    height: 22rem;
+  }
+  .engagement-spotlight__topline {
+    grid-template-columns: 1fr;
+    justify-items: start;
+  }
+  .engagement-spotlight__rule {
+    width: 100%;
+  }
+  .engagement-spotlight h3 {
+    max-width: none;
+  }
+  .engagement-card__quote {
+    padding-left: 2.2rem;
+  }
+  .engagement-card__quote::before {
+    font-size: 3.85rem;
+  }
+  .engagement-card__content {
+    min-height: 0;
+  }
   .about-footer { padding-top: 3.5rem; padding-bottom: 3.5rem; }
   .about-footer-inner { grid-template-columns: 1fr; }
 }
