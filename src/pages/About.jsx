@@ -301,7 +301,7 @@ export default function About() {
               </span>
             </p>
             <Link className="about-hero-cta" to="/dashboard">
-              Visit the tool →
+              Visit the SCALE-R Dashboard →
             </Link>
           </div>
         </div>
@@ -699,25 +699,25 @@ export default function About() {
 
       {/* ── Acknowledgment ───────────────────────────────────── */}
       <section
-        className="about-ack about-section--on-um-green"
+        className="about-ack about-section--on-ack-light"
         aria-labelledby="about-ack-heading"
       >
         <div className="about-ack-inner">
-          <h2 id="about-ack-heading" className="about-ack-heading">
-            Funding Acknowledgement
+          <h2 id="about-ack-heading">
+            <span className="about-heading-highlight">Funding Acknowledgement</span>
           </h2>
           <p>
             This project is based upon work supported by the National Science
-            Foundation under Grant Number (
+            Foundation under{' '}
             <a
               className="about-ack-nsf-link"
               href="https://www.nsf.gov/awardsearch/show-award/?AWD_ID=2435008&HistoricalAwards=false"
               target="_blank"
               rel="noopener noreferrer"
             >
-              2435008
-            </a>
-            ).
+              Grant Number
+            </a>{' '}
+            (2435008).
           </p>
           <p className="about-ack-disclaimer">
             <strong>Disclaimer:</strong> Any opinions, findings, and conclusions
@@ -725,7 +725,7 @@ export default function About() {
             investigator(s) and do not necessarily reflect the views of the
             National Science Foundation.
           </p>
-          <Link className="about-ack-dashboard-link" to="/dashboard">
+          <Link className="about-hero-cta" to="/dashboard">
             Visit the SCALE-R Dashboard →
           </Link>
         </div>

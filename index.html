@@ -28,6 +28,23 @@
         }
         syncScrollbarWidth();
         window.addEventListener('resize', syncScrollbarWidth);
+        /* Tab focus / overlay scrollbars: innerWidth − clientWidth can change without a resize event. */
+        window.addEventListener('pageshow', syncScrollbarWidth);
+        document.addEventListener('visibilitychange', function () {
+          if (document.visibilityState !== 'visible') return;
+          syncScrollbarWidth();
+          requestAnimationFrame(function () {
+            syncScrollbarWidth();
+          });
+        });
+        /* Classic scrollbar show/hide can change clientWidth without a window resize (e.g. after tab focus). */
+        if (typeof ResizeObserver !== 'undefined') {
+          try {
+            new ResizeObserver(syncScrollbarWidth).observe(document.documentElement);
+          } catch (e) {
+            /* ignore */
+          }
+        }
       })();
     </script>
     <div id="root"></div>

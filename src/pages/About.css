@@ -56,7 +56,10 @@
   /* Don’t clip horizontal breakout on the hero (html overflow-x contains page-wide overflow). */
   overflow-anchor: none;
   background: var(--about-bg);
-  width: calc(100% + var(--scrollbar-width, 0px));
+  /* #root / .app-shell already extend into the scrollbar gutter; adding it again here stacks overflow. */
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   font-family: 'Inter', 'Segoe UI', sans-serif;
   color: var(--about-text);
 }
@@ -100,6 +103,9 @@
     radial-gradient(ellipse 70% 45% at 100% 30%, rgba(0, 80, 48, 0.06) 0%, transparent 50%),
     radial-gradient(ellipse 55% 35% at 50% 100%, rgba(0, 0, 0, 0.03) 0%, transparent 45%);
   color: var(--about-text);
+  /* Wide carousel track + container-query reflow after tab focus: keep spill off the document scroll width. */
+  overflow-x: hidden;
+  min-width: 0;
 }
 
 /* Flat white */
@@ -119,20 +125,11 @@
   color: var(--about-text);
 }
 
-/* Slatted shade / rain: soft vertical shadow ribs (shelter, weather) */
-.about-ack.about-section--on-um-green {
-  background-color: var(--um-green);
-  background-image:
-    repeating-linear-gradient(
-      92deg,
-      transparent,
-      transparent 48px,
-      rgba(0, 0, 0, 0.07) 52px,
-      rgba(0, 0, 0, 0.07) 56px,
-      transparent 60px
-    ),
-    radial-gradient(ellipse 80% 60% at 50% -10%, rgba(255, 255, 255, 0.06) 0%, transparent 45%);
-  color: var(--um-text-on-green-muted);
+/* White band before footer — matches Science / Recent events surfaces */
+.about-ack.about-section--on-ack-light {
+  background: var(--about-section-white);
+  color: var(--about-text);
+  border-top: 1px solid rgba(0, 80, 48, 0.08);
 }
 
 /* Ground plane: overhead shadow + floor depth */
@@ -189,27 +186,6 @@
   color: var(--um-green);
 }
 
-.about-ack.about-section--on-um-green .about-ack-inner {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-left: 3px solid var(--um-orange);
-}
-.about-ack.about-section--on-um-green .about-ack-heading {
-  color: var(--um-text-on-green);
-}
-.about-ack.about-section--on-um-green p {
-  color: var(--um-text-on-green-muted);
-}
-.about-ack.about-section--on-um-green strong {
-  color: var(--um-text-on-green);
-}
-.about-ack.about-section--on-um-green a {
-  color: #ffc9a8;
-}
-.about-ack.about-section--on-um-green a:hover {
-  color: #fff;
-}
-
 .about-footer.about-section--on-um-green .about-footer-logo {
   color: var(--um-text-on-green);
 }
@@ -236,8 +212,8 @@
 .about-hero {
   position: relative;
   min-height: 100vh;
-  /* Same as navbar: 100vw often equals the content column; use measured gutter (index.html). */
-  width: calc(100% + var(--scrollbar-width, 0px));
+  /* Full width of main; #root already accounts for the vertical scrollbar gutter. */
+  width: 100%;
   max-width: none;
   box-sizing: border-box;
   display: flex;
@@ -418,7 +394,7 @@
 .about-science .about-science-title,
 .about-recent-events h2,
 .about-engagement h2,
-.about-ack .about-ack-heading {
+.about-ack h2 {
   display: inline-flex;
   align-items: center;
   width: fit-content;
@@ -807,7 +783,8 @@
   max-width: 1280px;
   margin: 0 auto;
 }
-.about-recent-events h2 {
+.about-recent-events h2,
+.about-ack h2 {
   font-family: 'Manrope', sans-serif;
   font-size: clamp(2rem, 3.5vw, 3rem);
   font-weight: 700;
@@ -1091,6 +1068,8 @@
 .about-engagement-inner {
   max-width: 1280px;
   margin: 0 auto;
+  width: 100%;
+  min-width: 0;
 }
 .about-engagement h2 {
   font-family: 'Manrope', sans-serif;
@@ -1113,18 +1092,23 @@
   --engagement-slide-duration: 0.55s;
   --engagement-slide-ease: cubic-bezier(0.33, 1, 0.68, 1);
   position: relative;
+  width: 100%;
+  min-width: 0;
 }
 .engagement-spotlight__viewport {
   container-type: inline-size;
   container-name: engagement;
   overflow: hidden;
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
 }
 .engagement-spotlight__track {
   display: flex;
   gap: var(--engagement-gap);
   align-items: stretch;
-  --slide-stride: calc((100cqi - var(--engagement-peek)) + var(--engagement-gap));
+  /* max(0, …): if 100cqi is briefly 0 after a tab switch, avoid negative stride / bogus overflow. */
+  --slide-stride: calc(max(0px, calc(100cqi - var(--engagement-peek))) + var(--engagement-gap));
   transform: translate3d(
     calc(-1 * var(--engagement-active, 0) * var(--slide-stride)),
     0,
@@ -1134,7 +1118,7 @@
   backface-visibility: hidden;
 }
 .engagement-card {
-  flex: 0 0 calc(100cqi - var(--engagement-peek));
+  flex: 0 0 max(0px, calc(100cqi - var(--engagement-peek)));
   min-width: 0;
   display: grid;
   grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
@@ -1415,23 +1399,17 @@
 .about-ack-inner {
   max-width: 1280px;
   margin: 0 auto;
-  background: rgba(11, 31, 21, 0.04);
-  border: 1px solid rgba(11, 31, 21, 0.08);
-  border-left: 3px solid var(--about-accent);
-  border-radius: 0.75rem;
-  padding: 1.75rem 2rem;
 }
-.about-ack-heading {
-  font-family: 'Manrope', sans-serif;
-  font-size: clamp(1.15rem, 2vw, 1.35rem);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--about-text-green);
-  margin: 0 0 0.85rem;
+.about-ack-inner > p {
+  max-width: var(--about-copy-max-width);
+}
+.about-ack .about-hero-cta {
+  margin-top: 1.35rem;
 }
 .about-ack p {
   color: var(--about-text-muted);
-  font-size: 0.9rem;
+  font-size: clamp(1.2rem, 1.5vw, 1.4rem);
+  font-weight: 500;
   line-height: 1.7;
   margin: 0;
 }
@@ -1449,17 +1427,6 @@
 }
 .about-ack a.about-ack-nsf-link:hover {
   color: #1d4ed8;
-}
-.about-ack-dashboard-link {
-  display: inline-block;
-  margin-top: 1.35rem;
-  color: #6b2d5c;
-  font-size: 0.9rem;
-  font-weight: 600;
-  text-decoration: underline;
-}
-.about-ack-dashboard-link:hover {
-  color: #4a1f42;
 }
 
 /* ── Footer (Stitch shell) ──────────────────────────────────── */
