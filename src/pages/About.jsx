@@ -250,8 +250,10 @@ export default function About() {
       },
       {
         ...(scrollRoot ? { root: scrollRoot } : {}),
-        threshold: 0.2,
-        rootMargin: '0px 0px -8% 0px',
+        /* Low threshold + no shrink root: the right column can fall below 20%
+           intersection when partially clipped, so it never received --visible. */
+        threshold: 0.01,
+        rootMargin: '0px',
       },
     );
     items.forEach((el) => io.observe(el));
@@ -340,21 +342,21 @@ export default function About() {
 
           <div className="about-goals-grid" ref={goalsListRef}>
             {goals.map((g, i) => (
-              <article
+              <div
                 key={g.title}
                 className={[
+                  'about-goal-reveal-wrap',
                   'goal-reveal',
-                  'about-goal-card',
-                  'about-goal-card--photo',
                   i % 2 === 0 ? 'goal-reveal--from-left' : 'goal-reveal--from-right',
                 ].join(' ')}
               >
+              <article className="about-goal-card about-goal-card--photo">
                 <div className="about-goal-card__media" aria-hidden>
                   <img
                     className="about-goal-card__media-img"
                     src={g.photoSrc}
                     alt=""
-                    loading="lazy"
+                    loading="eager"
                     decoding="async"
                   />
                   <div className="about-goal-card__media-scrim" />
@@ -367,6 +369,7 @@ export default function About() {
                 <h3>{g.title}</h3>
                 <p>{g.body}</p>
               </article>
+              </div>
             ))}
           </div>
         </div>

@@ -434,6 +434,19 @@
   gap: clamp(1.25rem, 3vw, 1.75rem);
   align-items: stretch;
 }
+/* Scroll-reveal transform lives on the wrapper so it does not composite with
+   .about-goal-card--photo::after (translateX hide/show); same-element transforms
+   could leave the green overlay covering the photo in some engines. */
+.about-goals-grid > .about-goal-reveal-wrap {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.about-goals-grid > .about-goal-reveal-wrap > .about-goal-card {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+}
 .about-goal-card {
   position: relative;
   overflow: hidden;
@@ -556,11 +569,17 @@
     rgba(0, 96, 58, 0.704) 48%,
     rgba(0, 64, 42, 0.736) 100%
   );
+  /* Opacity keeps the hover layer off the photo if translateX(-100%) fails to
+     composite (seen as a “missing” background on some cards). */
+  opacity: 0;
   transform: translateX(-100%);
-  transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+  transition:
+    opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
   pointer-events: none;
 }
 .about-goal-card--photo:hover::after {
+  opacity: 1;
   transform: translateX(0);
 }
 .about-goal-card--photo:hover {
