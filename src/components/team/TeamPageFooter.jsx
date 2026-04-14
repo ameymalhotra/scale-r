@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 
 export default function TeamPageFooter() {
   return (
-    <footer className="about-footer">
+    <footer className="about-footer about-section--on-um-green">
       <div className="about-footer-inner">
         <div className="about-footer-brand">
           <div className="about-footer-logo">SCALE-R</div>

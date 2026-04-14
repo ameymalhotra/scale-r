@@ -7,17 +7,21 @@ const LEADERS = [
     name: 'Sarbeswar Praharaj',
     bio:
       "Expert in urban informatics and smart city governance, leading the SCALE-R initiative's strategic vision for regional coastal resilience.",
-    imageSrc: '/Images/team-stitch-pi.jpg',
+    imageSrc: '/Images/team-sarbeswar-praharaj.png',
     imageAlt:
-      'Professional portrait of a male researcher with glasses in a modern lab environment, soft natural lighting',
+      'Sarbeswar Praharaj speaking at a podium in front of a welcome screen',
+    imagePosition: '68% 34%',
   },
   {
     role: 'Co-Investigator',
     name: 'Shouraseni Sen Roy',
     bio:
       'Specializing in climatology and spatial analysis, focusing on historical climate trends and future impact modeling in South Florida.',
-    imageSrc: '/Images/team-stitch-co-investigator.jpg',
-    imageAlt: 'Professional portrait of a female academic in a university setting, bright and clean composition',
+    imageSrc: '/Images/team-shouraseni-sen-roy.png',
+    imageAlt: 'Shouraseni Sen Roy standing at a marina with boats in the background',
+    imagePosition: 'center 5%',
+    mediaWidth: '132.25%',
+    mediaHeight: '132.25%',
   },
 ];
 
@@ -25,10 +29,9 @@ export default function TeamLeadershipSection() {
   return (
     <div className="team-leadership-block">
       <div className="team-section__head">
-        <div>
-          <h2 className="team-section__title">Leadership</h2>
-          <div className="team-section__rule team-section__rule--secondary" aria-hidden="true" />
-        </div>
+        <h2 id="team-leadership-heading" className="about-goals-heading">
+          <span className="about-heading-highlight">Leadership</span>
+        </h2>
       </div>
       <div className="team-leadership-grid">
         {LEADERS.map((m) => (
