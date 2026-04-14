@@ -746,6 +746,7 @@ export default function About() {
             <h5 className="about-footer-heading">Navigation</h5>
             <Link to="/about">About the project</Link>
             <Link to="/dashboard">Dashboard</Link>
+            <Link to="/team">Team</Link>
           </div>
           <div className="about-footer-col">
             <h5 className="about-footer-heading">Connect</h5>
