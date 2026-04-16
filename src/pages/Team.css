@@ -150,78 +150,87 @@
 .team-leadership-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 3rem;
+  gap: 2rem;
 }
 
 @media (min-width: 768px) {
   .team-leadership-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 .team-lead-card {
   position: relative;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   border-radius: var(--team-radius-stitch-2rem);
-  aspect-ratio: 4 / 5;
+  min-height: 100%;
   background: var(--team-color-surface-container-high);
+  box-shadow: 0 1px 2px rgba(0, 27, 14, 0.06);
+  transition:
+    transform 0.45s ease,
+    box-shadow 0.45s ease;
 }
 
-/* Wrapper handles centering/scale; img keeps object-fit + object-position (mixing transform on the same element as object-position is unreliable in some engines). */
+.team-lead-card:hover,
+.team-lead-card:has(:focus-visible) {
+  box-shadow: var(--team-shadow-card-hover);
+}
+
 .team-lead-card__media {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 135%;
-  height: 118%;
-  transform: translate(-50%, -50%);
+  position: relative;
   overflow: hidden;
-  border-radius: inherit;
+  min-height: 0;
+  aspect-ratio: 16 / 9;
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.16), transparent 38%),
+    linear-gradient(160deg, color-mix(in srgb, var(--team-color-primary) 90%, #0d3a28), color-mix(in srgb, var(--team-color-primary) 72%, #05150e));
 }
 
 .team-lead-card__img {
+  position: absolute;
+  inset: 0;
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
   object-position: center center;
-  filter: grayscale(1);
-  transition: filter 0.7s ease;
-}
-
-.team-lead-card:hover .team-lead-card__img,
-.team-lead-card:focus-within .team-lead-card__img {
-  filter: grayscale(0);
+  border-radius: var(--team-radius-stitch-2rem) var(--team-radius-stitch-2rem) 0 0;
+  filter: none;
 }
 
 .team-lead-card__overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    to top,
-    color-mix(in srgb, var(--team-color-primary) 62%, transparent) 0%,
-    color-mix(in srgb, var(--team-color-primary) 12%, transparent) 55%,
-    transparent 100%
-  );
   pointer-events: none;
+  background: linear-gradient(
+    160deg,
+    rgba(0, 82, 53, 0.32) 0%,
+    rgba(0, 55, 34, 0.22) 52%,
+    rgba(0, 32, 20, 0.18) 100%
+  );
+  opacity: 0;
+  transition: opacity 0.45s ease;
+}
+
+.team-lead-card:hover .team-lead-card__overlay,
+.team-lead-card:has(:focus-visible) .team-lead-card__overlay {
+  opacity: 1;
 }
 
 .team-lead-card__body {
-  position: absolute;
-  /* 1.5rem + 1rem padding-bottom keeps text block bottom at 2.5rem from card (matches pre-glass layout) */
-  bottom: 1.5rem;
-  /* 1.25rem + 1.25rem padding keeps copy aligned with previous 2.5rem card inset */
-  left: 1.25rem;
-  right: 1.25rem;
+  position: relative;
   z-index: 1;
   display: flex;
   flex-direction: column;
+  justify-content: flex-start;
   align-items: stretch;
+  flex: 1 1 auto;
   box-sizing: border-box;
-  padding: 1rem 1.25rem;
-  border-radius: var(--team-radius-2xl);
-  border: 1px solid transparent;
-  background: transparent;
+  padding: clamp(1.25rem, 3vw, 2rem) clamp(1.25rem, 3vw, 2.25rem);
+  background: color-mix(in srgb, var(--team-color-primary) 94%, #0a2a1c);
+  border-top: 1px solid color-mix(in srgb, var(--team-color-primary) 12%, transparent);
   transition:
     background 0.45s ease,
     border-color 0.45s ease,
@@ -231,8 +240,8 @@
 }
 
 .team-lead-card:hover .team-lead-card__body,
-.team-lead-card:focus-within .team-lead-card__body {
-  background: color-mix(in srgb, var(--team-color-surface-bright) 10%, transparent);
+.team-lead-card:has(:focus-visible) .team-lead-card__body {
+  background: color-mix(in srgb, var(--team-color-primary) 88%, #0a2a1c);
   border-color: color-mix(in srgb, #ffffff 10%, transparent);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
@@ -262,16 +271,15 @@
 .team-lead-card__bio {
   box-sizing: border-box;
   margin: 0;
-  /* Top spacing matches former bio padding-top after the name margin */
   padding: 1rem 0 0;
-  max-height: min(11rem, 42vh);
+  max-height: none;
   height: auto;
   min-height: 0;
   flex-shrink: 0;
   display: flex;
   align-items: flex-start;
   overflow-x: hidden;
-  overflow-y: auto;
+  overflow-y: visible;
 }
 
 .team-lead-card__bio p {
@@ -279,13 +287,6 @@
   font-size: 0.875rem;
   line-height: 1.55;
   color: var(--team-color-surface-container-highest);
-  opacity: 0;
-  transition: opacity 0.45s ease;
-}
-
-.team-lead-card:hover .team-lead-card__bio p,
-.team-lead-card:focus-within .team-lead-card__bio p {
-  opacity: 1;
 }
 
 /* ── Research grid ──────────────────────────────────────────── */
@@ -456,6 +457,7 @@
 @media (prefers-reduced-motion: reduce) {
   .team-lead-card__media,
   .team-lead-card__img,
+  .team-lead-card__overlay,
   .team-lead-card__body,
   .team-lead-card__bio p,
   .team-research-card__img,

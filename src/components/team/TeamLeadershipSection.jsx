@@ -7,21 +7,19 @@ const LEADERS = [
     name: 'Sarbeswar Praharaj',
     bio:
       "Expert in urban informatics and smart city governance, leading the SCALE-R initiative's strategic vision for regional coastal resilience.",
-    imageSrc: '/Images/team-sarbeswar-praharaj.png',
+    imageSrc: '/Images/team-sarbeswar-praharaj.webp',
     imageAlt:
       'Sarbeswar Praharaj speaking at a podium in front of a welcome screen',
-    imagePosition: '68% 34%',
+    imagePosition: '58% 42%',
   },
   {
     role: 'Co-Investigator',
     name: 'Shouraseni Sen Roy',
     bio:
       'Specializing in climatology and spatial analysis, focusing on historical climate trends and future impact modeling in South Florida.',
-    imageSrc: '/Images/team-shouraseni-sen-roy.png',
+    imageSrc: '/Images/team-shouraseni-sen-roy.webp',
     imageAlt: 'Shouraseni Sen Roy standing at a marina with boats in the background',
-    imagePosition: 'center 5%',
-    mediaWidth: '132.25%',
-    mediaHeight: '132.25%',
+    imagePosition: 'center 30%',
   },
 ];
 

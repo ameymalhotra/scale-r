@@ -25,6 +25,14 @@ const PAST_MEMBERS = [
     name: 'Jayline Cole',
     role: 'Bachelor of Architecture student',
   },
+  {
+    name: 'Noami Roos',
+    role: 'MPS in Urban Sustainability & Resilience Student',
+  },
+  {
+    name: 'Varsha Gopal',
+    role: 'Master in Urban Design Student',
+  },
 ];
 
 export default function TeamPastResearchersSection() {

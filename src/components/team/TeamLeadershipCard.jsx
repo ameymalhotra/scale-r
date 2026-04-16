@@ -1,8 +1,5 @@
 import React from 'react';
 
-const DEFAULT_MEDIA_WIDTH = '135%';
-const DEFAULT_MEDIA_HEIGHT = '118%';
-
 export default function TeamLeadershipCard({
   role,
   name,
@@ -12,8 +9,6 @@ export default function TeamLeadershipCard({
   imagePosition,
   imagePositionX,
   imagePositionY,
-  mediaWidth,
-  mediaHeight,
 }) {
   const pct = (v) => {
     if (typeof v === 'number') return `${v}%`;
@@ -31,26 +26,17 @@ export default function TeamLeadershipCard({
       ? objectPosition
       : undefined;
 
-  const hasCustomMedia =
-    mediaWidth != null || mediaHeight != null;
-  const mediaStyle = hasCustomMedia
-    ? {
-        width: mediaWidth ?? DEFAULT_MEDIA_WIDTH,
-        height: mediaHeight ?? DEFAULT_MEDIA_HEIGHT,
-      }
-    : undefined;
-
   return (
     <article className="team-lead-card" tabIndex={0}>
-      <div className="team-lead-card__media" style={mediaStyle}>
+      <div className="team-lead-card__media">
         <img
           className="team-lead-card__img"
           src={imageSrc}
           alt={imageAlt}
           style={imgPos ? { objectPosition: imgPos } : undefined}
         />
+        <div className="team-lead-card__overlay" aria-hidden="true" />
       </div>
-      <div className="team-lead-card__overlay" aria-hidden="true" />
       <div className="team-lead-card__body">
         <span className="team-lead-card__role">{role}</span>
         <h3 className="team-lead-card__name">{name}</h3>

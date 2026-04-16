@@ -4,7 +4,7 @@ import TeamResearchCard from './TeamResearchCard.jsx';
 const RESEARCHERS = [
   {
     name: 'Sofia Bond',
-    role: 'Project Management',
+    role: 'Coastal Management',
     imageSrc: '/Images/team-sofia-bond.jpg',
     imageAlt: 'Sofia Bond smiling in a Miami Waterkeeper polo during a group event',
     imagePosition: '50% 22%',
