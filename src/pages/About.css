@@ -1121,7 +1121,7 @@
   flex: 0 0 max(0px, calc(100cqi - var(--engagement-peek)));
   min-width: 0;
   display: grid;
-  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
   gap: clamp(1.75rem, 3vw, 3.25rem);
   align-items: stretch;
   min-height: 36rem;
@@ -1165,6 +1165,7 @@
   height: 100%;
   display: block;
   object-fit: cover;
+  object-position: center;
 }
 .engagement-card__media-placeholder {
   width: 100%;

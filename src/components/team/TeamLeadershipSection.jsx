@@ -4,7 +4,7 @@ import TeamLeadershipCard from './TeamLeadershipCard.jsx';
 const LEADERS = [
   {
     role: 'Principal Investigator',
-    name: 'Sarbeswar Praharaj',
+    name: 'Sarbeswar Praharaj, PhD',
     bio:
       "Expert in urban informatics and smart city governance, leading the SCALE-R initiative's strategic vision for regional coastal resilience.",
     imageSrc: '/Images/team-sarbeswar-praharaj.webp',
@@ -14,7 +14,7 @@ const LEADERS = [
   },
   {
     role: 'Co-Investigator',
-    name: 'Shouraseni Sen Roy',
+    name: 'Shouraseni Sen Roy, PhD',
     bio:
       'Specializing in climatology and spatial analysis, focusing on historical climate trends and future impact modeling in South Florida.',
     imageSrc: '/Images/team-shouraseni-sen-roy.webp',

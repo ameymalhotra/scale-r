@@ -4,93 +4,36 @@
   overflow-anchor: none;
 }
 
-/* ── Team hero (full-bleed photo + teal scrim + white type; reference mockup) ── */
-.team-hero {
-  position: relative;
-  width: 100%;
-  box-sizing: border-box;
-  min-height: 100vh;
-  overflow: hidden;
-  border-bottom: 1px solid rgba(0, 40, 35, 0.35);
+/* Alternating section surfaces: white → gray → white (footer stays brand green) */
+.team-page .team-intro.about-difference.about-section--on-um-green {
+  background: var(--about-section-gray);
 }
 
-.team-hero__media {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
+.team-page .team-page-roster.about-pillars.about-section--on-um-orange {
+  background: var(--about-section-white);
 }
 
-.team-hero__photo {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center center;
-  display: block;
+/* Text-only hero (no background photo) */
+.team-page .about-hero {
+  min-height: auto;
+  align-items: flex-start;
+  padding-top: clamp(5rem, 10vh, 7.5rem);
+  padding-bottom: clamp(2.25rem, 5vw, 3.5rem);
+  padding-left: var(--about-section-pad-x);
+  padding-right: var(--about-section-pad-x);
+  color: var(--about-text);
+  background: var(--about-section-white);
 }
 
-.team-hero__scrim {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  background: linear-gradient(
-    120deg,
-    rgba(8, 42, 40, 0.88) 0%,
-    rgba(0, 58, 52, 0.72) 42%,
-    rgba(0, 45, 48, 0.55) 100%
-  );
-  pointer-events: none;
+.team-page .about-hero-title {
+  padding: 0;
+  width: auto;
+  color: var(--um-orange);
 }
 
-.team-hero__inner {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  min-height: 100vh;
-  width: 100%;
-  max-width: 1280px;
-  margin: 0 auto;
-  box-sizing: border-box;
-  padding: clamp(2.5rem, 8vh, 5rem) var(--about-section-pad-x, 4rem)
-    clamp(2.5rem, 8vh, 5rem) clamp(1.5rem, 10vw, 6rem);
-}
-
-.team-hero__copy {
-  --about-hero-title-size: clamp(3.5rem, 8vw, 7rem);
-  width: 100%;
-  text-align: left;
-}
-
-.team-hero__heading {
-  max-width: min(38em, 100%);
-  margin: 0 0 1.25rem;
-  font-family: 'Manrope', sans-serif;
-  font-size: var(--about-hero-title-size);
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  line-height: 0.92;
-  color: #fff;
-  text-shadow: none;
-}
-
-.team-hero__lead {
-  max-width: min(52em, 100%);
-  margin: 0;
-  font-size: clamp(1.1rem, 2.5vw, 1.55rem);
-  font-weight: 400;
-  line-height: 1.6;
-  color: #fff;
-  text-shadow: none;
-}
-
-@media (max-width: 768px) {
-  .team-hero__inner {
-    padding-left: var(--about-section-pad-x, 1.5rem);
-    padding-right: var(--about-section-pad-x, 1.5rem);
-    padding-top: clamp(2.25rem, 7vh, 4rem);
-    padding-bottom: clamp(2.25rem, 7vh, 4rem);
-  }
+/* Roster section title pills: UM green (left border stays orange per About.css) */
+.team-page .about-heading-highlight {
+  background: var(--um-green);
 }
 
 .team-page-roster-inner {
@@ -228,24 +171,33 @@
   align-items: stretch;
   flex: 1 1 auto;
   box-sizing: border-box;
-  padding: clamp(1.25rem, 3vw, 2rem) clamp(1.25rem, 3vw, 2.25rem);
-  background: color-mix(in srgb, var(--team-color-primary) 94%, #0a2a1c);
-  border-top: 1px solid color-mix(in srgb, var(--team-color-primary) 12%, transparent);
+  padding: calc(6px + clamp(1.25rem, 3vw, 2rem)) clamp(1.25rem, 3vw, 2.25rem)
+    clamp(1.25rem, 3vw, 2rem);
+  background: var(--um-green);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
   transition:
     background 0.45s ease,
-    border-color 0.45s ease,
-    box-shadow 0.45s ease,
-    backdrop-filter 0.45s ease,
-    -webkit-backdrop-filter 0.45s ease;
+    box-shadow 0.45s ease;
+}
+
+.team-lead-card__body::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  background: var(--um-orange);
+  z-index: 2;
+  pointer-events: none;
 }
 
 .team-lead-card:hover .team-lead-card__body,
 .team-lead-card:has(:focus-visible) .team-lead-card__body {
-  background: color-mix(in srgb, var(--team-color-primary) 88%, #0a2a1c);
-  border-color: color-mix(in srgb, #ffffff 10%, transparent);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  box-shadow: 0 4px 20px rgba(0, 27, 14, 0.15);
+  background: color-mix(in srgb, var(--um-green) 92%, #ffffff);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 4px 20px rgba(0, 27, 14, 0.15);
 }
 
 .team-lead-card__role {
@@ -286,7 +238,7 @@
   margin: 0;
   font-size: 0.875rem;
   line-height: 1.55;
-  color: var(--team-color-surface-container-highest);
+  color: color-mix(in srgb, var(--team-color-surface-bright) 82%, var(--team-color-surface-container-highest));
 }
 
 /* ── Research grid ──────────────────────────────────────────── */

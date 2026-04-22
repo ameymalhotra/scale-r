@@ -111,7 +111,7 @@ const engagementItems = [
     title: 'Miami-Dade Environmental Stewards workshop',
     detail:
       'A workshop was held at the Stephen P. Clark Government Center on 26/9/2024 with the Miami-Dade County experts, enabling a discussion between leaders from the Divisions of Planning, Resilience, Transportation, Historic Preservation, Planning Research, and Zoning with the researchers and students involved in this project.',
-    imageSrc: '/Images/community-engagement/workshop-new.png',
+    imageSrc: '/Images/community-engagement/workshop-full.png',
     imageAlt:
       'Meeting room workshop with participants seated around a long table facing a presentation screen',
     imageObjectPosition: 'center center',
@@ -121,7 +121,7 @@ const engagementItems = [
     title: 'Awareness and engagement with high school students',
     detail:
       'An interaction with the Human Geography students and faculty was organized at the Palmer Trinity School on April 23, 2025, enabling greater awareness and knowledge dissemination among the young learners in the broader community.',
-    imageSrc: '/Images/community-engagement/workshop-replacement.png',
+    imageSrc: '/Images/community-engagement/awareness.jpg',
     imageAlt:
       'Classroom presentation with students seated at desks watching a climate change talk',
   },
