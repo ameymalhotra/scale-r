@@ -2,40 +2,56 @@ import React from 'react';
 
 const INFRASTRUCTURE_TYPES = [
   {
-    icon: 'bolt',
-    label: 'Energy',
+    icon: 'water',
+    label: 'Blue Infrastructure',
+    accent: '#0e7aad',
     text:
-      'Generation, substations, and distribution assets critical to power continuity during hazard events.',
+      'Blue infrastructure includes natural and engineered water systems that manage flooding, improve water quality, and support aquatic ecosystems. These systems play a key role in sustainable water management and reducing pressure on traditional infrastructure.',
+    examples: [
+      'Stormwater retention ponds',
+      'Canals and drainage networks',
+      'Wetland restoration projects',
+      'Coastal water management systems',
+    ],
   },
   {
-    icon: 'water_drop',
-    label: 'Water & wastewater',
+    icon: 'foundation',
+    label: 'Grey Infrastructure',
+    accent: '#52606b',
     text:
-      'Treatment plants, pump stations, and distribution mains — highly exposed to flood and surge.',
+      'Grey infrastructure refers to traditional engineered systems built with materials like concrete and steel to manage urban services and environmental challenges. While essential for large-scale infrastructure, these systems can have environmental trade-offs.',
+    examples: [
+      'Seawalls and flood barriers',
+      'Stormwater pipes and drainage systems',
+      'Roads and transportation networks',
+      'Water treatment facilities',
+    ],
   },
   {
-    icon: 'directions_bus',
-    label: 'Transportation',
+    icon: 'park',
+    label: 'Green Infrastructure',
+    accent: '#005030',
     text:
-      'Roads, bridges, transit nodes, and evacuation corridors supporting mobility and emergency response.',
+      'Green infrastructure uses vegetation, soil, and natural processes to improve environmental quality and enhance resilience. These solutions help cities adapt to climate impacts such as heat, flooding, and extreme weather while promoting sustainability.',
+    examples: [
+      'Urban tree canopies and green spaces',
+      'Green roofs and rain gardens',
+      'Bioswales and permeable surfaces',
+      'Urban parks and ecological restoration areas',
+    ],
   },
   {
-    icon: 'local_hospital',
-    label: 'Health & emergency',
+    icon: 'hub',
+    label: 'Hybrid Infrastructure',
+    accent: '#f47321',
     text:
-      'Hospitals, clinics, fire and EMS facilities that anchor community response capacity.',
-  },
-  {
-    icon: 'school',
-    label: 'Social & community',
-    text:
-      'Schools, shelters, and community centers that double as refuge and service hubs.',
-  },
-  {
-    icon: 'apartment',
-    label: 'Housing & buildings',
-    text:
-      'Residential and mixed-use stock — the first point of exposure for most residents.',
+      'Hybrid infrastructure combines elements of blue, green, and grey systems to deliver more adaptive and sustainable solutions. These approaches balance engineered reliability with environmental benefits.',
+    examples: [
+      'Living shorelines (natural vegetation + structural support)',
+      'Green stormwater systems integrated with drainage networks',
+      'Parks designed for flood storage',
+      'Multi-functional coastal protection systems',
+    ],
   },
 ];
 
@@ -43,7 +59,7 @@ export default function DocsInfrastructureSection() {
   return (
     <section
       id="infrastructure-types"
-      className="docs-section docs-section--pill"
+      className="docs-section docs-section--infra"
       aria-labelledby="docs-infra-heading"
     >
       <h2 id="docs-infra-heading" className="docs-section__title">
@@ -52,26 +68,39 @@ export default function DocsInfrastructureSection() {
         </span>
       </h2>
       <p className="docs-section__lede">
-        SCALE-R groups the built environment into six interdependent
-        infrastructure classes. Each class carries its own exposure profile and
-        its own set of adaptation levers.
+        Resilience projects are categorized into blue, green, grey, and hybrid
+        infrastructure to reflect how different systems reduce risk and
+        strengthen community resilience. This classification helps identify
+        spatial patterns, compare strategies across locations, and highlight
+        gaps—such as over-reliance on engineered solutions or underuse of
+        nature-based approaches.
       </p>
 
-      <div className="docs-tile-grid">
+      <ul className="docs-infra-rows" role="list">
         {INFRASTRUCTURE_TYPES.map((tile) => (
-          <div className="docs-def-tile" key={tile.label}>
-            <span className="docs-def-tile__icon" aria-hidden>
+          <li
+            className="docs-infra-row"
+            key={tile.label}
+            style={{ '--infra-accent': tile.accent }}
+          >
+            <span className="docs-infra-row__icon" aria-hidden>
               <span className="material-symbols-outlined">{tile.icon}</span>
             </span>
-            <h3 className="docs-def-tile__label">{tile.label}</h3>
-            <p className="docs-def-tile__text">{tile.text}</p>
-          </div>
+            <div className="docs-infra-row__body">
+              <h3 className="docs-infra-row__title">{tile.label}</h3>
+              <p className="docs-infra-row__text">{tile.text}</p>
+              <p className="docs-infra-row__examples-label">Examples</p>
+              <div className="docs-infra-row__pills">
+                {tile.examples.map((example) => (
+                  <span className="docs-infra-pill" key={example}>
+                    {example}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </li>
         ))}
-      </div>
-
-      <span className="docs-placeholder" aria-hidden>
-        Placeholder copy · Infrastructure Types
-      </span>
+      </ul>
     </section>
   );
 }
