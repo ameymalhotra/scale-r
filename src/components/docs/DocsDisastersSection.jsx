@@ -4,26 +4,37 @@ const DISASTER_TYPES = [
   {
     icon: 'flood',
     label: 'Flooding',
+    accent: '#0e7aad',
     text:
-      'Pluvial, fluvial, and tidal flooding — the dominant chronic hazard across Miami-Dade.',
-  },
-  {
-    icon: 'thermostat',
-    label: 'Extreme heat',
-    text:
-      'Rising heat days and urban heat island effects that stress health, energy, and outdoor labor.',
-  },
-  {
-    icon: 'cyclone',
-    label: 'Hurricanes & wind',
-    text:
-      'Tropical cyclones — wind damage, rainfall, and compounding outages across infrastructure.',
+      'Projects addressing risks from coastal and inland flooding driven by precipitation, tidal influences, and long-term sea-level rise, including stormwater management, drainage systems, and elevation strategies.',
   },
   {
     icon: 'tsunami',
-    label: 'Storm surge & SLR',
+    label: 'Storm Surge',
+    accent: '#127ea7',
     text:
-      'Acute coastal surge layered onto long-term sea level rise exposure along the Miami coast.',
+      'Projects addressing coastal inundation from storm-driven surges and wave action, including shoreline protection, surge barriers, and coastal defense systems.',
+  },
+  {
+    icon: 'thermostat',
+    label: 'Heat and Extreme Temperatures',
+    accent: '#f47321',
+    text:
+      'Projects focused on mitigating rising temperatures and urban heat island effects through cooling strategies, urban greening, shading, and heat-resilient urban design.',
+  },
+  {
+    icon: 'hub',
+    label: 'Multi-Hazard',
+    accent: '#2e6d54',
+    text:
+      'Projects designed to address multiple interacting hazards—such as flooding, heat, and infrastructure stress—through integrated and multiscale resilience strategies.',
+  },
+  {
+    icon: 'settings_input_component',
+    label: 'Critical Infrastructure',
+    accent: '#52606b',
+    text:
+      'Projects that enhance the resilient operation of essential systems including energy, communications, and transportation under hazard conditions and disruptive events.',
   },
 ];
 
@@ -38,26 +49,28 @@ export default function DocsDisastersSection() {
         <span className="docs-section__title-highlight">Disaster Focus</span>
       </h2>
       <p className="docs-section__lede">
-        The dashboard prioritizes four hazard families that most shape
-        resilience planning in South Florida. Each is treated as both an acute
-        event and a chronic stressor.
+        Projects are organized by primary hazard and system stressors to help
+        users compare how resilience strategies respond to flooding, coastal
+        surge, heat, compound risk, and essential infrastructure disruption.
       </p>
 
-      <div className="docs-tile-grid docs-tile-grid--disasters">
-        {DISASTER_TYPES.map((tile) => (
-          <div className="docs-def-tile" key={tile.label}>
-            <span className="docs-def-tile__icon" aria-hidden>
-              <span className="material-symbols-outlined">{tile.icon}</span>
+      <ul className="docs-disaster-rows" role="list">
+        {DISASTER_TYPES.map((hazard) => (
+          <li
+            className="docs-disaster-row"
+            key={hazard.label}
+            style={{ '--disaster-accent': hazard.accent }}
+          >
+            <span className="docs-disaster-row__icon" aria-hidden>
+              <span className="material-symbols-outlined">{hazard.icon}</span>
             </span>
-            <h3 className="docs-def-tile__label">{tile.label}</h3>
-            <p className="docs-def-tile__text">{tile.text}</p>
-          </div>
+            <div className="docs-disaster-row__body">
+              <h3 className="docs-disaster-row__title">{hazard.label}</h3>
+              <p className="docs-disaster-row__text">{hazard.text}</p>
+            </div>
+          </li>
         ))}
-      </div>
-
-      <span className="docs-placeholder" aria-hidden>
-        Placeholder copy · Disaster Focus
-      </span>
+      </ul>
     </section>
   );
 }

@@ -14,6 +14,13 @@ const parseNumericValue = (value) => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
+const PROJECT_STATUS_OPTIONS = ['Completed', 'Ongoing'];
+
+const getProjectStatusCategory = (props = {}) => {
+  const rawStatus = props['Project__1'] ?? props['Project Status'];
+  return String(rawStatus ?? '').trim().toLowerCase() === 'completed' ? 'Completed' : 'Ongoing';
+};
+
 const toWgs84Coordinate = ([x, y]) => {
   const originShift = 20037508.34;
   const lon = (x / originShift) * 180;
@@ -498,6 +505,7 @@ const Dashboard = () => {
   const [selectedTypes, setSelectedTypes] = useState([]);
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectedDisasterFocus, setSelectedDisasterFocus] = useState([]);
+  const [selectedProjectStatuses, setSelectedProjectStatuses] = useState([]);
   const [selectedCity, setSelectedCity] = useState('');
   const [cityDropdownOpen, setCityDropdownOpen] = useState(false);
   const [projectsLayerVisible, setProjectsLayerVisible] = useState(true);
@@ -2180,16 +2188,17 @@ const Dashboard = () => {
       if (!marker.feature) return;
       const props = marker.feature.properties || {};
       const type = props['Infrastruc'] || props['Infrastructure Type'] || props['Type'];
-      const category = props['Categories'];
       const disasterFocus = props['Disaster_F'] || props['Disaster Focus'];
+      const projectStatus = getProjectStatusCategory(props);
       const city = (props['NAME'] || props['City']) ? (props['NAME'] || props['City']).trim() : (props['NAME'] || props['City']);
 
       const typeMatch = selectedTypes.length === 0 || selectedTypes.includes(type);
       const disasterMatch = selectedDisasterFocus.length === 0 || selectedDisasterFocus.includes(disasterFocus);
+      const statusMatch = selectedProjectStatuses.length === 0 || selectedProjectStatuses.includes(projectStatus);
       const selectedCityTrimmed = selectedCity ? selectedCity.trim() : selectedCity;
       const cityMatch = !selectedCityTrimmed || selectedCityTrimmed === '' || (city || '').toLowerCase() === (selectedCityTrimmed || '').toLowerCase();
 
-      const shouldShow = projectsLayerVisible && typeMatch && disasterMatch && cityMatch;
+      const shouldShow = projectsLayerVisible && typeMatch && disasterMatch && statusMatch && cityMatch;
 
       if (shouldShow) {
         marker.getElement().style.display = 'block';
@@ -2209,7 +2218,7 @@ const Dashboard = () => {
         }
       }
     });
-  }, [projectsLayerVisible, selectedTypes, selectedDisasterFocus, selectedCity, allMarkers, activeFeature]);
+  }, [projectsLayerVisible, selectedTypes, selectedDisasterFocus, selectedProjectStatuses, selectedCity, allMarkers, activeFeature]);
 
   // Zoom to city when selected (including "All Cities")
   useEffect(() => {
@@ -2232,14 +2241,16 @@ const Dashboard = () => {
       const props = feature.properties || {};
       const type = props['Infrastruc'] || props['Infrastructure Type'] || props['Type'];
       const disasterFocus = props['Disaster_F'] || props['Disaster Focus'];
+      const projectStatus = getProjectStatusCategory(props);
       const city = (props['NAME'] || props['City']) ? (props['NAME'] || props['City']).trim() : (props['NAME'] || props['City']);
       
       const typeMatch = selectedTypes.length === 0 || selectedTypes.includes(type);
       const disasterMatch = selectedDisasterFocus.length === 0 || selectedDisasterFocus.includes(disasterFocus);
+      const statusMatch = selectedProjectStatuses.length === 0 || selectedProjectStatuses.includes(projectStatus);
       const selectedCityTrimmed = selectedCity ? selectedCity.trim() : selectedCity;
       const cityMatch = !selectedCityTrimmed || selectedCityTrimmed === '' || (city || '').toLowerCase() === (selectedCityTrimmed || '').toLowerCase();
 
-      return typeMatch && disasterMatch && cityMatch;
+      return typeMatch && disasterMatch && statusMatch && cityMatch;
     });
 
     const projectCount = filteredFeatures.length;
@@ -2260,7 +2271,7 @@ const Dashboard = () => {
     }, 0);
 
     return { projectCount, totalInvestment };
-  }, [allProjectsData, selectedTypes, selectedDisasterFocus, selectedCity]);
+  }, [allProjectsData, selectedTypes, selectedDisasterFocus, selectedProjectStatuses, selectedCity]);
 
   // Calculate pie chart data based on city, disaster focus, and infrastructure type filters
   const pieChartData = useMemo(() => {
@@ -2273,14 +2284,16 @@ const Dashboard = () => {
       const props = feature.properties || {};
       const type = props['Infrastruc'] || props['Infrastructure Type'] || props['Type'];
       const disasterFocus = props['Disaster_F'] || props['Disaster Focus'];
+      const projectStatus = getProjectStatusCategory(props);
       const city = (props['NAME'] || props['City']) ? (props['NAME'] || props['City']).trim() : (props['NAME'] || props['City']);
       
       const typeMatch = selectedTypes.length === 0 || selectedTypes.includes(type);
       const disasterMatch = selectedDisasterFocus.length === 0 || selectedDisasterFocus.includes(disasterFocus);
+      const statusMatch = selectedProjectStatuses.length === 0 || selectedProjectStatuses.includes(projectStatus);
       const selectedCityTrimmed = selectedCity ? selectedCity.trim() : selectedCity;
       const cityMatch = !selectedCityTrimmed || selectedCityTrimmed === '' || (city || '').toLowerCase() === (selectedCityTrimmed || '').toLowerCase();
 
-      return typeMatch && disasterMatch && cityMatch;
+      return typeMatch && disasterMatch && statusMatch && cityMatch;
     });
 
     // Count projects by infrastructure type
@@ -2320,7 +2333,7 @@ const Dashboard = () => {
         color: colors[name] || '#95a5a6'
       }))
       .sort((a, b) => b.value - a.value); // Sort by count descending
-  }, [allProjectsData, selectedTypes, selectedDisasterFocus, selectedCity]);
+  }, [allProjectsData, selectedTypes, selectedDisasterFocus, selectedProjectStatuses, selectedCity]);
 
   return (
     <div style={{ display: 'flex', flex: 1, width: '100%', overflow: 'hidden', boxSizing: 'border-box', minHeight: 0, position: 'relative' }}>
@@ -2521,6 +2534,49 @@ const Dashboard = () => {
             )}
           </div>
           
+          {/* Project Status Filter */}
+          <div style={{ marginBottom: '24px' }}>
+            <h3 style={{ fontSize: '1.1em', fontWeight: '500', color: '#2c3e50', marginBottom: '12px' }}>
+              Project Status
+            </h3>
+            <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
+              {PROJECT_STATUS_OPTIONS.map(status => (
+                <label key={status} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={selectedProjectStatuses.includes(status)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedProjectStatuses([...selectedProjectStatuses, status]);
+                      } else {
+                        setSelectedProjectStatuses(selectedProjectStatuses.filter(s => s !== status));
+                      }
+                    }}
+                    style={{ marginRight: '8px', cursor: 'pointer' }}
+                  />
+                  <span style={{ color: '#546e7a', fontSize: '0.9em' }}>{status}</span>
+                </label>
+              ))}
+            </div>
+            {selectedProjectStatuses.length > 0 && (
+              <button
+                onClick={() => setSelectedProjectStatuses([])}
+                style={{
+                  marginTop: '8px',
+                  padding: '4px 8px',
+                  fontSize: '0.85em',
+                  background: 'transparent',
+                  border: '1px solid #ccc',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  color: '#546e7a'
+                }}
+              >
+                Clear
+              </button>
+            )}
+          </div>
+
           {/* Type Filter */}
           <div style={{ marginBottom: '24px' }}>
             <h3 style={{ fontSize: '1.1em', fontWeight: '500', color: '#2c3e50', marginBottom: '12px' }}>

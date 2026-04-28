@@ -19,7 +19,7 @@ const SECTIONS = [
   { id: 'infrastructure-types', label: 'Infrastructure Types' },
   { id: 'disaster-focus', label: 'Disaster Focus' },
   { id: 'modeling-layers', label: 'Modeling Layers' },
-  { id: 'use-cases', label: 'Use Cases' },
+  { id: 'use-cases', label: 'Benefits & Use Cases' },
 ];
 
 export default function TechnicalDocs() {

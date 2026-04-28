@@ -1,73 +1,67 @@
 import React from 'react';
 
-const USE_CASES = [
+const BENEFITS = [
   {
-    kicker: 'Planner',
-    title: 'Prioritizing flood mitigation investment',
-    persona: 'City resilience officer preparing an LMS update.',
-    scenario:
-      'Overlays flood exposure, social sensitivity, and existing project locations to surface tracts with high need but low active investment.',
-    outcome:
-      'A ranked shortlist of neighborhoods for the next round of drainage, elevation, and green-infrastructure grants.',
+    icon: 'map',
+    title: 'Analyze Scale and Spatial Patterns of Resilience Infrastructure',
+    text:
+      'Allows users to examine the composition and spatial organization of blue, green, gray, and hybrid infrastructure to understand how different strategies are deployed across the region, including spatial configurations of clustering, hotspots, and complementarities.',
   },
   {
-    kicker: 'Researcher',
-    title: 'Cross-scale resilience comparison',
-    persona: 'Academic team studying adaptation across Greater Miami.',
-    scenario:
-      'Compares tract, municipality, and county-level scores across hazard families to test how local policies track with measured resilience outcomes.',
-    outcome:
-      'Exportable tables and maps for peer-reviewed analysis and policy briefs.',
+    icon: 'balance',
+    title: 'Assess Gaps and Alignment of Resilience Investments',
+    text:
+      'Enables stakeholders to compare patterns of hazard exposure, social vulnerability, and resilience capacity with the geographic distribution of projects to identify underserved areas and evaluate whether investments align with community needs.',
   },
   {
-    kicker: 'Community',
-    title: 'Neighborhood advocacy & planning',
-    persona: 'CBO leader preparing a testimony packet.',
-    scenario:
-      'Filters the map to a single neighborhood, combining hazard layers with pending projects to ground community concerns in shared data.',
-    outcome:
-      'A one-page evidence brief used in public comment and council engagement.',
+    icon: 'hub',
+    title: 'Enhance Interagency Coordination',
+    text:
+      'Provides municipal-county-regional-state agencies with a shared, scalable, integrated platform to visualize and track completed, ongoing, and planned resilience projects and identify synergies to support coordinated planning and implementation.',
+  },
+  {
+    icon: 'account_balance',
+    title: 'Support Evidence-Based, Equitable Investment Decisions',
+    text:
+      'Guides decision-makers through integrated data and modeling layers for strategic allocation of resources, enabling prioritization of interventions that address high-risk conditions while ensuring investments are directed toward communities with the greatest need.',
+  },
+  {
+    icon: 'campaign',
+    title: 'Increase Public Awareness and Engagement',
+    text:
+      'Presents complex resilience data through intuitive, map-based visualizations that make risk, vulnerability, and investment landscape more accessible to a broad audience, supporting greater public understanding, fostering transparency, and encouraging meaningful engagement of community leaders in resilience-building processes.',
   },
 ];
 
 export default function DocsUseCasesSection() {
   return (
-    <section
-      id="use-cases"
-      className="docs-section docs-section--pill"
-      aria-labelledby="docs-use-cases-heading"
-    >
+    <section id="use-cases" className="docs-section" aria-labelledby="docs-use-cases-heading">
       <h2 id="docs-use-cases-heading" className="docs-section__title">
-        <span className="docs-section__title-highlight">Use Cases</span>
+        <span className="docs-section__title-highlight">Benefits and Use Cases</span>
       </h2>
       <p className="docs-section__lede">
-        Three illustrative scenarios for how planners, researchers, and
-        community stakeholders use SCALE-R day-to-day.
+        Five ways SCALE-R supports planners, agencies, researchers, and the
+        public across the resilience-investment lifecycle.
       </p>
 
-      <div className="docs-usecase-grid">
-        {USE_CASES.map((uc, idx) => (
-          <article className="docs-usecase-card" key={uc.title}>
-            <span className="docs-usecase-card__kicker">
-              <span className="docs-usecase-card__num" aria-hidden>
-                {idx + 1}
-              </span>
-              {uc.kicker}
+      <ol className="docs-stepper">
+        {BENEFITS.map((benefit, idx) => (
+          <li className="docs-stepper__item" key={benefit.title}>
+            <span className="docs-stepper__marker" aria-hidden>
+              {idx + 1}
             </span>
-            <h3 className="docs-usecase-card__title">{uc.title}</h3>
-            <p className="docs-usecase-card__persona">{uc.persona}</p>
-            <p className="docs-usecase-card__scenario">{uc.scenario}</p>
-            <p className="docs-usecase-card__outcome">
-              <span className="docs-usecase-card__outcome-label">Outcome</span>
-              {uc.outcome}
-            </p>
-          </article>
+            <article className="docs-stepper__content">
+              <div className="docs-stepper__head">
+                <span className="docs-stepper__icon" aria-hidden>
+                  <span className="material-symbols-outlined">{benefit.icon}</span>
+                </span>
+                <h3 className="docs-stepper__title">{benefit.title}</h3>
+              </div>
+              <p className="docs-stepper__text">{benefit.text}</p>
+            </article>
+          </li>
         ))}
-      </div>
-
-      <span className="docs-placeholder" aria-hidden>
-        Placeholder copy · Use Cases
-      </span>
+      </ol>
     </section>
   );
 }

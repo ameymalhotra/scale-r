@@ -11,7 +11,7 @@ const renderApp = () => render(
 );
 
 // Mock mapbox-gl
-vi.mock('https://cdn.skypack.dev/mapbox-gl@2.15.0', () => {
+vi.mock('mapbox-gl', () => {
   const mockMap = {
     on: vi.fn((event, callback) => {
       if (event === 'load') {
@@ -34,6 +34,7 @@ vi.mock('https://cdn.skypack.dev/mapbox-gl@2.15.0', () => {
       style: {}
     })),
     setFeatureState: vi.fn(),
+    queryRenderedFeatures: vi.fn(() => []),
     dragRotate: { enable: vi.fn(), disable: vi.fn() },
     touchZoomRotate: { enableRotation: vi.fn(), disableRotation: vi.fn() },
     once: vi.fn((event, callback) => {
@@ -46,16 +47,24 @@ vi.mock('https://cdn.skypack.dev/mapbox-gl@2.15.0', () => {
   return {
     default: {
       Map: vi.fn(() => mockMap),
-      Marker: vi.fn(() => ({
-        setLngLat: vi.fn().mockReturnThis(),
-        addTo: vi.fn().mockReturnThis(),
-        getElement: vi.fn(() => ({
+      Marker: vi.fn(() => {
+        const element = {
           addEventListener: vi.fn(),
           style: {},
-          getLngLat: vi.fn(() => ({ lng: -80.1918, lat: 25.7617 }))
-        })),
-        feature: null
-      })),
+        };
+        let lngLat = { lng: -80.1918, lat: 25.7617 };
+        const marker = {
+          setLngLat: vi.fn((coords) => {
+            lngLat = Array.isArray(coords) ? { lng: coords[0], lat: coords[1] } : coords;
+            return marker;
+          }),
+          addTo: vi.fn(() => marker),
+          getElement: vi.fn(() => element),
+          getLngLat: vi.fn(() => lngLat),
+          feature: null
+        };
+        return marker;
+      }),
       Popup: vi.fn(() => ({
         setLngLat: vi.fn().mockReturnThis(),
         setHTML: vi.fn().mockReturnThis(),
@@ -217,6 +226,36 @@ describe('App Search Functionality', () => {
     await waitFor(() => {
       const searchInput = screen.getByPlaceholderText(/search projects/i);
       expect(searchInput).toBeInTheDocument();
+    });
+  });
+
+  it('should filter dashboard stats by project status', async () => {
+    const user = userEvent.setup();
+    renderApp();
+
+    await waitFor(() => {
+      expect(screen.getByText('Project Status')).toBeInTheDocument();
+    });
+
+    const getProjectCount = () => screen
+      .getAllByText('Projects')
+      .find(element => /^\d+$/.test(element.previousElementSibling?.textContent?.trim() || ''))
+      ?.previousElementSibling;
+
+    await waitFor(() => {
+      expect(getProjectCount()).toHaveTextContent('2');
+    });
+
+    await user.click(screen.getByLabelText('Completed'));
+
+    await waitFor(() => {
+      expect(getProjectCount()).toHaveTextContent('1');
+    });
+
+    await user.click(screen.getByLabelText('Ongoing'));
+
+    await waitFor(() => {
+      expect(getProjectCount()).toHaveTextContent('2');
     });
   });
 
