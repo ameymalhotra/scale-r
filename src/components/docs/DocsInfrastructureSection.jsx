@@ -72,10 +72,18 @@ export default function DocsInfrastructureSection() {
       <p className="docs-section__lede">
         Resilience projects are categorized into blue, green, grey, and hybrid
         infrastructure to reflect how different systems reduce risk and
-        strengthen community resilience. This classification—adapted from the
-        IPCC Sixth Assessment Report—helps the users to categorize and compare
-        strategies across the county-wide geography and highlights which
-        strategies are preferred under varying risk and resilience contexts.
+        strengthen community resilience. This classification—adapted from the{' '}
+        <a
+          className="docs-section__lede-link"
+          href="https://www.ipcc.ch/report/ar6/wg2/downloads/outreach/IPCC_AR6_WGII_SummaryForAll_Adaptation.pdf"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          IPCC Sixth Assessment Report
+        </a>
+        —helps the users to categorize and compare strategies across the
+        county-wide geography and highlights which strategies are preferred under
+        varying risk and resilience contexts.
       </p>
 
       <ul className="docs-infra-rows" role="list">

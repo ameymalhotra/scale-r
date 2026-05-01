@@ -299,6 +299,16 @@
   color: var(--about-text-green);
 }
 
+.docs-section__lede-link {
+  color: var(--um-green);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.docs-section__lede-link:hover {
+  color: var(--um-orange);
+}
+
 .docs-section--pill .docs-section__lede {
   color: rgba(255, 255, 255, 0.78);
 }

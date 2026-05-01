@@ -5,6 +5,7 @@ const navLinks = [
   { to: '/about', label: 'About the project' },
   { to: '/dashboard', label: 'Dashboard' },
   { to: '/team', label: 'Team' },
+  { to: '/docs', label: 'Technical documentation' },
 ];
 
 export default function Navbar() {
