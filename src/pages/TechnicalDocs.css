@@ -1396,33 +1396,10 @@
   border-color: rgba(244, 115, 33, 0.4);
 }
 
-/* ── Data Sources: grouped, expandable table ────────────────── */
-.docs-sources-wrap {
+/* ── Data Sources: grouped table + per-section expand ───────── */
+.docs-sources-table-wrap {
   position: relative;
-  overflow: hidden;
-  max-height: clamp(22rem, 48vh, 28rem);
-  transition: max-height 0.5s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.docs-sources-wrap[data-expanded='true'] {
-  max-height: 6000px;
-}
-
-.docs-sources-wrap__fade {
-  position: absolute;
-  inset: auto 0 0 0;
-  height: 5rem;
-  background: linear-gradient(
-    180deg,
-    rgba(250, 250, 249, 0) 0%,
-    var(--about-bg) 92%
-  );
-  pointer-events: none;
-  transition: opacity 0.3s ease;
-}
-
-.docs-sources-wrap[data-expanded='true'] .docs-sources-wrap__fade {
-  opacity: 0;
+  margin-top: 0.25rem;
 }
 
 .docs-sources-table {
@@ -1471,6 +1448,92 @@
   width: 1%;
 }
 
+.docs-sources-table td.docs-sources-table__source {
+  vertical-align: middle;
+}
+
+.docs-sources-table__source-text {
+  display: inline;
+  vertical-align: middle;
+}
+
+.docs-sources-table__link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 0.35rem;
+  vertical-align: middle;
+  color: var(--um-orange);
+  text-decoration: none;
+  border-radius: 4px;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.docs-sources-table__link:hover {
+  color: color-mix(in srgb, var(--um-orange) 85%, #000);
+  background: rgba(244, 115, 33, 0.1);
+}
+
+.docs-sources-table__link:focus-visible {
+  outline: 2px solid var(--um-orange);
+  outline-offset: 2px;
+}
+
+.docs-sources-table__link-icon {
+  font-size: 1rem;
+  font-variation-settings:
+    'FILL' 0,
+    'wght' 500,
+    'GRAD' 0,
+    'opsz' 24;
+  line-height: 1;
+}
+
+.docs-sources-table tbody tr.docs-sources-table__expand-row {
+  border-bottom: 1px solid rgba(0, 80, 48, 0.08);
+}
+
+.docs-sources-table tbody tr.docs-sources-table__expand-row:hover {
+  background: transparent;
+}
+
+.docs-sources-table__expand-row td {
+  padding: 0.5rem 0.85rem 0.85rem;
+  vertical-align: middle;
+}
+
+.docs-sources-group-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.85rem;
+  margin: 0;
+  background: rgba(0, 80, 48, 0.06);
+  color: var(--um-green);
+  border: 1px solid rgba(0, 80, 48, 0.12);
+  border-radius: 999px;
+  font-family: 'Manrope', 'Inter', sans-serif;
+  font-weight: 700;
+  font-size: 0.82rem;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.docs-sources-group-toggle:hover {
+  background: rgba(0, 80, 48, 0.1);
+  border-color: rgba(0, 80, 48, 0.2);
+}
+
+.docs-sources-group-toggle:focus-visible {
+  outline: 2px solid var(--um-orange);
+  outline-offset: 2px;
+}
+
+.docs-sources-group-toggle .material-symbols-outlined {
+  font-size: 1.1rem;
+}
+
 .docs-sources-table__group th {
   padding: 1.35rem 0.85rem 0.55rem;
   border-top: 2px solid var(--um-orange);
@@ -1497,6 +1560,28 @@
   background: transparent;
 }
 
+/* Municipal sub-jurisdictions (e.g. City of Miami, City of Miami Beach) */
+.docs-sources-table tbody tr.docs-sources-table__subgroup {
+  border-bottom: 0;
+}
+
+.docs-sources-table tbody tr.docs-sources-table__subgroup:hover {
+  background: transparent;
+}
+
+.docs-sources-table__subgroup-heading {
+  padding: 0.9rem 0.85rem 0.45rem 1.35rem;
+  border-top: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: none;
+  font-variant-numeric: lining-nums;
+  color: var(--about-text-green-muted);
+  background: transparent;
+  text-align: left;
+}
+
 .docs-sources-table__group-count {
   display: inline-block;
   margin-left: 0.6rem;
@@ -1507,41 +1592,6 @@
   font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.06em;
-}
-
-.docs-sources-toggle {
-  margin-top: 1.25rem;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  padding: 0.6rem 1.25rem;
-  background: var(--um-green);
-  color: #fff;
-  border: 0;
-  border-radius: 999px;
-  font-family: 'Manrope', 'Inter', sans-serif;
-  font-weight: 700;
-  font-size: 0.88rem;
-  letter-spacing: 0.02em;
-  cursor: pointer;
-  box-shadow: 0 4px 14px rgba(0, 80, 48, 0.18);
-  transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.docs-sources-toggle:hover {
-  background: color-mix(in srgb, var(--um-green) 82%, #000);
-  transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(0, 80, 48, 0.24);
-}
-
-.docs-sources-toggle:focus-visible {
-  outline: 2px solid var(--um-orange);
-  outline-offset: 3px;
-}
-
-.docs-sources-toggle .material-symbols-outlined {
-  font-size: 1.15rem;
-  transition: transform 0.25s ease;
 }
 
 /* Visually hidden helper for table caption — used for SR-only text */
@@ -1558,10 +1608,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .docs-sources-wrap,
-  .docs-sources-wrap__fade,
-  .docs-sources-toggle,
-  .docs-sources-toggle .material-symbols-outlined {
+  .docs-sources-table__link,
+  .docs-sources-group-toggle {
     transition: none;
   }
 }
@@ -1577,6 +1625,11 @@
   }
   .docs-sources-table__group th {
     padding: 1rem 0.5rem 0.45rem;
+  }
+
+  .docs-sources-table__subgroup-heading {
+    padding-left: 1rem;
+    padding-right: 0.5rem;
   }
 }
 
