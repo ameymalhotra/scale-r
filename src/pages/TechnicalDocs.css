@@ -40,7 +40,8 @@
   padding: 0 var(--about-section-pad-x);
   box-sizing: border-box;
   display: grid;
-  grid-template-columns: 240px minmax(0, 1fr);
+  /* Wide enough for longest TOC label + index on one line (e.g. Limitations & Future Research) */
+  grid-template-columns: 320px minmax(0, 1fr);
   gap: clamp(1.5rem, 3vw, 3rem);
   align-items: start;
 }
@@ -107,6 +108,7 @@
   border-bottom: 0;
   width: 100%;
   text-align: left;
+  white-space: nowrap;
   transition:
     color 0.2s ease,
     border-color 0.2s ease,
@@ -1575,6 +1577,203 @@
   }
   .docs-sources-table__group th {
     padding: 1rem 0.5rem 0.45rem;
+  }
+}
+
+/* ── Limitations & Future Research: inherits page cream; editorial cards below */
+.docs-section.docs-section--limitations-bleed {
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 0;
+  margin-bottom: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.docs-horizon-stack {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1.25rem, 2vw, 1.75rem);
+}
+
+.docs-horizon-card {
+  --horizon-accent: var(--um-green);
+  position: relative;
+  padding: clamp(1.75rem, 3vw, 2.4rem);
+  border-radius: 1.25rem;
+  border: 1px solid rgba(0, 80, 48, 0.08);
+  background: linear-gradient(
+    165deg,
+    color-mix(in srgb, var(--about-bg) 35%, #fff) 0%,
+    color-mix(in srgb, var(--about-bg) 82%, var(--about-section-gray)) 52%,
+    color-mix(in srgb, var(--about-bg) 70%, var(--about-section-gray)) 100%
+  );
+  box-shadow: 0 4px 22px rgba(0, 27, 14, 0.045);
+  overflow: hidden;
+  transition:
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+.docs-horizon-card:hover {
+  border-color: color-mix(in srgb, var(--horizon-accent) 22%, rgba(0, 80, 48, 0.1));
+  box-shadow:
+    0 10px 32px rgba(0, 27, 14, 0.09),
+    0 2px 12px color-mix(in srgb, var(--horizon-accent) 12%, transparent);
+}
+
+.docs-horizon-card--research {
+  --horizon-accent: var(--um-orange);
+}
+
+.docs-horizon-card__numeral {
+  position: absolute;
+  right: -0.15em;
+  top: -0.1em;
+  font-family: 'Manrope', sans-serif;
+  font-size: clamp(5.5rem, 9vw, 8.5rem);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 0.85;
+  letter-spacing: -0.04em;
+  color: color-mix(in srgb, var(--horizon-accent) 8%, transparent);
+  pointer-events: none;
+  user-select: none;
+  transition: color 0.3s ease;
+}
+
+.docs-horizon-card:hover .docs-horizon-card__numeral {
+  color: color-mix(in srgb, var(--horizon-accent) 12%, transparent);
+}
+
+.docs-horizon-card__head {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: clamp(1rem, 2vw, 1.35rem);
+  align-items: start;
+}
+
+.docs-horizon-card__medallion {
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: color-mix(in srgb, var(--horizon-accent) 10%, #fff);
+  color: var(--horizon-accent);
+  box-shadow: inset 0 0 0 1px
+    color-mix(in srgb, var(--horizon-accent) 22%, transparent);
+  transition: box-shadow 0.3s ease;
+}
+
+.docs-horizon-card:hover .docs-horizon-card__medallion {
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--horizon-accent) 28%, transparent),
+    0 4px 14px color-mix(in srgb, var(--horizon-accent) 14%, transparent);
+}
+
+.docs-horizon-card__medallion .material-symbols-outlined {
+  font-size: 1.65rem;
+}
+
+.docs-horizon-card__meta {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.docs-horizon-card__tag {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 0.22rem 0.7rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--horizon-accent) 8%, #fff);
+  border: 1px solid
+    color-mix(in srgb, var(--horizon-accent) 22%, transparent);
+  color: var(--horizon-accent);
+  font-family: 'Manrope', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.docs-horizon-card__title {
+  margin: 0;
+  padding-right: clamp(0.5rem, 8vw, 4rem);
+  font-family: 'Manrope', sans-serif;
+  font-size: clamp(1.3rem, 2vw, 1.65rem);
+  font-weight: 700;
+  letter-spacing: -0.018em;
+  line-height: 1.25;
+  color: var(--about-text-green);
+}
+
+.docs-horizon-card__rule {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 2.75rem;
+  height: 2px;
+  margin: clamp(0.85rem, 1.5vw, 1.1rem) 0 clamp(0.75rem, 1.2vw, 0.95rem);
+  border-radius: 999px;
+  background: var(--horizon-accent);
+}
+
+.docs-horizon-card__text {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  max-width: 72ch;
+  font-family: 'Manrope', 'Inter', sans-serif;
+  font-size: clamp(1rem, 1.2vw, 1.1rem);
+  font-weight: 500;
+  line-height: 1.72;
+  color: var(--about-text-green-muted);
+}
+
+@media (max-width: 720px) {
+  .docs-horizon-card {
+    padding: clamp(1.25rem, 4vw, 1.6rem);
+  }
+
+  .docs-horizon-card__numeral {
+    font-size: clamp(4rem, 18vw, 5.5rem);
+    color: color-mix(in srgb, var(--horizon-accent) 6%, transparent);
+  }
+
+  .docs-horizon-card:hover .docs-horizon-card__numeral {
+    color: color-mix(in srgb, var(--horizon-accent) 10%, transparent);
+  }
+
+  .docs-horizon-card__head {
+    grid-template-columns: 1fr;
+    gap: 0.85rem;
+  }
+
+  .docs-horizon-card__medallion {
+    width: 3rem;
+    height: 3rem;
+  }
+
+  .docs-horizon-card__title {
+    padding-right: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .docs-horizon-card,
+  .docs-horizon-card__numeral,
+  .docs-horizon-card__medallion {
+    transition: none;
   }
 }
 

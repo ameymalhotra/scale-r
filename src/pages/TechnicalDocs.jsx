@@ -10,6 +10,7 @@ import DocsInfrastructureSection from '../components/docs/DocsInfrastructureSect
 import DocsDisastersSection from '../components/docs/DocsDisastersSection.jsx';
 import DocsModelingLayersSection from '../components/docs/DocsModelingLayersSection.jsx';
 import DocsUseCasesSection from '../components/docs/DocsUseCasesSection.jsx';
+import DocsLimitationsSection from '../components/docs/DocsLimitationsSection.jsx';
 import TeamPageFooter from '../components/team/TeamPageFooter.jsx';
 
 const SECTIONS = [
@@ -20,6 +21,7 @@ const SECTIONS = [
   { id: 'disaster-focus', label: 'Disaster Focus' },
   { id: 'modeling-layers', label: 'Modeling Layers' },
   { id: 'use-cases', label: 'Benefits & Use Cases' },
+  { id: 'limitations', label: 'Limitations & Future Research' },
 ];
 
 export default function TechnicalDocs() {
@@ -38,6 +40,7 @@ export default function TechnicalDocs() {
           <DocsDisastersSection />
           <DocsModelingLayersSection />
           <DocsUseCasesSection />
+          <DocsLimitationsSection />
         </main>
       </div>
 
