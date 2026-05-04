@@ -234,7 +234,7 @@ describe('App Search Functionality', () => {
     renderApp();
 
     await waitFor(() => {
-      expect(screen.getByText('Project Status')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Project Status' })).toBeInTheDocument();
     });
 
     const getProjectCount = () => screen
@@ -271,7 +271,7 @@ describe('App Search Functionality', () => {
     await user.type(searchInput, 'Miami');
 
     await waitFor(() => {
-      expect(screen.getByText(/Miami Beach Flood Protection/i)).toBeInTheDocument();
+      expect(screen.getByRole('option', { name: /Miami Beach Flood Protection/i })).toBeInTheDocument();
     });
   });
 
@@ -287,7 +287,7 @@ describe('App Search Functionality', () => {
     await user.type(searchInput, 'Miami');
 
     await waitFor(() => {
-      expect(screen.getByText(/Miami Beach Flood Protection/i)).toBeInTheDocument();
+      expect(screen.getByRole('option', { name: /Miami Beach Flood Protection/i })).toBeInTheDocument();
     });
 
     // Find and click clear button
@@ -296,7 +296,7 @@ describe('App Search Functionality', () => {
 
     await waitFor(() => {
       expect(searchInput).toHaveValue('');
-      expect(screen.queryByText(/Miami Beach Flood Protection/i)).not.toBeInTheDocument();
+      expect(screen.queryByRole('option', { name: /Miami Beach Flood Protection/i })).not.toBeInTheDocument();
     });
   });
 
@@ -328,8 +328,8 @@ describe('App Search Functionality', () => {
     await user.type(searchInput, 'Coral Gables');
 
     await waitFor(() => {
-      expect(screen.getByText(/Coral Gables Green Infrastructure/i)).toBeInTheDocument();
-      expect(screen.queryByText(/Miami Beach/i)).not.toBeInTheDocument();
+      expect(screen.getByRole('option', { name: /Coral Gables Green Infrastructure/i })).toBeInTheDocument();
+      expect(screen.queryByRole('option', { name: /Miami Beach/i })).not.toBeInTheDocument();
     });
   });
 
@@ -345,13 +345,10 @@ describe('App Search Functionality', () => {
     await user.type(searchInput, 'Miami');
 
     await waitFor(() => {
-      // Check that project name is displayed
-      expect(screen.getByText(/Miami Beach Flood Protection/i)).toBeInTheDocument();
-      // Check that city is displayed (use getAllByText since "Miami Beach" appears in both project name and city)
-      const miamiBeachElements = screen.getAllByText(/Miami Beach/i);
-      expect(miamiBeachElements.length).toBeGreaterThan(0);
-      // Check that infrastructure type is displayed
-      expect(screen.getByText(/Blue Infrastructure/i)).toBeInTheDocument();
+      const row = screen.getByRole('option', { name: /Miami Beach Flood Protection/i });
+      expect(row).toBeInTheDocument();
+      expect(row).toHaveTextContent(/Miami Beach/i);
+      expect(row).toHaveTextContent(/Gray Infrastructure/i);
     });
   });
 
@@ -367,17 +364,15 @@ describe('App Search Functionality', () => {
     await user.type(searchInput, 'Miami');
     
     await waitFor(() => {
-      // "Miami Beach" appears in both project name and city, so use getAllByText
-      const miamiBeachElements = screen.getAllByText(/Miami Beach/i);
-      expect(miamiBeachElements.length).toBeGreaterThan(0);
+      const miamiBeachOptions = screen.getAllByRole('option', { name: /Miami Beach/i });
+      expect(miamiBeachOptions.length).toBeGreaterThan(0);
     });
 
     // Clear the input
     await user.clear(searchInput);
 
     await waitFor(() => {
-      // After clearing, all "Miami Beach" elements should be gone
-      expect(screen.queryByText(/Miami Beach/i)).not.toBeInTheDocument();
+      expect(screen.queryByRole('option', { name: /Miami Beach/i })).not.toBeInTheDocument();
     });
   });
 
@@ -393,7 +388,7 @@ describe('App Search Functionality', () => {
     await user.type(searchInput, 'miami beach');
 
     await waitFor(() => {
-      expect(screen.getByText(/Miami Beach Flood Protection/i)).toBeInTheDocument();
+      expect(screen.getByRole('option', { name: /Miami Beach Flood Protection/i })).toBeInTheDocument();
     });
   });
 });

@@ -219,6 +219,7 @@ const partners = [
 export default function About() {
   const goalsListRef = useRef(null);
   const [activeEngagementIndex, setActiveEngagementIndex] = useState(0);
+  const [partnersMarqueePaused, setPartnersMarqueePaused] = useState(false);
 
   useEffect(() => {
     const root = goalsListRef.current;
@@ -636,6 +637,7 @@ export default function About() {
                   <a
                     className="recent-event-contact-btn"
                     href={ctaHref}
+                    aria-label={`Learn more: ${event.presentation}`}
                     {...(ctaIsExternal
                       ? { target: '_blank', rel: 'noopener noreferrer' }
                       : {})}
@@ -662,10 +664,25 @@ export default function About() {
           <h2 id="strategic-partners-heading" className="about-partners-title">
             <span className="about-heading-highlight">Strategic Partners</span>
           </h2>
+          <div className="about-partners-header__aside">
+            <button
+              type="button"
+              className="about-partners-marquee-toggle"
+              aria-pressed={partnersMarqueePaused}
+              aria-label={partnersMarqueePaused ? 'Play scrolling partner logos' : 'Pause scrolling partner logos'}
+              onClick={() => setPartnersMarqueePaused((p) => !p)}
+            >
+              <span className="about-partners-marquee-toggle__text" aria-hidden="true">
+                {partnersMarqueePaused ? 'Play' : 'Pause'}
+              </span>
+            </button>
+          </div>
         </div>
         <div className="about-partners-marquee">
           <div className="marquee-container">
-            <div className="marquee-track">
+            <div
+              className={`marquee-track${partnersMarqueePaused ? ' marquee-track--paused' : ''}`}
+            >
               <div className="marquee-group">
                 {partners.map((p) => (
                   <div className="partner-item" key={p.alt}>
@@ -743,13 +760,13 @@ export default function About() {
             </p>
           </div>
           <div className="about-footer-col">
-            <h5 className="about-footer-heading">Navigation</h5>
+            <h3 className="about-footer-heading">Navigation</h3>
             <Link to="/about">About the project</Link>
             <Link to="/dashboard">Dashboard</Link>
             <Link to="/team">Team</Link>
           </div>
           <div className="about-footer-col">
-            <h5 className="about-footer-heading">Connect</h5>
+            <h3 className="about-footer-heading">Connect</h3>
             <a href={`mailto:${SCALE_R_CONTACT_EMAIL}`}>Contact Us</a>
             <div className="about-footer-social">
               <a

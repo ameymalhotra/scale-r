@@ -27,7 +27,7 @@ export default function TeamLeadershipCard({
       : undefined;
 
   return (
-    <article className="team-lead-card" tabIndex={0}>
+    <article className="team-lead-card">
       <div className="team-lead-card__media">
         <img
           className="team-lead-card__img"

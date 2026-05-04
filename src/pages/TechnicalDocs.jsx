@@ -32,7 +32,7 @@ export default function TechnicalDocs() {
       <div className="docs-layout">
         <DocsSideNav sections={SECTIONS} />
 
-        <main className="docs-content">
+        <section className="docs-content" aria-label="Documentation content">
           <DocsIntroSection />
           <DocsBackgroundSection />
           <DocsDataSourcesSection />
@@ -41,7 +41,7 @@ export default function TechnicalDocs() {
           <DocsModelingLayersSection />
           <DocsUseCasesSection />
           <DocsLimitationsSection />
-        </main>
+        </section>
       </div>
 
       <TeamPageFooter />

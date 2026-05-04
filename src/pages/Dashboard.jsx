@@ -5,6 +5,11 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recha
 import { searchProjects } from '../utils/searchProjects.js';
 import { highlightText } from '../utils/highlightText.jsx';
 
+const DASHBOARD_CITY_LISTBOX_ID = 'dashboard-city-listbox';
+const DASHBOARD_CITY_TRIGGER_ID = 'dashboard-city-trigger';
+const DASHBOARD_SEARCH_LISTBOX_ID = 'dashboard-search-listbox';
+const DASHBOARD_SEARCH_INPUT_ID = 'dashboard-project-search';
+const DASHBOARD_SEARCH_LIVE_ID = 'dashboard-search-live';
 
 const parseNumericValue = (value) => {
   if (value === null || value === undefined) return null;
@@ -80,7 +85,7 @@ const reprojectFeatureCollectionIfNeeded = (featureCollection) => {
 };
 
 // Rewrite Point geometry to use lon/lat from feature properties (e.g. for EPSG:3087 layers that store X,Y in props)
-const useLonLatFromProperties = (featureCollection, lonField, latField) => {
+const applyLonLatFromProperties = (featureCollection, lonField, latField) => {
   if (!featureCollection?.features?.length || !lonField || !latField) return featureCollection;
   return {
     ...featureCollection,
@@ -126,14 +131,18 @@ const createCircleBuffer = (center, radiusInMeters = 50) => {
   return circle;
 };
 
-const formatWithCommas = (value) => {
-  if (value === null || value === undefined || Number.isNaN(value)) return '—';
-  return new Intl.NumberFormat('en-US').format(value);
-};
-
-const formatRiskValue = (value) => {
-  if (value === null || value === undefined || Number.isNaN(value)) return '—';
-  return value.toFixed(2);
+/** Shift bounds northeast (avoid south/west empty areas when fitting “all” markers). */
+const shiftBoundsNortheast = (bounds) => {
+  const ne = bounds.getNorthEast();
+  const sw = bounds.getSouthWest();
+  const lngRange = ne.lng - sw.lng;
+  const latRange = ne.lat - sw.lat;
+  const shiftLng = lngRange * 0.55;
+  const shiftLat = latRange * 0.50;
+  const shiftedBounds = new mapboxgl.LngLatBounds();
+  shiftedBounds.extend([sw.lng + shiftLng, sw.lat + shiftLat]);
+  shiftedBounds.extend([ne.lng, ne.lat]);
+  return shiftedBounds;
 };
 
 // Format cost using compact notation (e.g., "3M", "1.2B")
@@ -491,7 +500,6 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [allMarkers, setAllMarkers] = useState([]);
-  const [currentDistrict, setCurrentDistrict] = useState(null);
   const [allProjectsData, setAllProjectsData] = useState(null);
   const [isSatelliteView, setIsSatelliteView] = useState(false);
   const [activeFeature, setActiveFeature] = useState(null);
@@ -503,13 +511,11 @@ const Dashboard = () => {
   const censusEventsBoundRef = useRef(false);
   const censusVisibleRef = useRef(true);
   const [selectedTypes, setSelectedTypes] = useState([]);
-  const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectedDisasterFocus, setSelectedDisasterFocus] = useState([]);
   const [selectedProjectStatuses, setSelectedProjectStatuses] = useState([]);
   const [selectedCity, setSelectedCity] = useState('');
   const [cityDropdownOpen, setCityDropdownOpen] = useState(false);
   const [projectsLayerVisible, setProjectsLayerVisible] = useState(true);
-  const [showTooltip, setShowTooltip] = useState(false);
   const [showDisclaimer, setShowDisclaimer] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
@@ -531,7 +537,6 @@ const Dashboard = () => {
   }, [searchQuery]);
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [modellingLayerOpen, setModellingLayerOpen] = useState(false);
   const isMobileRef = useRef(isMobile);
 
   // Mobile breakpoint listener
@@ -790,10 +795,6 @@ const Dashboard = () => {
     }
   };
 
-  const handleCensusVisibilityToggle = () => {
-    setCensusVisible((prev) => !prev);
-  };
-
   // Define district boundaries
   
 
@@ -815,131 +816,6 @@ const Dashboard = () => {
         return '#95a5a6';
     }
   };
-
-  // Get marker size based on project cost
-  const getMarkerSize = (cost) => {
-    if (!cost) return 8;
-    const numericCost = parseFloat(cost.replace(/[$,]/g, ''));
-    if (numericCost > 50000000) return 15;
-    if (numericCost > 10000000) return 12;
-    return 8;
-  };
-
-
-  
-
-  // Check if point is within district
-  const isPointInDistrict = (point, districtCoords) => {
-    const [lng, lat] = point;
-    let inside = false;
-    
-    for (let i = 0, j = districtCoords.length - 1; i < districtCoords.length; j = i++) {
-      const [xi, yi] = districtCoords[i];
-      const [xj, yj] = districtCoords[j];
-      
-      const intersect = ((yi > lat) !== (yj > lat)) &&
-          (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi);
-      if (intersect) inside = !inside;
-    }
-    
-    return inside;
-  };
-
-  // Zoom to district
-  const zoomToDistrict = (districtId) => {
-    const district = districtsRef.current[districtId];
-    if (!district || !map.current) return;
-
-    setCurrentDistrict(districtId);
-    console.log(district.zoom);
-    map.current.flyTo({
-      center: district.center,
-      zoom: district.zoom,
-      duration: 1500
-    });
-
-    Object.keys(districtsRef.current).forEach(id => {
-      map.current.setPaintProperty(
-        `${id}-fill`,
-        'fill-opacity',
-        id === districtId ? 0.3 : 0.1
-      );
-      map.current.setPaintProperty(
-        `${id}-outline`,
-        'line-opacity',
-        id === districtId ? 1 : 0.5
-      );
-      map.current.setPaintProperty(
-        `${id}-outline`,
-        'line-width',
-        id === districtId ? 3 : 2
-      );
-    });
-
-    allMarkers.forEach(marker => {
-      const coords = marker.getLngLat();
-      const pointInDistrict = isPointInDistrict(
-        [coords.lng, coords.lat],
-        district.coordinates
-      );
-
-      if (pointInDistrict) {
-        marker.getElement().style.opacity = '1';
-        marker.getElement().style.transform = 'scale(1.3)';
-        marker.getElement().style.zIndex = '1000';
-      } else {
-        marker.getElement().style.opacity = '0.3';
-        marker.getElement().style.transform = 'scale(0.8)';
-        marker.getElement().style.zIndex = '1';
-      }
-    });
-  };
-
-  // Reset view
-  const resetView = () => {
-    if (!map.current) return;
-    
-    setCurrentDistrict(null);
-    handleCensusViewChange('risk');
-
-    Object.keys(districtsRef.current).forEach(id => {
-      map.current.setPaintProperty(`${id}-fill`, 'fill-opacity', 0.1);
-      map.current.setPaintProperty(`${id}-outline`, 'line-opacity', 0.5);
-      map.current.setPaintProperty(`${id}-outline`, 'line-width', 2);
-    });
-
-    allMarkers.forEach(marker => {
-      marker.getElement().style.opacity = '1';
-      marker.getElement().style.transform = 'scale(1)';
-      marker.getElement().style.zIndex = '1';
-    });
-
-    // Use shifted bounds for reset view (shifted northeast)
-    if (allMarkers.length > 0) {
-      const bounds = new mapboxgl.LngLatBounds();
-      allMarkers.forEach(marker => {
-        const coords = marker.getLngLat();
-        bounds.extend([coords.lng, coords.lat]);
-      });
-      if (!bounds.isEmpty()) {
-        const shiftedBounds = shiftBoundsNortheast(bounds);
-        map.current.fitBounds(shiftedBounds, { 
-          padding: { top: 10, bottom: 300, left: 200, right: 10 },
-          maxZoom: 13,
-          duration: 1500 
-        });
-      }
-    } else {
-    map.current.flyTo({
-      center: [-80.70, 26.15],
-      zoom: 11,
-      duration: 1500
-    });
-    }
-  };
-
-
-
 
   const addOverlaySourceAndLayer = useCallback((mapInstance, layerId, config, geojson) => {
     if (!mapInstance || !config) return;
@@ -1033,7 +909,7 @@ const Dashboard = () => {
       if (!response.ok) throw new Error(`Failed to load ${config.label}`);
       let geojson = await response.json();
       if (config.pointLonLatFields && config.pointLonLatFields.length >= 2) {
-        geojson = useLonLatFromProperties(geojson, config.pointLonLatFields[0], config.pointLonLatFields[1]);
+        geojson = applyLonLatFromProperties(geojson, config.pointLonLatFields[0], config.pointLonLatFields[1]);
       }
       geojson = reprojectFeatureCollectionIfNeeded(geojson);
       overlayDataCacheRef.current[layerId] = geojson;
@@ -1311,7 +1187,7 @@ const Dashboard = () => {
         const popupHtml = `
           <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; min-width: 220px;">
             <div style="font-size: 1.05em; font-weight: 700; color: #1b3a4b; margin-bottom: 4px;">${tractName}</div>
-            <div style="font-size: 0.85em; color: #546e7a; margin-bottom: 10px;">Tract ID: ${tractId}</div>
+            <div style="font-size: 0.85em; color: #445461; margin-bottom: 10px;">Tract ID: ${tractId}</div>
             <hr style="border: none; border-top: 1px solid #e0e6ed; margin: 8px 0;" />
             <div style="font-size: 0.9em; color: #1b3a4b; margin-bottom: 4px;">
               <span style="font-weight: 600;">FEMA Risk Rating:</span>
@@ -1434,27 +1310,6 @@ const Dashboard = () => {
     setIsSatelliteView(!isSatelliteView);
   };
 
-  // Helper function to shift bounds northeast (to avoid south and west areas)
-  const shiftBoundsNortheast = (bounds) => {
-    const ne = bounds.getNorthEast();
-    const sw = bounds.getSouthWest();
-    
-    // Calculate ranges
-    const lngRange = ne.lng - sw.lng;
-    const latRange = ne.lat - sw.lat;
-    
-    // Shift southwest corner northeast: 55% east, 50% north
-    const shiftLng = lngRange * 0.55;
-    const shiftLat = latRange * 0.50;
-    
-    // Create new bounds with shifted southwest corner
-    const shiftedBounds = new mapboxgl.LngLatBounds();
-    shiftedBounds.extend([sw.lng + shiftLng, sw.lat + shiftLat]);
-    shiftedBounds.extend([ne.lng, ne.lat]);
-    
-    return shiftedBounds;
-  };
-
   useEffect(() => {
     if (map.current) return;
 
@@ -1491,7 +1346,7 @@ const Dashboard = () => {
         if(cn > cs) {
           cf = cn;
         } else {
-          cf = cs
+          cf = cs;
         }
         const zoom = 9 / cf;
         console.log(name + ": " + zoom + " " + cn);
@@ -1500,8 +1355,8 @@ const Dashboard = () => {
           coordinates,
           zoom,
           center
-        }
-       {}});
+        };
+      });
       districtsRef.current = districts;
     }catch(err) {
       console.error('Error loading cities:', err);
@@ -2118,7 +1973,6 @@ const Dashboard = () => {
   const legacyTypes = getUniqueValues('Infrastructure Type');
   const fallbackTypes = getUniqueValues('Type');
   const uniqueTypes = infrastructureTypes.length > 0 ? infrastructureTypes : (legacyTypes.length > 0 ? legacyTypes : fallbackTypes);
-  const uniqueCategories = getUniqueValues('Categories');
   const disasterFocusNew = getUniqueValues('Disaster_F');
   const disasterFocusLegacy = getUniqueValues('Disaster Focus');
   const uniqueDisasterFocus = disasterFocusNew.length > 0 ? disasterFocusNew : disasterFocusLegacy;
@@ -2132,12 +1986,12 @@ const Dashboard = () => {
   const uniqueCities = Array.from(cityByLower.values()).sort((a, b) => (a || '').localeCompare(b || '', undefined, { sensitivity: 'base' }));
 
   // Zoom to city markers when city is selected
-  const zoomToCity = (cityName) => {
+  const zoomToCity = useCallback((cityName) => {
     if (!map.current || !allMarkers.length) return;
 
     // If no city selected (All Cities), zoom to all markers (respecting other filters)
     // Filter markers for the selected city, or use all markers if "All Cities"
-    const markersToZoom = (!cityName || cityName === '') 
+    const markersToZoom = (!cityName || cityName === '')
       ? allMarkers.filter(marker => {
           // Include all markers that are currently visible (respecting Type/Disaster Focus filters)
           return marker.getElement().style.display !== 'none';
@@ -2164,21 +2018,21 @@ const Dashboard = () => {
       // If "All Cities" is selected, shift bounds to avoid south and west areas
       if (!cityName || cityName === '') {
         const shiftedBounds = shiftBoundsNortheast(bounds);
-        
-        map.current.fitBounds(shiftedBounds, { 
+
+        map.current.fitBounds(shiftedBounds, {
           padding: { top: 10, bottom: 300, left: 200, right: 10 },
           maxZoom: 13,
-          duration: 1500 
+          duration: 1500
         });
       } else {
-        map.current.fitBounds(bounds, { 
+        map.current.fitBounds(bounds, {
           padding: { top: 10, bottom: 300, left: 200, right: 10 },
           maxZoom: 12,
-          duration: 1500 
+          duration: 1500
         });
       }
     }
-  };
+  }, [allMarkers]);
 
   // Filter markers based on selected filters
   useEffect(() => {
@@ -2229,7 +2083,7 @@ const Dashboard = () => {
       }, 50);
       return () => clearTimeout(timeoutId);
     }
-  }, [selectedCity]);
+  }, [selectedCity, allMarkers.length, zoomToCity]);
 
   // Calculate filtered statistics (project count and total investment)
   const filteredStats = useMemo(() => {
@@ -2335,8 +2189,60 @@ const Dashboard = () => {
       .sort((a, b) => b.value - a.value); // Sort by count descending
   }, [allProjectsData, selectedTypes, selectedDisasterFocus, selectedProjectStatuses, selectedCity]);
 
+  const pieChartSummary = useMemo(() => {
+    if (!pieChartData.length) return '';
+    const total = pieChartData.reduce((sum, row) => sum + row.value, 0);
+    if (!total) return 'No projects in the current filter.';
+    const parts = pieChartData.map((row) => {
+      const pct = Math.round((row.value / total) * 100);
+      return `${row.name}: ${row.value} (${pct}%)`;
+    });
+    return `${total} projects total. ${parts.join('; ')}.`;
+  }, [pieChartData]);
+
+  const searchHasQuery = debouncedSearchQuery.trim().length > 0;
+  const searchListboxActive = showSearchResults && searchResults.length > 0;
+  const searchLiveMessage =
+    searchHasQuery && showSearchResults
+      ? (searchResults.length === 0 ? 'No projects found.' : `${searchResults.length} project${searchResults.length === 1 ? '' : 's'} found.`)
+      : '';
+
   return (
     <div style={{ display: 'flex', flex: 1, width: '100%', overflow: 'hidden', boxSizing: 'border-box', minHeight: 0, position: 'relative' }}>
+        <h1 className="sr-only">Project map and filters</h1>
+        {isMobile && !sidebarOpen && (
+          <button
+            type="button"
+            className="dashboard-mobile-filters-open"
+            aria-label="Open project filters"
+            aria-expanded={false}
+            aria-controls="dashboard-filters-sidebar"
+            onClick={() => setSidebarOpen(true)}
+            style={{
+              position: 'fixed',
+              left: 'max(12px, env(safe-area-inset-left))',
+              top: 'max(12px, env(safe-area-inset-top))',
+              zIndex: 1101,
+              width: 44,
+              height: 44,
+              borderRadius: 10,
+              border: '1px solid rgba(0,0,0,0.12)',
+              background: 'rgba(255,255,255,0.92)',
+              boxShadow: '0 2px 10px rgba(0,0,0,0.12)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#2c3e50',
+            }}
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true" focusable="false">
+              <line x1="4" y1="6" x2="20" y2="6" />
+              <line x1="4" y1="12" x2="20" y2="12" />
+              <line x1="4" y1="18" x2="20" y2="18" />
+            </svg>
+          </button>
+        )}
         {isMobile && sidebarOpen && (
           <div
             role="presentation"
@@ -2351,7 +2257,11 @@ const Dashboard = () => {
             }}
           />
         )}
-        <aside style={{
+        <aside
+          id="dashboard-filters-sidebar"
+          aria-label="Project filters"
+          aria-hidden={isMobile && !sidebarOpen ? true : undefined}
+          style={{
           maxWidth: 320,
           background: 'rgba(255, 255, 255, 0.5)',
           backdropFilter: 'blur(28px) saturate(200%)',
@@ -2399,7 +2309,7 @@ const Dashboard = () => {
                   justifyContent: 'center'
                 }}
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
           )}
@@ -2444,101 +2354,151 @@ const Dashboard = () => {
           </div>
           {/* City Filter */}
           <div style={{ marginBottom: '24px', position: 'relative' }} data-city-dropdown>
-            <h3 style={{ fontSize: '1.1em', fontWeight: '500', color: '#2c3e50', marginBottom: '12px' }}>
+            <h2 id="dashboard-city-heading" style={{ fontSize: '1.1em', fontWeight: '500', color: '#2c3e50', marginBottom: '12px' }}>
               City
-            </h3>
-            <div
-              onClick={() => setCityDropdownOpen(!cityDropdownOpen)}
+            </h2>
+            <button
+              type="button"
+              id={DASHBOARD_CITY_TRIGGER_ID}
+              aria-haspopup="listbox"
+              aria-expanded={cityDropdownOpen}
+              aria-controls={DASHBOARD_CITY_LISTBOX_ID}
+              aria-labelledby="dashboard-city-heading"
+              onClick={() => setCityDropdownOpen((open) => !open)}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape' && cityDropdownOpen) {
+                  e.preventDefault();
+                  setCityDropdownOpen(false);
+                }
+                if ((e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') && !cityDropdownOpen) {
+                  e.preventDefault();
+                  setCityDropdownOpen(true);
+                }
+              }}
               style={{
                 width: '100%',
                 padding: '8px 12px',
                 fontSize: '0.9em',
-                color: selectedCity ? '#2c3e50' : '#999',
+                color: selectedCity ? '#2c3e50' : '#5d6d7e',
                 border: '1px solid rgba(255, 255, 255, 0.4)',
                 borderRadius: '8px',
                 backgroundColor: 'rgba(255, 255, 255, 0.6)',
                 backdropFilter: 'blur(10px) saturate(180%)',
                 WebkitBackdropFilter: 'blur(10px) saturate(180%)',
                 cursor: 'pointer',
-                outline: 'none',
+                textAlign: 'left',
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08), inset 0 0 0 1px rgba(255, 255, 255, 0.5)',
-                transition: 'all 0.2s ease'
+                transition: 'all 0.2s ease',
+                fontFamily: 'inherit',
               }}
             >
               <span>{selectedCity ? formatCityName(selectedCity) : 'All Cities'}</span>
-              <span style={{ fontSize: '0.7em' }}>▼</span>
-            </div>
+              <span style={{ fontSize: '0.7em' }} aria-hidden="true">▼</span>
+            </button>
             {cityDropdownOpen && (
-              <div style={{
-                position: 'absolute',
-                top: '100%',
-                left: 0,
-                right: 0,
-                maxHeight: '150px',
-                height: '150px',
-                overflowY: 'auto',
-                backgroundColor: 'rgba(255, 255, 255, 0.85)',
-                backdropFilter: 'blur(20px) saturate(180%)',
-                WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-                border: '1px solid rgba(255, 255, 255, 0.4)',
-                borderRadius: '8px',
-                marginTop: '4px',
-                zIndex: 1000,
-                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.5)'
-              }}>
-                <div
-                  onClick={() => {
-                    setSelectedCity('');
-                    setCityDropdownOpen(false);
-                  }}
-                  style={{
-                    padding: '8px 12px',
-                    cursor: 'pointer',
-                    fontSize: '0.9em',
-                    color: selectedCity === '' ? '#3498db' : '#2c3e50',
-                    backgroundColor: selectedCity === '' ? 'rgba(240, 248, 255, 0.7)' : 'transparent',
-                    borderRadius: '6px',
-                    transition: 'all 0.2s ease'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(240, 248, 255, 0.5)'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = selectedCity === '' ? 'rgba(240, 248, 255, 0.7)' : 'transparent'}
-                >
-                  All Cities
-                </div>
-                {uniqueCities.map(city => (
-                  <div
-                    key={city}
+              <ul
+                id={DASHBOARD_CITY_LISTBOX_ID}
+                role="listbox"
+                aria-labelledby="dashboard-city-heading"
+                style={{
+                  listStyle: 'none',
+                  margin: 0,
+                  padding: '4px',
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  right: 0,
+                  maxHeight: '150px',
+                  height: '150px',
+                  overflowY: 'auto',
+                  backgroundColor: 'rgba(255, 255, 255, 0.85)',
+                  backdropFilter: 'blur(20px) saturate(180%)',
+                  WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+                  border: '1px solid rgba(255, 255, 255, 0.4)',
+                  borderRadius: '8px',
+                  marginTop: '4px',
+                  zIndex: 1000,
+                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.5)',
+                }}
+              >
+                <li role="presentation" style={{ margin: 0, padding: 0 }}>
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={selectedCity === ''}
                     onClick={() => {
-                      setSelectedCity(city);
+                      setSelectedCity('');
                       setCityDropdownOpen(false);
                     }}
                     style={{
+                      width: '100%',
+                      textAlign: 'left',
+                      border: 'none',
+                      background: selectedCity === '' ? 'rgba(240, 248, 255, 0.7)' : 'transparent',
                       padding: '8px 12px',
                       cursor: 'pointer',
                       fontSize: '0.9em',
-                      color: selectedCity === city ? '#3498db' : '#2c3e50',
-                      backgroundColor: selectedCity === city ? 'rgba(240, 248, 255, 0.7)' : 'transparent',
+                      color: selectedCity === '' ? '#3498db' : '#2c3e50',
                       borderRadius: '6px',
-                      transition: 'all 0.2s ease'
+                      transition: 'all 0.2s ease',
+                      fontFamily: 'inherit',
                     }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(240, 248, 255, 0.5)'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = selectedCity === city ? 'rgba(240, 248, 255, 0.7)' : 'transparent'}
+                    onMouseEnter={(e) => {
+                      if (selectedCity !== '') e.currentTarget.style.backgroundColor = 'rgba(240, 248, 255, 0.5)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = selectedCity === '' ? 'rgba(240, 248, 255, 0.7)' : 'transparent';
+                    }}
                   >
-                    {formatCityName(city)}
-                  </div>
+                    All Cities
+                  </button>
+                </li>
+                {uniqueCities.map((city) => (
+                  <li key={city} role="presentation" style={{ margin: 0, padding: 0 }}>
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={selectedCity === city}
+                      onClick={() => {
+                        setSelectedCity(city);
+                        setCityDropdownOpen(false);
+                      }}
+                      style={{
+                        width: '100%',
+                        textAlign: 'left',
+                        border: 'none',
+                        background: selectedCity === city ? 'rgba(240, 248, 255, 0.7)' : 'transparent',
+                        padding: '8px 12px',
+                        cursor: 'pointer',
+                        fontSize: '0.9em',
+                        color: selectedCity === city ? '#3498db' : '#2c3e50',
+                        borderRadius: '6px',
+                        transition: 'all 0.2s ease',
+                        fontFamily: 'inherit',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (selectedCity !== city) e.currentTarget.style.backgroundColor = 'rgba(240, 248, 255, 0.5)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = selectedCity === city ? 'rgba(240, 248, 255, 0.7)' : 'transparent';
+                      }}
+                    >
+                      {formatCityName(city)}
+                    </button>
+                  </li>
                 ))}
-              </div>
+              </ul>
             )}
           </div>
           
           {/* Project Status Filter */}
           <div style={{ marginBottom: '24px' }}>
-            <h3 style={{ fontSize: '1.1em', fontWeight: '500', color: '#2c3e50', marginBottom: '12px' }}>
+            <h2 style={{ fontSize: '1.1em', fontWeight: '500', color: '#2c3e50', marginBottom: '12px' }}>
               Project Status
-            </h3>
+            </h2>
             <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
               {PROJECT_STATUS_OPTIONS.map(status => (
                 <label key={status} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
@@ -2554,12 +2514,13 @@ const Dashboard = () => {
                     }}
                     style={{ marginRight: '8px', cursor: 'pointer' }}
                   />
-                  <span style={{ color: '#546e7a', fontSize: '0.9em' }}>{status}</span>
+                  <span style={{ color: '#445461', fontSize: '0.9em' }}>{status}</span>
                 </label>
               ))}
             </div>
             {selectedProjectStatuses.length > 0 && (
               <button
+                type="button"
                 onClick={() => setSelectedProjectStatuses([])}
                 style={{
                   marginTop: '8px',
@@ -2569,7 +2530,7 @@ const Dashboard = () => {
                   border: '1px solid #ccc',
                   borderRadius: '4px',
                   cursor: 'pointer',
-                  color: '#546e7a'
+                  color: '#445461'
                 }}
               >
                 Clear
@@ -2579,9 +2540,9 @@ const Dashboard = () => {
 
           {/* Type Filter */}
           <div style={{ marginBottom: '24px' }}>
-            <h3 style={{ fontSize: '1.1em', fontWeight: '500', color: '#2c3e50', marginBottom: '12px' }}>
+            <h2 style={{ fontSize: '1.1em', fontWeight: '500', color: '#2c3e50', marginBottom: '12px' }}>
               Infrastructure Type
-            </h3>
+            </h2>
             <div style={{ maxHeight: '150px', overflowY: 'auto' }}>
               {uniqueTypes.map(type => (
                 <label key={type} style={{ display: 'flex', alignItems: 'center', marginBottom: '8px', cursor: 'pointer' }}>
@@ -2597,12 +2558,13 @@ const Dashboard = () => {
                     }}
                     style={{ marginRight: '8px', cursor: 'pointer' }}
                   />
-                  <span style={{ color: '#546e7a', fontSize: '0.9em' }}>{type}</span>
+                  <span style={{ color: '#445461', fontSize: '0.9em' }}>{type}</span>
                 </label>
               ))}
             </div>
             {selectedTypes.length > 0 && (
               <button
+                type="button"
                 onClick={() => setSelectedTypes([])}
                 style={{
                   marginTop: '8px',
@@ -2612,7 +2574,7 @@ const Dashboard = () => {
                   border: '1px solid #ccc',
                   borderRadius: '4px',
                   cursor: 'pointer',
-                  color: '#546e7a'
+                  color: '#445461'
                 }}
               >
                 Clear
@@ -2622,9 +2584,9 @@ const Dashboard = () => {
 
           {/* Disaster Focus Filter */}
           <div style={{ marginBottom: '24px' }}>
-            <h3 style={{ fontSize: '1.1em', fontWeight: '500', color: '#2c3e50', marginBottom: '12px' }}>
+            <h2 style={{ fontSize: '1.1em', fontWeight: '500', color: '#2c3e50', marginBottom: '12px' }}>
               Disaster Focus
-            </h3>
+            </h2>
             <div style={{ maxHeight: '150px', overflowY: 'auto' }}>
               {uniqueDisasterFocus.map(focus => (
                 <label key={focus} style={{ display: 'flex', alignItems: 'center', marginBottom: '8px', cursor: 'pointer' }}>
@@ -2640,12 +2602,13 @@ const Dashboard = () => {
                     }}
                     style={{ marginRight: '8px', cursor: 'pointer' }}
                   />
-                  <span style={{ color: '#546e7a', fontSize: '0.9em' }}>{focus}</span>
+                  <span style={{ color: '#445461', fontSize: '0.9em' }}>{focus}</span>
                 </label>
               ))}
             </div>
             {selectedDisasterFocus.length > 0 && (
               <button
+                type="button"
                 onClick={() => setSelectedDisasterFocus([])}
                 style={{
                   marginTop: '8px',
@@ -2655,7 +2618,7 @@ const Dashboard = () => {
                   border: '1px solid #ccc',
                   borderRadius: '4px',
                   cursor: 'pointer',
-                  color: '#546e7a'
+                  color: '#445461'
                 }}
               >
                 Clear
@@ -2693,7 +2656,7 @@ const Dashboard = () => {
               </div>
               <div style={{ 
                 fontSize: '0.75em', 
-                color: '#546e7a',
+                color: '#445461',
                 fontWeight: 500
               }}>
                 Projects
@@ -2724,7 +2687,7 @@ const Dashboard = () => {
               </div>
               <div style={{ 
                 fontSize: '0.75em', 
-                color: '#546e7a',
+                color: '#445461',
                 fontWeight: 500
               }}>
                 Total Investment
@@ -2734,29 +2697,37 @@ const Dashboard = () => {
 
           {/* Pie Chart */}
           {pieChartData.length > 0 && (
-            <div style={{
+            <figure style={{
               marginTop: '24px',
               paddingTop: '24px',
-              borderTop: '1px solid rgba(0, 0, 0, 0.1)'
+              borderTop: '1px solid rgba(0, 0, 0, 0.1)',
+              marginLeft: 0,
+              marginRight: 0,
+              marginBottom: 0,
             }}>
-              <h3 style={{ 
-                fontSize: '1em', 
-                fontWeight: '500', 
-                color: '#2c3e50', 
+              <h2 style={{
+                fontSize: '1em',
+                fontWeight: '500',
+                color: '#2c3e50',
                 marginBottom: '12px',
-                textAlign: 'center'
+                textAlign: 'center',
               }}>
                 Infrastructure Type Distribution
-              </h3>
-              <div style={{
-                background: 'rgba(255, 255, 255, 0.8)',
-                backdropFilter: 'blur(10px) saturate(180%)',
-                WebkitBackdropFilter: 'blur(10px) saturate(180%)',
-                border: '1px solid rgba(255, 255, 255, 0.4)',
-                borderRadius: '12px',
-                padding: '12px',
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08), inset 0 0 0 1px rgba(255, 255, 255, 0.5)'
-              }}>
+              </h2>
+              <figcaption className="sr-only">{pieChartSummary}</figcaption>
+              <div
+                role="img"
+                aria-label={pieChartSummary}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.8)',
+                  backdropFilter: 'blur(10px) saturate(180%)',
+                  WebkitBackdropFilter: 'blur(10px) saturate(180%)',
+                  border: '1px solid rgba(255, 255, 255, 0.4)',
+                  borderRadius: '12px',
+                  padding: '12px',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08), inset 0 0 0 1px rgba(255, 255, 255, 0.5)',
+                }}
+              >
                 <ResponsiveContainer width="100%" height={180}>
                   <PieChart>
                     <Pie
@@ -2769,28 +2740,28 @@ const Dashboard = () => {
                       isAnimationActive={false}
                     >
                       {pieChartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
+                        <Cell key={`cell-${index}`} fill={entry.color} stroke="#ffffff" strokeWidth={1} />
                       ))}
                     </Pie>
-                    <Tooltip 
+                    <Tooltip
                       formatter={(value) => [`${value} projects`, 'Count']}
                       contentStyle={{
                         backgroundColor: 'rgba(255, 255, 255, 0.95)',
                         border: '1px solid rgba(0, 0, 0, 0.1)',
                         borderRadius: '8px',
-                        padding: '8px'
+                        padding: '8px',
                       }}
                     />
-                    <Legend 
+                    <Legend
                       verticalAlign="bottom"
                       height={36}
                       iconType="circle"
-                      wrapperStyle={{ fontSize: '0.75em', paddingTop: '8px' }}
+                      wrapperStyle={{ fontSize: '0.75em', paddingTop: '8px', color: '#445461' }}
                     />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-            </div>
+            </figure>
           )}
 
           {/* NSF Disclaimer */}
@@ -2810,7 +2781,7 @@ const Dashboard = () => {
             }}>
               <p style={{
                 fontSize: '0.75em',
-                color: '#546e7a',
+                color: '#445461',
                 lineHeight: 1.6,
                 margin: 0,
                 textAlign: 'justify'
@@ -2832,30 +2803,41 @@ const Dashboard = () => {
                 ).
               </p>
               <div style={{ marginTop: '8px' }}>
-                <a
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setShowDisclaimer(!showDisclaimer);
-                  }}
+                <button
+                  type="button"
+                  aria-expanded={showDisclaimer}
+                  aria-controls="disclaimer-panel"
+                  onClick={() => setShowDisclaimer((v) => !v)}
                   style={{
                     fontSize: '0.75em',
                     color: '#3498db',
                     textDecoration: 'none',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    background: 'none',
+                    border: 'none',
+                    padding: 0,
+                    fontFamily: 'inherit',
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.textDecoration = 'underline'}
-                  onMouseLeave={(e) => e.currentTarget.style.textDecoration = 'none'}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.textDecoration = 'underline';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.textDecoration = 'none';
+                  }}
                 >
                   Disclaimer
-                </a>
-                {showDisclaimer && (
-                  <span style={{ fontSize: '0.75em', color: '#546e7a' }}>: Any opinions, findings, and conclusions or recommendations expressed in this website are those of the investigator(s) and do not necessarily reflect the views of the National Science Foundation.</span>
-                )}
+                </button>
+                <div
+                  id="disclaimer-panel"
+                  hidden={!showDisclaimer}
+                  style={{ fontSize: '0.75em', color: '#445461', marginTop: '6px', lineHeight: 1.5 }}
+                >
+                  Any opinions, findings, and conclusions or recommendations expressed in this website are those of the investigator(s) and do not necessarily reflect the views of the National Science Foundation.
+                </div>
               </div>
               <p style={{
                 fontSize: '0.75em',
-                color: '#546e7a',
+                color: '#445461',
                 lineHeight: 1.6,
                 margin: '12px 0 0 0',
                 textAlign: 'left'
@@ -2881,9 +2863,12 @@ const Dashboard = () => {
 
 
         <div style={{ flex: 1, position: 'relative', height: '100%', width: '100%', minWidth: 0, overflow: 'hidden', boxSizing: 'border-box' }}>
+          {/* role=application: focus moves to map canvas when user activates the map; avoid tabIndex on wrapper (false positive from jsx-a11y). */}
           <div
             ref={mapContainer}
             className="dashboard-map-area"
+            role="application"
+            aria-label="Interactive map of Miami-Dade climate resilience projects. Use the project filters in the sidebar and the search field for a non-map view."
             style={{ width: '100%', height: '100%', minWidth: 0, overflow: 'hidden', boxSizing: 'border-box' }}
           />
           
@@ -2906,6 +2891,12 @@ const Dashboard = () => {
               borderRadius: isMobile ? '8px' : '12px',
               overflow: 'visible'
             }}>
+              <label htmlFor={DASHBOARD_SEARCH_INPUT_ID} className="sr-only">
+                Search projects by name, city, or keyword
+              </label>
+              <span id={DASHBOARD_SEARCH_LIVE_ID} className="sr-only" aria-live="polite">
+                {searchLiveMessage}
+              </span>
               <div
                 ref={searchInputRowRef}
                 style={{
@@ -2920,17 +2911,35 @@ const Dashboard = () => {
                   height={isMobile ? 18 : 20}
                   viewBox="0 0 24 24"
                   fill="none"
-                  stroke="#546e7a"
+                  stroke="#445461"
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   style={{ flexShrink: 0 }}
+                  aria-hidden="true"
+                  focusable="false"
                 >
                   <circle cx="11" cy="11" r="8"></circle>
                   <path d="m21 21-4.35-4.35"></path>
                 </svg>
                 <input
                   type="text"
+                  id={DASHBOARD_SEARCH_INPUT_ID}
+                  role="combobox"
+                  aria-autocomplete="list"
+                  aria-expanded={showSearchResults && searchHasQuery}
+                  aria-controls={
+                    searchListboxActive
+                      ? DASHBOARD_SEARCH_LISTBOX_ID
+                      : showSearchResults && searchHasQuery && searchResults.length === 0
+                        ? 'dashboard-search-empty'
+                        : undefined
+                  }
+                  aria-activedescendant={
+                    selectedResultIndex >= 0 && searchListboxActive
+                      ? `search-option-${selectedResultIndex}`
+                      : undefined
+                  }
                   placeholder="Search projects..."
                   value={searchQuery}
                   onChange={(e) => {
@@ -2945,7 +2954,6 @@ const Dashboard = () => {
                   style={{
                     flex: 1,
                     border: 'none',
-                    outline: 'none',
                     background: 'transparent',
                     fontSize: isMobile ? '16px' : '0.95em',
                     color: '#2c3e50',
@@ -2953,6 +2961,7 @@ const Dashboard = () => {
                   }}
                 />
                 <button
+                  type="button"
                   aria-label="Clear search"
                   onClick={() => {
                     setSearchQuery('');
@@ -2968,7 +2977,7 @@ const Dashboard = () => {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    color: '#546e7a',
+                    color: '#445461',
                     transition: 'color 0.2s ease, opacity 0.2s ease',
                     opacity: searchQuery ? 1 : 0,
                     visibility: searchQuery ? 'visible' : 'hidden',
@@ -2983,7 +2992,7 @@ const Dashboard = () => {
                   }}
                   onMouseLeave={(e) => {
                     if (searchQuery) {
-                      e.currentTarget.style.color = '#546e7a';
+                      e.currentTarget.style.color = '#445461';
                     }
                   }}
                 >
@@ -2996,6 +3005,8 @@ const Dashboard = () => {
                     strokeWidth="2"
                     strokeLinecap="round"
                     strokeLinejoin="round"
+                    aria-hidden="true"
+                    focusable="false"
                   >
                     <line x1="18" y1="6" x2="6" y2="18"></line>
                     <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -3005,18 +3016,26 @@ const Dashboard = () => {
 
               {/* Search Results Dropdown */}
               {showSearchResults && searchResults.length > 0 && (
-                <div style={{
-                  position: 'absolute',
-                  top: '100%',
-                  left: 0,
-                  right: 0,
-                  marginTop: '4px',
-                  maxHeight: searchDropdownMaxHeightPx,
-                  overflowY: 'auto',
-                  ...mapOverlayGlassStyle,
-                  borderRadius: '12px',
-                  zIndex: 2
-                }}>
+                <ul
+                  id={DASHBOARD_SEARCH_LISTBOX_ID}
+                  role="listbox"
+                  aria-label="Search results"
+                  style={{
+                    listStyle: 'none',
+                    margin: 0,
+                    padding: 0,
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    marginTop: '4px',
+                    maxHeight: searchDropdownMaxHeightPx,
+                    overflowY: 'auto',
+                    ...mapOverlayGlassStyle,
+                    borderRadius: '12px',
+                    zIndex: 2,
+                  }}
+                >
                   {searchResults.map((result, index) => {
                     const props = result.properties || {};
                     const projectName = props['Project_Na'] || props['Project Name'] || 'Unnamed Project';
@@ -3026,86 +3045,99 @@ const Dashboard = () => {
                     const isSelected = index === selectedResultIndex;
 
                     return (
-                      <div
-                        key={result.id || index}
-                        onClick={() => navigateToProject(result)}
-                        style={{
-                          padding: '12px 16px',
-                          cursor: 'pointer',
-                          borderBottom: index < searchResults.length - 1 ? '1px solid rgba(0, 0, 0, 0.05)' : 'none',
-                          backgroundColor: isSelected ? 'rgba(52, 152, 219, 0.1)' : 'transparent',
-                          transition: 'background-color 0.2s ease'
-                        }}
-                        onMouseEnter={(e) => {
-                          if (!isSelected) {
-                            e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.03)';
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (!isSelected) {
-                            e.currentTarget.style.backgroundColor = 'transparent';
-                          }
-                        }}
-                      >
-                        <div style={{
-                          fontSize: '0.95em',
-                          fontWeight: 600,
-                          color: '#2c3e50',
-                          marginBottom: '4px'
-                        }}>
-                          {highlightText(projectName, searchQuery)}
-                        </div>
-                        <div style={{
-                          fontSize: '0.85em',
-                          color: '#546e7a',
-                          display: 'flex',
-                          gap: '12px',
-                          flexWrap: 'wrap'
-                        }}>
-                          <span>{highlightText(city, searchQuery)}</span>
-                          <span>•</span>
-                          <span>{highlightText(infrastructureType, searchQuery)}</span>
-                        </div>
-                        {description && (
+                      <li key={result.id || index} role="presentation" style={{ margin: 0, padding: 0 }}>
+                        <button
+                          type="button"
+                          id={`search-option-${index}`}
+                          role="option"
+                          aria-selected={isSelected}
+                          onClick={() => navigateToProject(result)}
+                          style={{
+                            width: '100%',
+                            textAlign: 'left',
+                            border: 'none',
+                            borderBottom: index < searchResults.length - 1 ? '1px solid rgba(0, 0, 0, 0.05)' : 'none',
+                            backgroundColor: isSelected ? 'rgba(52, 152, 219, 0.1)' : 'transparent',
+                            transition: 'background-color 0.2s ease',
+                            padding: '12px 16px',
+                            cursor: 'pointer',
+                            fontFamily: 'inherit',
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!isSelected) {
+                              e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.03)';
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!isSelected) {
+                              e.currentTarget.style.backgroundColor = 'transparent';
+                            }
+                          }}
+                        >
                           <div style={{
-                            fontSize: '0.75em',
-                            color: '#7f8c8d',
-                            marginTop: '6px',
-                            lineHeight: 1.4,
-                            display: '-webkit-box',
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: 'vertical',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis'
+                            fontSize: '0.95em',
+                            fontWeight: 600,
+                            color: '#2c3e50',
+                            marginBottom: '4px',
                           }}>
-                            {highlightText(description, searchQuery)}
+                            {highlightText(projectName, searchQuery)}
                           </div>
-                        )}
-                      </div>
+                          <div style={{
+                            fontSize: '0.85em',
+                            color: '#445461',
+                            display: 'flex',
+                            gap: '12px',
+                            flexWrap: 'wrap',
+                          }}>
+                            <span>{highlightText(city, searchQuery)}</span>
+                            <span aria-hidden="true">•</span>
+                            <span>{highlightText(infrastructureType, searchQuery)}</span>
+                          </div>
+                          {description && (
+                            <div style={{
+                              fontSize: '0.75em',
+                              color: '#5d656d',
+                              marginTop: '6px',
+                              lineHeight: 1.4,
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                            }}>
+                              {highlightText(description, searchQuery)}
+                            </div>
+                          )}
+                        </button>
+                      </li>
                     );
                   })}
-                </div>
+                </ul>
               )}
 
               {/* No Results Message */}
               {showSearchResults && debouncedSearchQuery.trim() && searchResults.length === 0 && (
-                <div style={{
-                  position: 'absolute',
-                  top: '100%',
-                  left: 0,
-                  right: 0,
-                  marginTop: '4px',
-                  padding: '16px',
-                  maxHeight: searchDropdownMaxHeightPx,
-                  overflowY: 'auto',
-                  ...mapOverlayGlassStyle,
-                  borderRadius: '12px',
-                  zIndex: 2,
-                  textAlign: 'center',
-                  color: '#546e7a',
-                  fontSize: '0.9em'
-                }}>
-                  No projects found matching "{debouncedSearchQuery}"
+                <div
+                  id="dashboard-search-empty"
+                  role="status"
+                  style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    marginTop: '4px',
+                    padding: '16px',
+                    maxHeight: searchDropdownMaxHeightPx,
+                    overflowY: 'auto',
+                    ...mapOverlayGlassStyle,
+                    borderRadius: '12px',
+                    zIndex: 2,
+                    textAlign: 'center',
+                    color: '#445461',
+                    fontSize: '0.9em',
+                  }}
+                >
+                  No projects found matching &quot;{debouncedSearchQuery}&quot;
                 </div>
               )}
             </div>
@@ -3185,7 +3217,7 @@ const Dashboard = () => {
                         <div style={{ width: '100%', height: '14px', borderRadius: '4px', overflow: 'hidden', marginBottom: '4px' }}>
                           <div style={{ width: '100%', height: '100%', background: 'linear-gradient(to right, #FFF9C4 0%, #FFF9C4 20%, #FFE082 25%, #FFE082 40%, #FFB74D 45%, #FFB74D 60%, #FF8A65 65%, #FF8A65 80%, #E64A19 85%, #E64A19 100%)' }}></div>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7em', color: '#546e7a' }}><span>Very Low</span><span>Very High</span></div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7em', color: '#445461' }}><span>Very Low</span><span>Very High</span></div>
                       </div>
                     </div>
                   )}
@@ -3196,7 +3228,7 @@ const Dashboard = () => {
                         <div style={{ width: '100%', height: '14px', borderRadius: '4px', overflow: 'hidden', marginBottom: '4px' }}>
                           <div style={{ width: '100%', height: '100%', background: 'linear-gradient(to right, #E8D4F5 0%, #E8D4F5 10%, #D4B3E8 20%, #C298DB 35%, #A866C7 50%, #7A3FA8 65%, #5A1D85 80%, #2D0045 90%, #2D0045 100%)' }}></div>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7em', color: '#546e7a' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7em', color: '#445461' }}>
                           <span>{censusStats.pred3PE.min?.toFixed(1) || '0'}%</span>
                           <span>{censusStats.pred3PE.max?.toFixed(1) || '0'}%</span>
                         </div>
@@ -3292,7 +3324,7 @@ const Dashboard = () => {
                           background: 'linear-gradient(to right, #FFF9C4 0%, #FFF9C4 20%, #FFE082 25%, #FFE082 40%, #FFB74D 45%, #FFB74D 60%, #FF8A65 65%, #FF8A65 80%, #E64A19 85%, #E64A19 100%)'
                         }}></div>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7em', color: '#546e7a' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7em', color: '#445461' }}>
                         <span>Very Low</span>
                         <span>Very High</span>
                       </div>
@@ -3318,7 +3350,7 @@ const Dashboard = () => {
                           background: 'linear-gradient(to right, #E8D4F5 0%, #E8D4F5 10%, #D4B3E8 20%, #C298DB 35%, #A866C7 50%, #7A3FA8 65%, #5A1D85 80%, #2D0045 90%, #2D0045 100%)'
                         }}></div>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7em', color: '#546e7a' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7em', color: '#445461' }}>
                         <span>{censusStats.pred3PE.min?.toFixed(1) || '0'}%</span>
                         <span>{censusStats.pred3PE.max?.toFixed(1) || '0'}%</span>
                       </div>
@@ -3347,10 +3379,12 @@ const Dashboard = () => {
                     overflow: 'hidden'
                   }}>
                     <button
+                      type="button"
                       onClick={toggleMapStyle}
+                      aria-label={isSatelliteView ? 'Switch map to standard view' : 'Switch map to satellite view'}
                       style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 12px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '0.8em', color: '#2c3e50', transition: 'all 0.3s', width: '100%' }}
                     >
-                      <div style={{ marginRight: '8px', fontSize: '16px', display: 'flex', alignItems: 'center' }}>
+                      <div style={{ marginRight: '8px', fontSize: '16px', display: 'flex', alignItems: 'center' }} aria-hidden="true">
                         {isSatelliteView ? '\uD83D\uDDFA\uFE0F' : '\uD83D\uDEF0\uFE0F'}
                       </div>
                       <span style={{ fontWeight: '500' }}>{isSatelliteView ? 'Standard' : 'Satellite'}</span>
@@ -3381,10 +3415,12 @@ const Dashboard = () => {
             overflow: 'hidden'
           }}>
             <button
+              type="button"
               onClick={toggleMapStyle}
+              aria-label={isSatelliteView ? 'Switch map to standard view' : 'Switch map to satellite view'}
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 12px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '0.8em', color: '#2c3e50', transition: 'all 0.3s', minWidth: '120px' }}
             >
-              <div style={{ marginRight: '8px', fontSize: '16px', display: 'flex', alignItems: 'center' }}>
+              <div style={{ marginRight: '8px', fontSize: '16px', display: 'flex', alignItems: 'center' }} aria-hidden="true">
                 {isSatelliteView ? '🗺️' : '🛰️'}
               </div>
               <span style={{ fontWeight: '500' }}>{isSatelliteView ? 'Standard' : 'Satellite'}</span>
@@ -3573,19 +3609,19 @@ const MapboxPopup = ({ map, activeFeature }) => {
             </tr>
             <tr>
               <td style={{ color: '#34495e', fontWeight: 600 }}>Status</td>
-              <td style={{ color: (props['Project__1'] || props['Project Status'] || '').toLowerCase() === 'completed' ? '#27ae60' : '#f39c12', fontWeight: 700 }}>
+              <td style={{ color: (props['Project__1'] || props['Project Status'] || '').toLowerCase() === 'completed' ? '#27ae60' : '#b45309', fontWeight: 700 }}>
                 {props['Project__1'] || props['Project Status'] || 'Unknown'}
               </td>
             </tr>
             <tr>
               <td style={{ color: '#34495e', fontWeight: 600 }}>Cost</td>
-              <td style={{ color: ((props['Estimated_'] || props['Estimated Project Cost']) == null) ?'#f39c12' : '#27ae60', fontWeight: 700 }}>{
+              <td style={{ color: ((props['Estimated_'] || props['Estimated Project Cost']) == null) ?'#b45309' : '#27ae60', fontWeight: 700 }}>{
                   formatCostCompact(props['Estimated_'] || props['Estimated Project Cost']) || 'Not Disclosed'}</td>
             </tr>
           </tbody>
         </table>
         {(props['New_15_25_'] || props['New 15-25 Words Project Description']) && (
-          <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid #ecf0f1', color: '#7f8c8d', fontSize: '0.85em', lineHeight: 1.4 }}>
+          <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid #ecf0f1', color: '#5d656d', fontSize: '0.85em', lineHeight: 1.4 }}>
             {props['New_15_25_'] || props['New 15-25 Words Project Description']}
           </div>
         )}

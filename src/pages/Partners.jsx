@@ -60,9 +60,9 @@ export default function Partners() {
 
       <div className="page-body">
         <section className="page-section">
-          <div className="card-grid cols-3">
+          <ul className="card-grid cols-3" role="list" style={{ listStyle: 'none', padding: 0, margin: 0 }}>
             {partners.map((p, i) => (
-              <div className="card" key={i}>
+              <li className="card" key={i} style={{ listStyle: 'none' }}>
                 <div
                   style={{
                     width: 52,
@@ -94,9 +94,9 @@ export default function Partners() {
                 <div className="prose" style={{ fontSize: '0.92rem' }}>
                   {p.description}
                 </div>
-              </div>
+              </li>
             ))}
-          </div>
+          </ul>
         </section>
       </div>
     </div>

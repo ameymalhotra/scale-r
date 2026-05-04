@@ -10,7 +10,7 @@ const navLinks = [
 
 export default function Navbar() {
   return (
-    <nav className="site-navbar" role="navigation" aria-label="Main">
+    <nav className="site-navbar" aria-label="Main">
       {navLinks.map(({ to, label }) => (
         <NavLink
           key={to}

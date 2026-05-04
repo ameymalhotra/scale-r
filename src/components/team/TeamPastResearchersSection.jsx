@@ -45,7 +45,7 @@ export default function TeamPastResearchersSection() {
           </span>
         </h2>
       </div>
-      <ul className="team-past-list" aria-labelledby="team-past-heading">
+      <ul className="team-past-list" role="list" aria-labelledby="team-past-heading">
         {PAST_MEMBERS.map((m) => (
           <li key={m.name} className="team-past-item">
             <span className="team-past-name">{m.name}</span>

@@ -16,7 +16,7 @@ export default function TeamResearchCard({
     .join(' ');
 
   return (
-    <article className="team-research-card" tabIndex={0}>
+    <article className="team-research-card">
       <img
         className={imgClassName}
         src={imageSrc}
@@ -25,7 +25,7 @@ export default function TeamResearchCard({
       />
       <div className="team-research-card__body">
         <div className="team-research-card__frost">
-          <h4 className="team-research-card__name">{name}</h4>
+          <h3 className="team-research-card__name">{name}</h3>
           <p className="team-research-card__role">{role}</p>
         </div>
       </div>

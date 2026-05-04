@@ -128,7 +128,6 @@ export default function DocsSideNav({ sections }) {
         <div
           className="docs-sidenav-mobile__scroll"
           ref={mobileScrollerRef}
-          role="tablist"
         >
           {sections.map((section) => {
             const isActive = activeId === section.id;

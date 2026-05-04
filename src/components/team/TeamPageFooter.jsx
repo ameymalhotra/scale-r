@@ -14,13 +14,13 @@ export default function TeamPageFooter() {
           </p>
         </div>
         <div className="about-footer-col">
-          <h5 className="about-footer-heading">Navigation</h5>
+          <h3 className="about-footer-heading">Navigation</h3>
           <Link to="/about">About the project</Link>
           <Link to="/dashboard">Dashboard</Link>
           <Link to="/team">Team</Link>
         </div>
         <div className="about-footer-col">
-          <h5 className="about-footer-heading">Connect</h5>
+          <h3 className="about-footer-heading">Connect</h3>
           <a href="mailto:spraharaj@miami.edu">Contact Us</a>
           <div className="about-footer-social">
             <a

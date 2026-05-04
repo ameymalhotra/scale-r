@@ -393,9 +393,9 @@ const DATA_SOURCES = [
   },
 ];
 
-function SourceDataRow({ item }) {
+function SourceDataRow({ item, id }) {
   return (
-    <tr>
+    <tr {...(id ? { id } : {})}>
       <td className="docs-sources-table__source">
         <span className="docs-sources-table__source-text">{item.source}</span>
         <a
@@ -488,7 +488,7 @@ export default function DocsDataSourcesSection() {
               );
 
               return (
-                <tbody key={group.level}>
+                <tbody key={group.level} id={`docs-sources-group-${group.level}`}>
                   <tr className="docs-sources-table__group">
                     <th colSpan={2} scope="colgroup">
                       {group.level}
@@ -523,6 +523,7 @@ export default function DocsDataSourcesSection() {
                           <SourceDataRow
                             key={`${sub.id}-${idx}-${item.source}`}
                             item={item}
+                            id={idx === 0 ? `panel-municipal-${sub.id}` : undefined}
                           />
                         ))}
                         {hasMore ? (
@@ -533,6 +534,7 @@ export default function DocsDataSourcesSection() {
                                 className="docs-sources-group-toggle"
                                 onClick={() => toggleMunicipalSub(sub.id)}
                                 aria-expanded={expanded}
+                                aria-controls={`panel-municipal-${sub.id}`}
                               >
                                 <span
                                   className="material-symbols-outlined"
@@ -563,7 +565,7 @@ export default function DocsDataSourcesSection() {
             const hiddenCount = items.length - initial;
 
             return (
-              <tbody key={group.level}>
+              <tbody key={group.level} id={`docs-sources-group-${group.level}`}>
                 <tr className="docs-sources-table__group">
                   <th colSpan={2} scope="colgroup">
                     {group.level}
@@ -586,6 +588,7 @@ export default function DocsDataSourcesSection() {
                         className="docs-sources-group-toggle"
                         onClick={() => toggleGroup(group.level)}
                         aria-expanded={expanded}
+                        aria-controls={`docs-sources-group-${group.level}`}
                       >
                         <span className="material-symbols-outlined" aria-hidden>
                           {expanded ? 'expand_less' : 'expand_more'}
