@@ -527,6 +527,51 @@ When `VITE_SUPABASE_URL` is set, the app loads project data from Supabase Storag
 
 After any insert/update/delete on `projects`, run `npm run upload-geojson` again, or deploy the Edge Function `regenerate-projects-geojson` and call it from your upload flow so the file updates automatically.
 
+### Add census tract GEOID (`projects_merged_conf1.tract_geoid`)
+
+The source Excel's `FIPSCODE` column mixes city/place codes and zeros — it does not answer "which census tract is this project in?". To get the 11-digit census tract ID (state FIPS + county FIPS + tract code) per project from its coordinates, the repo derives a separate `tract_geoid` value (the original `FIPSCODE` is left untouched).
+
+1. **One-time DB prep** — in Supabase SQL Editor, run [`supabase/sql/add_tract_geoid_column.sql`](supabase/sql/add_tract_geoid_column.sql):
+
+   ```sql
+   alter table public.projects_merged_conf1 add column if not exists tract_geoid text;
+   ```
+
+2. **Resolve tracts from coordinates** (instant, offline for Miami-Dade):
+
+   ```bash
+   pip install -r scripts/python/requirements.txt
+   npm run add-tract-geoid
+   ```
+
+   Resolution order per row:
+   1. **Local point-in-polygon** against `public/censuscommunityresilience.geojson` (706 Miami-Dade tracts; reprojected from Web Mercator on the fly). Handles every point inside the tract layer.
+   2. **FCC Census Block API** (`https://geo.fcc.gov/api/census/block/find`) — fallback for points outside the local layer.
+   3. **Census Bureau coordinate geocoder** as a last resort (unstable; not relied on).
+
+   Outputs (under `data/output/logs/tract_geoid/`):
+   - `projects_with_tract_geoid.csv` — full sheet plus `TRACT_GEOID`, `TRACT_NAME`, `TRACT_LOOKUP_SOURCE`, `TRACT_RESOLVE_STATUS`
+   - `tract_geoid_updates.csv` — payload consumed by the sync step
+   - `tract_resolve_failures.csv` — only emitted if any rows with coordinates fail every source
+
+   Plus an enriched copy of the merged Excel: `data/output/merged/MergedDataset_Original_plus_LMS_conf1_with_tract_geoid.xlsx`.
+
+3. **Sync the resolved tracts into Supabase** (`projects_merged_conf1.tract_geoid`):
+
+   ```bash
+   npm run sync-tract-geoid
+   ```
+
+   The sync matches DB rows on `(project_na, lat≈, lng≈)` (with `(project_na, city)` as fallback) and updates whenever the new 11-digit value differs from what's stored. Idempotent and safe to re-run.
+
+4. **Refresh GeoJSON for the app**:
+
+   ```bash
+   npm run upload-geojson-merged-conf1
+   ```
+
+   The output GeoJSON exposes `TRACT_GEOID` in feature properties.
+
 ### Other Deployment Platforms
 
 The application can be deployed to any static hosting service:

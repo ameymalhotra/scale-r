@@ -34,3 +34,17 @@ data/
 *.njsproj
 *.sln
 *.sw?
+
+# FEMA NRI source data
+NRI_Table_CensusTracts*.csv
+
+# Derived modeling datasets
+ols_tract_data.csv
+ols_tract_data_enriched.csv
+geocode_checkpoint.csv
+geocode_failures.csv
+
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
