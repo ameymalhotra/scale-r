@@ -19,7 +19,8 @@
     "add-tract-geoid": "python3 scripts/python/add_tract_geoid_conf1.py",
     "sync-tract-geoid": "node --env-file=.env scripts/js/sync-tract-geoid-to-supabase.js",
     "reproject-femaindex": "node tools/reproject-femaindex-to-4326.mjs",
-    "compare-fema-ratings": "python3 compare_fema_ratings.py"
+    "compare-fema-ratings": "python3 compare_fema_ratings.py",
+    "refresh-femaindex": "python3 refresh_femaindex_from_csv.py"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.95.3",
