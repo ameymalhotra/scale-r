@@ -109,6 +109,40 @@ const getRangeStats = (values) => {
   return { min, mid, max };
 };
 
+/**
+ * Spread co-located markers into a circle so every project is visible.
+ * Returns a Map<coordKey, offsetCoord[]> where each entry is the list of
+ * [lng, lat] positions (original position kept for singletons).
+ */
+const computeSpiderOffsets = (features, radiusMeters = 40) => {
+  const groups = new Map();
+  features.forEach((feature, index) => {
+    const coords = feature.geometry?.coordinates;
+    if (!coords) return;
+    const key = `${coords[0]},${coords[1]}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(index);
+  });
+
+  const offsets = new Map();
+  groups.forEach((indices, key) => {
+    const [lng, lat] = key.split(',').map(Number);
+    if (indices.length === 1) {
+      offsets.set(indices[0], [lng, lat]);
+      return;
+    }
+    const n = indices.length;
+    indices.forEach((featureIndex, i) => {
+      const angle = (i * 2 * Math.PI) / n - Math.PI / 2;
+      const latOffset = (radiusMeters * Math.sin(angle)) / 111000;
+      const lngOffset = (radiusMeters * Math.cos(angle)) / (111000 * Math.cos((lat * Math.PI) / 180));
+      offsets.set(featureIndex, [lng + lngOffset, lat + latOffset]);
+    });
+  });
+
+  return offsets;
+};
+
 // Create a small circle polygon around a point to use as a buffer zone
 const createCircleBuffer = (center, radiusInMeters = 50) => {
   const [lng, lat] = center;
@@ -1490,9 +1524,12 @@ const Dashboard = () => {
           data: filteredData
         });
 
-        // Create invisible buffer zones around each marker
+        // Compute spider offsets so co-located projects get distinct marker positions
+        const spiderOffsets = computeSpiderOffsets(costFilteredFeatures, 40);
+
+        // Create invisible buffer zones around each marker (using offset positions)
         const bufferFeatures = costFilteredFeatures.map((feature, index) => {
-          const coordinates = feature.geometry.coordinates;
+          const coordinates = spiderOffsets.get(index) || feature.geometry.coordinates;
           const circleCoords = createCircleBuffer(coordinates, 30); // 30 meter radius buffer
           return {
             type: 'Feature',
@@ -1521,7 +1558,7 @@ const Dashboard = () => {
         // Buffer layer will be added in addCensusSourceAndLayers after census layers
 
         const markers = [];
-        costFilteredFeatures.forEach(feature => {
+        costFilteredFeatures.forEach((feature, featureIndex) => {
           const geometry = feature.geometry;
           const coordinates = geometry && geometry.coordinates;
           // Skip features without valid point coordinates
@@ -1552,11 +1589,14 @@ const Dashboard = () => {
             }
           }
 
+          // Use spider-offset position for co-located markers
+          const displayCoords = spiderOffsets.get(featureIndex) || coordinates;
+
           const marker = new mapboxgl.Marker({
             color: getMarkerColor(properties['Infrastruc'] || properties['Infrastructure Type'] || properties['Type']),
             scale: isMobileRef.current ? 0.5 : 0.7
           })
-            .setLngLat(coordinates);
+            .setLngLat(displayCoords);
 
           marker.getElement().addEventListener('click', (e) => {
             e.stopPropagation();
