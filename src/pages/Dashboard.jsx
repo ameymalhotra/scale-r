@@ -1498,9 +1498,22 @@ const Dashboard = () => {
         const data = await response.json();
         const allFeatures = data.features || [];
 
-        // Temporary dashboard-level filter for testing:
-        // show only projects with an estimated cost greater than zero.
+        // Dashboard-level display filters:
+        //  1. exclude projects without valid coordinates (missing or 0,0 placeholders)
+        //  2. show only projects with an estimated cost greater than zero
+        const hasValidCoordinates = (feature) => {
+          const coords = feature?.geometry?.coordinates;
+          if (!Array.isArray(coords) || coords.length < 2) return false;
+          const lng = Number(coords[0]);
+          const lat = Number(coords[1]);
+          if (!Number.isFinite(lng) || !Number.isFinite(lat)) return false;
+          // (0,0) is the "null island" placeholder used for ungeocoded projects.
+          if (lng === 0 && lat === 0) return false;
+          return Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
+        };
+
         const costFilteredFeatures = allFeatures.filter((feature) => {
+          if (!hasValidCoordinates(feature)) return false;
           const props = feature?.properties || {};
           const rawCost = props['Estimated_'] ?? props['Estimated Project Cost'];
           if (rawCost == null || rawCost === '') return false;
