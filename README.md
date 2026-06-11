@@ -252,6 +252,8 @@ Python scripts live in `scripts/python/`, Node scripts in `scripts/js/`. They us
 - **`data/output/logs/matched/`** — Matched-project outputs: reference and pairs Excel files.
 - **`data/output/merged/`** — Final merged Excel file consumed by `npm run seed-merged`.
 
+For the full LMS ingest, county filter, merge, and publish methodology, see **[docs/LMS_DATA_PIPELINE.md](docs/LMS_DATA_PIPELINE.md)**.
+
 ## Features in Detail
 
 ### Search Functionality

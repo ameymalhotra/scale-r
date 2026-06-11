@@ -207,6 +207,15 @@
 .about-footer.about-section--on-um-green .about-footer-social a:hover {
   color: var(--um-orange);
 }
+.about-footer.about-section--on-um-green .about-footer-bottom {
+  border-top-color: rgba(255, 255, 255, 0.12);
+}
+.about-footer.about-section--on-um-green .about-footer-bottom a {
+  color: var(--um-text-on-green-muted);
+}
+.about-footer.about-section--on-um-green .about-footer-bottom a:hover {
+  color: var(--um-orange);
+}
 
 /* ── Hero ───────────────────────────────────────────────────── */
 .about-hero {
@@ -1545,6 +1554,22 @@
 }
 .about-footer-social .material-symbols-outlined {
   font-size: 1.5rem;
+}
+.about-footer-bottom {
+  max-width: 1280px;
+  margin: 2.5rem auto 0;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(11, 31, 21, 0.08);
+  font-size: 0.8125rem;
+}
+.about-footer-bottom a {
+  color: var(--about-text-muted);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.about-footer-bottom a:hover {
+  color: var(--about-accent);
+  text-decoration: underline;
 }
 
 /* ── Responsive ─────────────────────────────────────────────── */

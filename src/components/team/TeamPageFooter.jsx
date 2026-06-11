@@ -41,6 +41,15 @@ export default function TeamPageFooter() {
           </div>
         </div>
       </div>
+      <div className="about-footer-bottom">
+        <a
+          href="https://welcome.miami.edu/privacy-and-legal/index.html"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Privacy Statement &amp; Legal Notices
+        </a>
+      </div>
     </footer>
   );
 }
