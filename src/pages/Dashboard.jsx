@@ -19,11 +19,35 @@ const parseNumericValue = (value) => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
-const PROJECT_STATUS_OPTIONS = ['Completed', 'Ongoing'];
+const PROJECT_STATUS_OPTIONS = ['Completed', 'Ongoing', 'Planning'];
+
+// Professor-approved mapping from the raw LMS `Project__1` status to one of the
+// three lifecycle categories. Used only as a fallback when a feature does not
+// carry the pre-computed `Status_Category` column (e.g. older/un-reseeded data).
+const PROJECT_STATUS_CATEGORY_MAP = {
+  'completed': 'Completed',
+  'project complete': 'Completed',
+  'ongoing': 'Ongoing',
+  'funding secured': 'Ongoing',
+  'construction/project begun': 'Ongoing',
+  '25% complete': 'Ongoing',
+  '50% complete': 'Ongoing',
+  '75% complete': 'Ongoing',
+  'other': 'Ongoing',
+  'future unfunded project': 'Planning',
+  'funding not yet secured': 'Planning',
+  'funding applied for': 'Planning',
+  'project in planning stage': 'Planning',
+  'project deferred': 'Planning',
+};
 
 const getProjectStatusCategory = (props = {}) => {
-  const rawStatus = props['Project__1'] ?? props['Project Status'];
-  return String(rawStatus ?? '').trim().toLowerCase() === 'completed' ? 'Completed' : 'Ongoing';
+  // Primary source: the pre-categorized column baked into the dataset.
+  const category = String(props['Status_Category'] ?? '').trim();
+  if (PROJECT_STATUS_OPTIONS.includes(category)) return category;
+  // Fallback: derive from the raw status string.
+  const rawStatus = String(props['Project__1'] ?? props['Project Status'] ?? '').trim().toLowerCase();
+  return PROJECT_STATUS_CATEGORY_MAP[rawStatus] ?? 'Ongoing';
 };
 
 const toWgs84Coordinate = ([x, y]) => {
@@ -3662,8 +3686,8 @@ const MapboxPopup = ({ map, activeFeature }) => {
             </tr>
             <tr>
               <td style={{ color: '#34495e', fontWeight: 600 }}>Status</td>
-              <td style={{ color: (props['Project__1'] || props['Project Status'] || '').toLowerCase() === 'completed' ? '#27ae60' : '#b45309', fontWeight: 700 }}>
-                {props['Project__1'] || props['Project Status'] || 'Unknown'}
+              <td style={{ color: { Completed: '#27ae60', Ongoing: '#b45309', Planning: '#2563eb' }[getProjectStatusCategory(props)] || '#b45309', fontWeight: 700 }}>
+                {getProjectStatusCategory(props)}
               </td>
             </tr>
             <tr>
