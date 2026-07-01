@@ -1,0 +1,40 @@
+{
+  "Blue Infrastructure": {
+    "definition": "Blue infrastructure encompasses natural and engineered water-based systems that mitigate flooding, support adaptation to sea-level rise, improve water quality, and sustain diverse aquatic ecosystems. These interventions advance sustainable water management while alleviating climate-related pressures on coastal environments.",
+    "examples": [
+      "Wetland restoration projects",
+      "Stormwater detention systems",
+      "Canals and drainage networks",
+      "Coastal water management systems"
+    ]
+  },
+  "Green Infrastructure": {
+    "definition": "Green infrastructure integrates vegetation, soils, and ecological processes to mitigate urban heat, manage stormwater, improve air and water quality, and support biodiversity. These solutions enhance urban resilience while advancing sustainable development across built and natural environments.",
+    "examples": [
+      "Mangrove restoration",
+      "Urban tree canopy and park systems",
+      "Green roofs and permeable surfaces",
+      "Bioswales and rain gardens",
+      "Ecological restoration of endangered lands"
+    ]
+  },
+  "Grey Infrastructure": {
+    "definition": "Gray infrastructure comprises conventional engineered systems constructed with materials such as concrete and steel to deliver essential urban services, including stormwater conveyance, flood control, and transportation. While critical for reliability at defined performance thresholds, these systems often entail environmental trade-offs that reduce ecological function.",
+    "examples": [
+      "Seawalls and flood barriers",
+      "Stormwater pipes and drainage systems",
+      "Elevated roads and transportation networks",
+      "Water treatment and pumping facilities"
+    ]
+  },
+  "Hybrid Infrastructure": {
+    "definition": "Hybrid infrastructure integrates elements of blue, green, and gray systems to deliver adaptive, multi-functional solutions. These approaches combine engineered reliability with ecosystem-based processes to enhance resilience, optimize performance, and provide co-benefits across environmental and urban systems.",
+    "examples": [
+      "Living shorelines",
+      "Green-gray drainage systems",
+      "Elevated green corridors",
+      "Parks designed for flood storage",
+      "Permeable pavement systems"
+    ]
+  }
+}
