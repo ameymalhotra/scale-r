@@ -330,6 +330,8 @@ def build_examples(df, pool_indices) -> list[dict]:
         ex.append({"title": safe_str(row.get(TITLE_COL)),
                    "description": build_description(row),
                    "label": parse_label(safe_str(row.get(INFRA_COL)))})
+    # order_fewshot_examples interleaves Blue/Hybrid first (the main error mode is
+    # true-Hybrid -> predicted-Blue), then Green and Grey.
     return order_fewshot_examples(ex)
 
 def build_prompt(
@@ -341,40 +343,71 @@ def build_prompt(
     label_map: dict[str, str] | None = None,
 ) -> str:
     label_map = label_map or DEFINITION_KEY_TO_LABEL
-    type_options = "Blue | Green | Grey | Hybrid"
-    lines = [
-        "You are an expert classifier for climate resilience and urban infrastructure projects.",
-        "Assign exactly one infrastructure type to a project based on its title and description.",
+    L = ["You are an expert classifier for climate-resilience and urban-infrastructure projects.",
+         "Assign exactly one type (Blue, Green, Grey, or Hybrid) from the definitions below.", "",
+         "─── DEFINITIONS ───"]
+    for key, d in definitions.items():
+        label = label_map.get(key, key)
+        L.append(f"• {label}: {normalize_definition_entry(d)['definition']}"); L.append("")
+    L += [
+        "─── HOW TO DECIDE (this dataset's convention — follow in order) ───",
+        "1. List the distinct physical components/actions in the project.",
+        "2. Categorize each component:",
+        "   • GREY — engineered / structural systems, INCLUDING engineered water CONVEYANCE that moves",
+        "     water away: storm sewers, pipes, drainage networks, catch basins, manholes, culverts,",
+        "     exfiltration trenches, pump stations, seawalls, floodwalls, flood control, lined/structural",
+        "     canals, roads, bridges, buildings, generators, solar, wind/structural retrofits,",
+        "     elevation or hardening of structures.",
+        "   • GREEN — vegetation / natural land: parks, trees, urban forestry, greenways, landscaping,",
+        "     rain gardens, bioswales, grass / vegetated swales, dune or mangrove planting.",
+        "   • BLUE — water HELD as the feature, plus nature-based water/coastal features (NOT hard",
+        "     conveyance): stormwater DETENTION / retention ponds and basins, living shorelines, reef",
+        "     systems, beach/dune renourishment, restored wetlands, natural water-quality/ecosystem restoration.",
+        "3. Decide:",
+        "   • Only Grey-type components (engineered water counts as Grey) → Grey.",
+        "   • Only Green → Green.   • Only nature-based water (Blue) → Blue.",
+        "   • A Grey/structural element COMBINED with a Green or nature-based element → Hybrid",
+        "     (e.g. drainage PLUS tree planting or a park, seawall PLUS a living shoreline/dune,",
+        "     'gray & green' / 'integrated' projects).",
         "",
-        "─── INFRASTRUCTURE TYPE DEFINITIONS ───────────────────────────────────────────",
-    ]
-    for key, entry in definitions.items():
-        lines.extend(format_definition_lines(key, entry, label_map=label_map))
-
-    lines += ["─── CLASSIFICATION EXAMPLES ────────────────────────────────────────────────────", ""]
-    for ex in examples:
-        desc = ex["description"]
-        truncated = (desc[:500] + "...") if len(desc) > 500 else desc
-        lines += [f"Title: {ex['title']}", f"Description: {truncated}", f"Type: {ex['label']}", ""]
-
-    lines += [
-        "─── YOUR TASK ──────────────────────────────────────────────────────────────────",
+        "CRITICAL CONVENTIONS (these override the general definitions above):",
+        "• Engineered water CONVEYANCE that moves water away — pipes, drainage networks, catch basins,",
+        "  manholes, culverts, exfiltration trenches, storm sewers, pump stations, seawalls, flood control",
+        "  — is GREY, not Blue. Most drainage/stormwater projects here are Grey.",
+        "• Blue = water HELD as the feature (stormwater detention/retention ponds and basins) OR",
+        "  nature-based water (living shorelines, reefs, dune renourishment, restored wetlands).",
+        "• A drainage/structural project is HYBRID only if it CONSTRUCTS a green feature — grass/vegetated",
+        "  swales, bioswales, rain gardens, tree planting, or a park. Pure conveyance (catch basins, manholes,",
+        "  culverts, exfiltration trenches, pipes) is GREY even if it regrades or modifies EXISTING roadway",
+        "  swales/ditches — modifying an existing swale is not a green feature.",
+        "• Pure vegetation/parks = Green.",
+        "• Do NOT pick Blue merely because water, drainage, canal, or stormwater appears — conveyance",
+        "  (pipes, catch basins, manholes, culverts, exfiltration trenches) is Grey. Blue is only for water",
+        "  storage (detention/retention) or genuinely nature-based water.",
         "",
-        "Classify the project below. Reply with ONLY valid JSON — no extra text, no markdown.",
-        "",
-        "Respond in this exact format:",
-        "{",
-        f'  "type": "one of: {type_options}",',
-        '  "confidence": "high | medium | low",',
-        '  "reasoning": "one concise sentence explaining why you chose this type"',
-        "}",
-        "",
-        f"Title: {title}",
-        f"Description: {(description[:1000] + '...') if len(description) > 1000 else description}",
-        "",
-        "JSON response:",
-    ]
-    return "\n".join(lines)
+        "─── EXAMPLES ───", ""]
+    for e in examples:
+        d = e["description"]; d = (d[:500] + "...") if len(d) > 500 else d
+        L += [f"Title: {e['title']}", f"Description: {d}", f"Type: {e['label']}", ""]
+    L += ["─── TASK ───",
+          "Classify the project below. FIRST fill \"components\" with each physical element and its",
+          "approach, THEN apply the decision rule. Reply with ONLY valid JSON — no extra text, no markdown.", "",
+          "The \"type\" MUST follow from your \"components\":",
+          "• If EVERY component is (Grey) → type = Grey. (A seawall, drainage, or pump tagged (Grey) is GREY,",
+          "  even when the project is coastal or raises elevation — do NOT pick Blue for water/coastal wording",
+          "  when no component is (Blue).)",
+          "• Only (Green) components → Green.   • Only (Blue) components → Blue.",
+          "• Components include (Grey) AND a (Green) or (Blue) → Hybrid.",
+          "",
+          '{',
+          '  "components": ["e.g. \\"seawall (Grey)\\", \\"living shoreline (Blue)\\""],',
+          '  "type": "Blue | Green | Grey | Hybrid",',
+          '  "confidence": "high | medium | low",',
+          '  "reasoning": "one concise sentence; if Hybrid, name the two approaches"', '}', "",
+          f"Title: {title}",
+          f"Description: {(description[:1000] + '...') if len(description) > 1000 else description}", "",
+          "JSON response:"]
+    return "\n".join(L)
 
 def call_ollama(prompt, think=False, options=None, model: str | None = None) -> str:
     from ollama import chat

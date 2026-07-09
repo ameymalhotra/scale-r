@@ -723,19 +723,30 @@ export default function About() {
           <h2 id="about-ack-heading">
             <span className="about-heading-highlight">Funding Acknowledgement</span>
           </h2>
-          <p>
-            This project is based upon work supported by the National Science
-            Foundation under{' '}
-            <a
-              className="about-ack-nsf-link"
-              href="https://www.nsf.gov/awardsearch/show-award/?AWD_ID=2435008&HistoricalAwards=false"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Grant Number
-            </a>{' '}
-            (2435008).
-          </p>
+          <div className="about-ack-main-row">
+            <p>
+              This project is based upon work supported by the National Science
+              Foundation under{' '}
+              <a
+                className="about-ack-nsf-link"
+                href="https://www.nsf.gov/awardsearch/show-award/?AWD_ID=2435008&HistoricalAwards=false"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Grant Number
+              </a>{' '}
+              (2435008).
+            </p>
+            <div className="about-ack-logo-wrap">
+              <img
+                className="about-ack-logo"
+                src="/Images/1019px-NSF_logo.png"
+                alt="U.S. National Science Foundation logo"
+                loading="lazy"
+                decoding="async"
+              />
+            </div>
+          </div>
           <p className="about-ack-disclaimer">
             <strong>Disclaimer:</strong> Any opinions, findings, and conclusions
             or recommendations expressed in this website are those of the
@@ -755,8 +766,6 @@ export default function About() {
             <div className="about-footer-logo">SCALE-R</div>
             <p>
               © {new Date().getFullYear()} SCALE-R Miami-Dade.
-              <br />
-              Supported by NSF &amp; University of Miami.
             </p>
           </div>
           <div className="about-footer-col">

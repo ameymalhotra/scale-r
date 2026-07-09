@@ -20,9 +20,16 @@ dist-ssr
 design-reference/
 
 # Local scripts and data (not needed for deployment)
-scripts/
+scripts/*
+!scripts/python/
+scripts/python/*
+!scripts/python/infra_common.py
+!scripts/python/classify_infrastructure_lms_csv.py
 supabase/
-data/
+data/*
+!data/input/
+data/input/*
+!data/input/infrastructure_type_definitions.json
 
 # Editor directories and files
 .vscode/*

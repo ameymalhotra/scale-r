@@ -9,8 +9,6 @@ export default function TeamPageFooter() {
           <div className="about-footer-logo">SCALE-R</div>
           <p>
             © {new Date().getFullYear()} SCALE-R Miami-Dade.
-            <br />
-            Supported by NSF &amp; University of Miami.
           </p>
         </div>
         <div className="about-footer-col">

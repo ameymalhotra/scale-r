@@ -1456,8 +1456,29 @@
   max-width: 1280px;
   margin: 0 auto;
 }
+.about-ack-main-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: clamp(1rem, 3vw, 2rem);
+  width: 100%;
+}
+.about-ack-logo-wrap {
+  margin: 0;
+  flex-shrink: 0;
+}
+.about-ack-logo {
+  display: block;
+  width: clamp(120px, 18vw, 180px);
+  height: auto;
+}
 .about-ack-inner > p {
   max-width: var(--about-copy-max-width);
+}
+.about-ack-main-row > p {
+  margin: 0;
+  max-width: var(--about-copy-max-width);
+  flex: 1 1 auto;
 }
 .about-ack .about-hero-cta {
   margin-top: 1.35rem;
@@ -1483,6 +1504,12 @@
 }
 .about-ack a.about-ack-nsf-link:hover {
   color: #1d4ed8;
+}
+@media (max-width: 768px) {
+  .about-ack-main-row {
+    flex-direction: column-reverse;
+    align-items: flex-start;
+  }
 }
 
 /* ── Footer (Stitch shell) ──────────────────────────────────── */

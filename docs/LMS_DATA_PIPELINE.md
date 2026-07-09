@@ -40,6 +40,7 @@ All pipeline GeoJSON files live in `data/input/lms_project_list/`. Names use a *
 | 2 | `LMS_stage02_county_out.geojson` | Outside county or invalid geometry |
 | 3 | `LMS_stage03_status_cost_in.geojson` | Passed status whitelist + cost &gt; 0 (**primary ingest artifact**) |
 | 3 | `LMS_stage03_status_cost_out.geojson` | Failed status or cost rules |
+| — | `LMS_county_cost_excl_stage03_in.geojson` / `.csv` | Supplemental: county + cost&gt;0, excluding stage03 in (no status filter) |
 
 Canonical paths are defined in [`scripts/python/lms_pipeline_paths.py`](../scripts/python/lms_pipeline_paths.py).
 
@@ -191,6 +192,30 @@ python3 scripts/python/filter_lms_status_and_cost.py
 ```
 
 **Typical split (example run on current data):** ~177 passed / ~1,343 excluded of ~1,520 in-county (counts change when LMS is updated). Many “Project Complete” rows have zero or blank cost and are excluded by the cost rule.
+
+### Supplemental export — county + cost>0, excluding stage03 in
+
+Use this when you need **in-county LMS projects with positive cost that are not in the 177-project primary ingest** (typically because they failed the status whitelist, not because cost was missing).
+
+**Script:** [`scripts/python/export_lms_county_cost_excl_stage03.py`](../scripts/python/export_lms_county_cost_excl_stage03.py)
+
+**Logic:** Start from `LMS_stage02_county_in.geojson` → keep `EstimatedCosts > 0` → drop any `GlobalID` present in `LMS_stage03_status_cost_in.geojson`.
+
+**Outputs:**
+
+| File | Purpose |
+|------|---------|
+| `data/input/lms_project_list/LMS_county_cost_excl_stage03_in.geojson` | Map-ready GeoJSON (~498 rows on current snapshot) |
+| `data/input/lms_project_list/LMS_county_cost_excl_stage03_in.csv` | Same rows, all LMS columns + Longitude/Latitude (column order matches `LMS_stage02_county_in.csv`) |
+
+**Run:**
+
+```bash
+python3 scripts/python/export_lms_county_cost_excl_stage03.py
+# or: npm run export-lms-county-cost-excl-stage03
+```
+
+**Typical split (current snapshot):** 1,520 in-county → 675 with cost > 0 → **498** after excluding the 177 stage03-in GlobalIDs. These 498 match the `status_not_allowed` rows in `LMS_stage03_status_cost_out.geojson` that still have cost > 0.
 
 ---
 
