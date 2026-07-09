@@ -1459,8 +1459,7 @@
 .about-ack-main-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: clamp(1rem, 3vw, 2rem);
+  gap: clamp(1.25rem, 3vw, 2.5rem);
   width: 100%;
 }
 .about-ack-logo-wrap {
@@ -1507,7 +1506,7 @@
 }
 @media (max-width: 768px) {
   .about-ack-main-row {
-    flex-direction: column-reverse;
+    flex-direction: column;
     align-items: flex-start;
   }
 }

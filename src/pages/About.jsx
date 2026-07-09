@@ -724,9 +724,20 @@ export default function About() {
             <span className="about-heading-highlight">Funding Acknowledgement</span>
           </h2>
           <div className="about-ack-main-row">
+            <div className="about-ack-logo-wrap">
+              <img
+                className="about-ack-logo"
+                src="/Images/1019px-NSF_logo.png"
+                alt="U.S. National Science Foundation logo"
+                loading="lazy"
+                decoding="async"
+              />
+            </div>
             <p>
               This project is based upon work supported by the National Science
-              Foundation under{' '}
+              Foundation
+              <br />
+              under{' '}
               <a
                 className="about-ack-nsf-link"
                 href="https://www.nsf.gov/awardsearch/show-award/?AWD_ID=2435008&HistoricalAwards=false"
@@ -737,15 +748,6 @@ export default function About() {
               </a>{' '}
               (2435008).
             </p>
-            <div className="about-ack-logo-wrap">
-              <img
-                className="about-ack-logo"
-                src="/Images/1019px-NSF_logo.png"
-                alt="U.S. National Science Foundation logo"
-                loading="lazy"
-                decoding="async"
-              />
-            </div>
           </div>
           <p className="about-ack-disclaimer">
             <strong>Disclaimer:</strong> Any opinions, findings, and conclusions
