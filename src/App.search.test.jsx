@@ -348,7 +348,7 @@ describe('App Search Functionality', () => {
       const row = screen.getByRole('option', { name: /Miami Beach Flood Protection/i });
       expect(row).toBeInTheDocument();
       expect(row).toHaveTextContent(/Miami Beach/i);
-      expect(row).toHaveTextContent(/Gray Infrastructure/i);
+      expect(row).toHaveTextContent(/Gray/i);
     });
   });
 

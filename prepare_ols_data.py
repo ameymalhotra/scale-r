@@ -106,7 +106,7 @@ def main() -> int:
     def contains_ci(s: pd.Series, needle: str) -> pd.Series:
         return s.str.contains(needle, case=False, regex=False, na=False)
 
-    p["is_grey"] = contains_ci(p["infrastruc"], "Grey")
+    p["is_gray"] = p["infrastruc"].str.contains(r"gr[ae]y", case=False, regex=True, na=False)
     p["is_green"] = contains_ci(p["infrastruc"], "Green")
     p["is_blue"] = contains_ci(p["infrastruc"], "Blue")
     p["is_hybrid"] = contains_ci(p["infrastruc"], "Hybrid")
@@ -127,7 +127,7 @@ def main() -> int:
     agg = grouped.agg(
         project_count=("tract_geoid", "count"),
         total_investment=("cost", "sum"),
-        _grey=("is_grey", "sum"),
+        _gray=("is_gray", "sum"),
         _green=("is_green", "sum"),
         _blue=("is_blue", "sum"),
         _hybrid=("is_hybrid", "sum"),
@@ -146,12 +146,12 @@ def main() -> int:
     agg = agg.merge(dom, on="tract_geoid", how="left")
 
     n = agg["project_count"].replace(0, np.nan)
-    agg["pct_grey"] = (agg["_grey"] / n * 100).fillna(0.0)
+    agg["pct_gray"] = (agg["_gray"] / n * 100).fillna(0.0)
     agg["pct_green"] = (agg["_green"] / n * 100).fillna(0.0)
     agg["pct_blue"] = (agg["_blue"] / n * 100).fillna(0.0)
     agg["pct_hybrid"] = (agg["_hybrid"] / n * 100).fillna(0.0)
     agg["pct_complete"] = (agg["_complete"] / n * 100).fillna(0.0)
-    agg = agg.drop(columns=["_grey", "_green", "_blue", "_hybrid", "_complete"])
+    agg = agg.drop(columns=["_gray", "_green", "_blue", "_hybrid", "_complete"])
 
     agg = agg.rename(columns={"tract_geoid": "GEOID"})
     print(f"Aggregated tracts with ≥1 project row: {len(agg)}")
@@ -191,7 +191,7 @@ def main() -> int:
     fill_zero = [
         "project_count",
         "total_investment",
-        "pct_grey",
+        "pct_gray",
         "pct_green",
         "pct_blue",
         "pct_hybrid",
@@ -213,7 +213,7 @@ def main() -> int:
         "fema_rating",
         "project_count",
         "total_investment",
-        "pct_grey",
+        "pct_gray",
         "pct_green",
         "pct_blue",
         "pct_hybrid",
@@ -258,7 +258,7 @@ def main() -> int:
     x_numeric = [
         "project_count",
         "total_investment",
-        "pct_grey",
+        "pct_gray",
         "pct_green",
         "pct_blue",
         "pct_hybrid",

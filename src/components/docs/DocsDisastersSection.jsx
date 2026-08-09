@@ -10,10 +10,10 @@ const DISASTER_TYPES = [
   },
   {
     icon: 'tsunami',
-    label: 'Storm Surge',
+    label: 'Storms',
     accent: '#127ea7',
     text:
-      'Projects addressing coastal inundation from storm-driven surges and wave action, including shoreline protection, surge barriers, and coastal defense systems.',
+      'Projects aimed at protecting public assets, medical compounds, and vital community facilities from high-velocity winds, cyclones, and hurricane events, including structural hardening, window and roof treatment, and coastal defense systems.',
   },
   {
     icon: 'thermostat',

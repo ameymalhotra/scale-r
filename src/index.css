@@ -220,6 +220,78 @@ html:not(.route-dashboard) .site-navbar {
   }
 }
 
+/* Infrastructure Type filter — info (i) icon + hover definition tooltip */
+.infra-type-info {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.infra-type-info__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #1a73e8;
+  cursor: help;
+  line-height: 0;
+  border-radius: 50%;
+}
+
+.infra-type-info__btn:hover,
+.infra-type-info__btn:focus-visible {
+  color: #1557b0;
+}
+
+.infra-type-info__btn:focus-visible {
+  outline: 2px solid #1a73e8;
+  outline-offset: 2px;
+}
+
+.infra-type-info__icon {
+  display: block;
+}
+
+.infra-type-info__tooltip--portal {
+  position: fixed;
+  z-index: 1200;
+  width: max-content;
+  max-width: min(280px, calc(100vw - 16px));
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: #1f2a33;
+  color: #f5f7fa;
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1.35;
+  text-align: left;
+  white-space: normal;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
+  pointer-events: none;
+}
+
+.infra-type-info__tooltip--portal::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+}
+
+.infra-type-info__tooltip--below::after {
+  bottom: 100%;
+  border-bottom-color: #1f2a33;
+}
+
+.infra-type-info__tooltip--above::after {
+  top: 100%;
+  border-top-color: #1f2a33;
+}
+
 /* Fullscreen map has no sidebar — align controls to the map edge again */
 .dashboard-map-area:fullscreen .mapboxgl-ctrl-top-left,
 .dashboard-map-area:-webkit-full-screen .mapboxgl-ctrl-top-left {

@@ -6,6 +6,7 @@ import DocsSideNav from '../components/docs/DocsSideNav.jsx';
 import DocsIntroSection from '../components/docs/DocsIntroSection.jsx';
 import DocsBackgroundSection from '../components/docs/DocsBackgroundSection.jsx';
 import DocsDataSourcesSection from '../components/docs/DocsDataSourcesSection.jsx';
+import DocsProjectStatusSection from '../components/docs/DocsProjectStatusSection.jsx';
 import DocsInfrastructureSection from '../components/docs/DocsInfrastructureSection.jsx';
 import DocsDisastersSection from '../components/docs/DocsDisastersSection.jsx';
 import DocsModelingLayersSection from '../components/docs/DocsModelingLayersSection.jsx';
@@ -17,6 +18,7 @@ const SECTIONS = [
   { id: 'introduction', label: 'Introduction' },
   { id: 'background', label: 'Background' },
   { id: 'data-sources', label: 'Data Sources' },
+  { id: 'project-status', label: 'Project Status' },
   { id: 'infrastructure-types', label: 'Infrastructure Types' },
   { id: 'disaster-focus', label: 'Disaster Focus' },
   { id: 'modeling-layers', label: 'Modeling Layers' },
@@ -36,6 +38,7 @@ export default function TechnicalDocs() {
           <DocsIntroSection />
           <DocsBackgroundSection />
           <DocsDataSourcesSection />
+          <DocsProjectStatusSection />
           <DocsInfrastructureSection />
           <DocsDisastersSection />
           <DocsModelingLayersSection />

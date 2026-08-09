@@ -284,7 +284,7 @@ These are filled with local Ollama models, mirroring the existing `*_ollama.py` 
 1. Read the Claude-merged CSV; find rows with empty `Infrastruc`.
 2. Build few-shot examples (up to 10 per label) from rows already classified in the **same file**.
 3. Prompt `qwen2.5:7b` with the type definitions from [`data/input/infrastructure_type_definitions.json`](../data/input/infrastructure_type_definitions.json) + examples + the project title/description.
-4. Emit a **short label** — `Blue` | `Green` | `Grey` | `Hybrid` — to match the values already in the dataset (not the long "… Infrastructure" form used by the Excel script).
+4. Emit a **short label** — `Blue` | `Green` | `Gray` | `Hybrid` — to match the values already in the dataset (not the long "… Infrastructure" form used by the Excel script).
 
 **Modes:**
 

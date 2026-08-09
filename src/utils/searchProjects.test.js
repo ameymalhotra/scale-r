@@ -58,9 +58,9 @@ describe('searchProjects', () => {
           'New_15_25_': 'Stormwater management system for Doral',
           'NAME': 'Doral',
           'City': 'Doral',
-          'Infrastruc': 'Grey Infrastructure',
-          'Infrastructure Type': 'Grey Infrastructure',
-          'Type': 'Grey Infrastructure',
+          'Infrastruc': 'Gray Infrastructure',
+          'Infrastructure Type': 'Gray Infrastructure',
+          'Type': 'Gray Infrastructure',
           'Categories': 'Water Management',
           'Disaster_F': 'Flooding',
           'Disaster Focus': 'Flooding'
@@ -194,7 +194,7 @@ describe('searchProjects', () => {
     });
 
     it('should find projects using Type field as fallback', () => {
-      const results = searchProjects('Grey', mockProjectsData);
+      const results = searchProjects('Gray', mockProjectsData);
       expect(results.length).toBeGreaterThan(0);
     });
   });

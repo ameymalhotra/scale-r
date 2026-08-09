@@ -3,7 +3,7 @@ import React from 'react';
 const INFRASTRUCTURE_TYPES = [
   {
     icon: 'water',
-    label: 'Blue Infrastructure',
+    label: 'Blue',
     accent: '#0e7aad',
     text:
       'Blue infrastructure encompasses natural and engineered water-based systems that mitigate flooding, support adaptation to sea-level rise, improve water quality, and sustain diverse aquatic ecosystems. These interventions advance sustainable water management while alleviating climate-related pressures on coastal environments.',
@@ -16,7 +16,7 @@ const INFRASTRUCTURE_TYPES = [
   },
   {
     icon: 'park',
-    label: 'Green Infrastructure',
+    label: 'Green',
     accent: '#005030',
     text:
       'Green infrastructure integrates vegetation, soils, and ecological processes to mitigate urban heat, manage stormwater, improve air and water quality, and support biodiversity. These solutions enhance urban resilience while advancing sustainable development across built and natural environments.',
@@ -30,7 +30,7 @@ const INFRASTRUCTURE_TYPES = [
   },
   {
     icon: 'foundation',
-    label: 'Grey Infrastructure',
+    label: 'Gray',
     accent: '#52606b',
     text:
       'Gray infrastructure comprises conventional engineered systems constructed with materials such as concrete and steel to deliver essential urban services, including stormwater conveyance, flood control, and transportation. While critical for reliability at defined performance thresholds, these systems often entail environmental trade-offs that reduce ecological function.',
@@ -43,7 +43,7 @@ const INFRASTRUCTURE_TYPES = [
   },
   {
     icon: 'hub',
-    label: 'Hybrid Infrastructure',
+    label: 'Hybrid',
     accent: '#f47321',
     text:
       'Hybrid infrastructure integrates elements of blue, green, and gray systems to deliver adaptive, multi-functional solutions. These approaches combine engineered reliability with ecosystem-based processes to enhance resilience, optimize performance, and provide co-benefits across environmental and urban systems.',
@@ -70,7 +70,7 @@ export default function DocsInfrastructureSection() {
         </span>
       </h2>
       <p className="docs-section__lede">
-        Resilience projects are categorized into blue, green, grey, and hybrid
+        Resilience projects are categorized into blue, green, gray, and hybrid
         infrastructure to reflect how different systems reduce risk and
         strengthen community resilience. This classification—adapted from the{' '}
         <a

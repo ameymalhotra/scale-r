@@ -19,35 +19,24 @@ const parseNumericValue = (value) => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
-const PROJECT_STATUS_OPTIONS = ['Completed', 'Ongoing', 'Planning'];
+// Canonical project status values from the dataset `Project__1` column.
+// Filter UI order (2×2): Completed | Ongoing / Funded | Planned
+const PROJECT_STATUS_OPTIONS = ['Completed', 'Ongoing', 'Funded', 'Planned'];
 
-// Professor-approved mapping from the raw LMS `Project__1` status to one of the
-// three lifecycle categories. Used only as a fallback when a feature does not
-// carry the pre-computed `Status_Category` column (e.g. older/un-reseeded data).
-const PROJECT_STATUS_CATEGORY_MAP = {
-  'completed': 'Completed',
-  'project complete': 'Completed',
-  'ongoing': 'Ongoing',
-  'funding secured': 'Ongoing',
-  'construction/project begun': 'Ongoing',
-  '25% complete': 'Ongoing',
-  '50% complete': 'Ongoing',
-  '75% complete': 'Ongoing',
-  'other': 'Ongoing',
-  'future unfunded project': 'Planning',
-  'funding not yet secured': 'Planning',
-  'funding applied for': 'Planning',
-  'project in planning stage': 'Planning',
-  'project deferred': 'Planning',
+const PROJECT_STATUS_COLORS = {
+  Completed: '#27ae60',
+  Ongoing: '#b45309',
+  Funded: '#0f766e',
+  Planned: '#2563eb',
 };
 
-const getProjectStatusCategory = (props = {}) => {
-  // Primary source: the pre-categorized column baked into the dataset.
-  const category = String(props['Status_Category'] ?? '').trim();
-  if (PROJECT_STATUS_OPTIONS.includes(category)) return category;
-  // Fallback: derive from the raw status string.
-  const rawStatus = String(props['Project__1'] ?? props['Project Status'] ?? '').trim().toLowerCase();
-  return PROJECT_STATUS_CATEGORY_MAP[rawStatus] ?? 'Ongoing';
+const getProjectStatus = (props = {}) => {
+  const raw = String(props['Project__1'] ?? props['Project Status'] ?? '').trim();
+  if (PROJECT_STATUS_OPTIONS.includes(raw)) return raw;
+  // Case-insensitive match for slightly inconsistent source values.
+  const lower = raw.toLowerCase();
+  const matched = PROJECT_STATUS_OPTIONS.find((s) => s.toLowerCase() === lower);
+  return matched ?? (raw || 'Ongoing');
 };
 
 const toWgs84Coordinate = ([x, y]) => {
@@ -189,18 +178,76 @@ const createCircleBuffer = (center, radiusInMeters = 50) => {
   return circle;
 };
 
-/** Shift bounds northeast (avoid south/west empty areas when fitting “all” markers). */
-const shiftBoundsNortheast = (bounds) => {
-  const ne = bounds.getNorthEast();
-  const sw = bounds.getSouthWest();
-  const lngRange = ne.lng - sw.lng;
-  const latRange = ne.lat - sw.lat;
-  const shiftLng = lngRange * 0.55;
-  const shiftLat = latRange * 0.50;
-  const shiftedBounds = new mapboxgl.LngLatBounds();
-  shiftedBounds.extend([sw.lng + shiftLng, sw.lat + shiftLat]);
-  shiftedBounds.extend([ne.lng, ne.lat]);
-  return shiftedBounds;
+/** Miami-Dade urban core — where most inventory projects cluster. */
+const MIAMI_DADE_DEFAULT_CENTER = [-80.25, 25.78];
+const MIAMI_DADE_DEFAULT_ZOOM = 10;
+const MIAMI_DADE_COUNTY_BOUNDS = {
+  west: -80.9,
+  south: 25.2,
+  east: -80.1,
+  north: 25.98,
+};
+
+const OVERVIEW_FIT_PADDING = { top: 10, bottom: 300, left: 200, right: 10 };
+
+const percentileValue = (sorted, p) => {
+  if (!sorted.length) return null;
+  const idx = Math.min(sorted.length - 1, Math.max(0, Math.floor((sorted.length - 1) * p)));
+  return sorted[idx];
+};
+
+/**
+ * Bounds covering where most projects sit (percentile cluster inside Miami-Dade).
+ * Ignores sparse western/southern tails so the opening view stays on the urban corridor.
+ */
+const getMostProjectsBounds = (lngLats) => {
+  if (!lngLats?.length) return null;
+
+  const inCounty = lngLats.filter(
+    ({ lng, lat }) =>
+      lng >= MIAMI_DADE_COUNTY_BOUNDS.west &&
+      lng <= MIAMI_DADE_COUNTY_BOUNDS.east &&
+      lat >= MIAMI_DADE_COUNTY_BOUNDS.south &&
+      lat <= MIAMI_DADE_COUNTY_BOUNDS.north
+  );
+  const pts = inCounty.length >= 10 ? inCounty : lngLats;
+  const lngs = pts.map((p) => p.lng).sort((a, b) => a - b);
+  const lats = pts.map((p) => p.lat).sort((a, b) => a - b);
+
+  // ~10th–90th percentile: most markers, without Everglades / far-south outliers.
+  const west = percentileValue(lngs, 0.1);
+  const east = percentileValue(lngs, 0.9);
+  const south = percentileValue(lats, 0.1);
+  const north = percentileValue(lats, 0.9);
+  if ([west, east, south, north].some((v) => v == null)) return null;
+
+  const bounds = new mapboxgl.LngLatBounds([west, south], [east, north]);
+  // Guard against a degenerate box when nearly all points coincide.
+  if (east - west < 0.05) {
+    bounds.extend([west - 0.08, south]);
+    bounds.extend([east + 0.08, north]);
+  }
+  if (north - south < 0.05) {
+    bounds.extend([west, south - 0.06]);
+    bounds.extend([east, north + 0.06]);
+  }
+  return bounds;
+};
+
+const fitMapToMostProjects = (mapInstance, markers, { duration = 0, maxZoom = 11 } = {}) => {
+  if (!mapInstance || !markers?.length) return false;
+  const lngLats = markers.map((marker) => {
+    const { lng, lat } = marker.getLngLat();
+    return { lng, lat };
+  });
+  const bounds = getMostProjectsBounds(lngLats);
+  if (!bounds || bounds.isEmpty()) return false;
+  mapInstance.fitBounds(bounds, {
+    padding: OVERVIEW_FIT_PADDING,
+    maxZoom,
+    duration,
+  });
+  return true;
 };
 
 // Format cost using compact notation (e.g., "3M", "1.2B")
@@ -236,6 +283,212 @@ const formatCityName = (cityName) => {
     .split(/\s+/)
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
+};
+
+/** Display label for infrastructure type: "Blue Infrastructure" → "Blue". */
+const formatInfrastructureType = (type) => {
+  if (!type || typeof type !== 'string') return type;
+  const short = type.replace(/\s+infrastructure$/i, '').trim() || type;
+  // American English: normalize British "Grey" → "Gray"
+  if (/^grey$/i.test(short)) return 'Gray';
+  return short;
+};
+
+/** Canonicalize stored infrastructure type values to American English "Gray". */
+const canonicalizeInfrastructureTypeValue = (type) => {
+  if (!type || typeof type !== 'string') return type;
+  const trimmed = type.trim();
+  if (/^grey$/i.test(trimmed)) return 'Gray';
+  if (/^grey\s+infrastructure$/i.test(trimmed)) return 'Gray Infrastructure';
+  if (/^gray$/i.test(trimmed)) return 'Gray';
+  if (/^gray\s+infrastructure$/i.test(trimmed)) return 'Gray Infrastructure';
+  return trimmed;
+};
+
+/** Preferred Infrastructure Type filter order (2×2 grid). */
+const INFRASTRUCTURE_TYPE_ORDER = ['Blue', 'Green', 'Gray', 'Hybrid'];
+
+/**
+ * Hover definitions for Infrastructure Type filter info icons.
+ */
+const INFRASTRUCTURE_TYPE_DEFINITIONS = {
+  Blue:
+    'Blue infrastructure encompasses natural and engineered water-based systems that mitigate flooding, support adaptation to sea-level rise, improve water quality, and sustain diverse aquatic ecosystems.',
+  Green:
+    'Green infrastructure integrates vegetation, soils, and ecological processes to mitigate urban heat, manage stormwater, improve air and water quality, and support biodiversity.',
+  Gray:
+    'Gray infrastructure comprises conventional engineered systems constructed with materials such as concrete and steel to deliver essential urban services, including stormwater conveyance, flood control, and transportation.',
+  Hybrid:
+    'Hybrid infrastructure integrates elements of blue, green, and gray systems to deliver adaptive, multi-functional solutions.',
+};
+
+const getInfrastructureTypeDefinition = (type) => {
+  const label = formatInfrastructureType(type);
+  if (!label) return '';
+  const normalized = String(label).trim();
+  const key = Object.keys(INFRASTRUCTURE_TYPE_DEFINITIONS).find(
+    (k) => k.toLowerCase() === normalized.toLowerCase()
+  );
+  if (key) return INFRASTRUCTURE_TYPE_DEFINITIONS[key];
+  // Legacy British spelling still present in some source data
+  if (/^grey$/i.test(normalized)) return INFRASTRUCTURE_TYPE_DEFINITIONS.Gray;
+  return '';
+};
+
+/** Info icon with a fixed-position tooltip that stays inside the viewport. */
+function InfrastructureTypeInfoIcon({ label, definition }) {
+  const btnRef = useRef(null);
+  const tipRef = useRef(null);
+  const [open, setOpen] = useState(false);
+  const [coords, setCoords] = useState({ top: 0, left: 0, placement: 'below' });
+
+  const updatePosition = useCallback(() => {
+    const btn = btnRef.current;
+    const tip = tipRef.current;
+    if (!btn || !tip) return;
+
+    const margin = 8;
+    const gap = 8;
+    const rect = btn.getBoundingClientRect();
+    const tipWidth = tip.offsetWidth;
+    const tipHeight = tip.offsetHeight;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    const spaceBelow = vh - rect.bottom - margin;
+    const spaceAbove = rect.top - margin;
+    const preferBelow = spaceBelow >= tipHeight + gap || spaceBelow >= spaceAbove;
+    const placement = preferBelow ? 'below' : 'above';
+    let top = preferBelow
+      ? rect.bottom + gap
+      : rect.top - tipHeight - gap;
+
+    if (top < margin) top = margin;
+    if (top + tipHeight > vh - margin) top = Math.max(margin, vh - margin - tipHeight);
+
+    // Prefer centering on the icon; clamp horizontally so the box stays on-screen.
+    let left = rect.left + rect.width / 2 - tipWidth / 2;
+    if (left + tipWidth > vw - margin) left = vw - margin - tipWidth;
+    if (left < margin) left = margin;
+
+    setCoords({ top, left, placement });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!open) return undefined;
+    updatePosition();
+    const onReposition = () => updatePosition();
+    window.addEventListener('resize', onReposition);
+    window.addEventListener('scroll', onReposition, true);
+    return () => {
+      window.removeEventListener('resize', onReposition);
+      window.removeEventListener('scroll', onReposition, true);
+    };
+  }, [open, definition, updatePosition]);
+
+  return (
+    <span
+      className="infra-type-info"
+      onMouseEnter={() => definition && setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+    >
+      <button
+        ref={btnRef}
+        type="button"
+        className="infra-type-info__btn"
+        aria-label={`About ${label} infrastructure`}
+        aria-describedby={open && definition ? `infra-type-tip-${label}` : undefined}
+        onFocus={() => definition && setOpen(true)}
+        onBlur={() => setOpen(false)}
+      >
+        <svg
+          className="infra-type-info__icon"
+          viewBox="0 0 16 16"
+          width="14"
+          height="14"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" strokeWidth="1.5" />
+          <circle cx="8" cy="4.75" r="0.9" fill="currentColor" />
+          <path
+            d="M8 7.1v4.2"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          />
+        </svg>
+      </button>
+      {open && definition
+        ? createPortal(
+            <span
+              ref={tipRef}
+              id={`infra-type-tip-${label}`}
+              className={`infra-type-info__tooltip infra-type-info__tooltip--portal infra-type-info__tooltip--${coords.placement}`}
+              role="tooltip"
+              style={{ top: coords.top, left: coords.left }}
+            >
+              {definition}
+            </span>,
+            document.body
+          )
+        : null}
+    </span>
+  );
+}
+
+const infrastructureTypeSortKey = (type) => {
+  const label = formatInfrastructureType(type);
+  const idx = INFRASTRUCTURE_TYPE_ORDER.findIndex(
+    (o) => o.toLowerCase() === String(label || '').toLowerCase()
+  );
+  return idx === -1 ? INFRASTRUCTURE_TYPE_ORDER.length : idx;
+};
+
+/** Case-insensitive key for disaster focus (handles typos and display aliases). */
+const disasterFocusKey = (focus) => {
+  if (typeof focus !== 'string') return '';
+  const key = focus.trim().toLowerCase();
+  if (key === 'storm surge' || key === 'storms') return 'storms';
+  return key;
+};
+
+/**
+ * Canonical display label for disaster focus.
+ * Collapses Multi-hazard / Multi-Hazard casing typos to "Multi-Hazard".
+ * Maps Storm Surge → Storms.
+ */
+const formatDisasterFocus = (focus) => {
+  if (!focus || typeof focus !== 'string') return focus;
+  const trimmed = focus.trim();
+  const key = disasterFocusKey(trimmed);
+  if (key === 'multi-hazard') return 'Multi-Hazard';
+  if (key === 'storms') return 'Storms';
+  return trimmed;
+};
+
+/** Preferred Disaster Focus filter order; Critical Infrastructure is last (full-width row). */
+const DISASTER_FOCUS_ORDER = [
+  'Flooding',
+  'Storms',
+  'Extreme Heat',
+  'Multi-Hazard',
+  'Critical Infrastructure',
+];
+
+const disasterFocusSortKey = (focus) => {
+  const label = formatDisasterFocus(focus);
+  const idx = DISASTER_FOCUS_ORDER.findIndex(
+    (o) => disasterFocusKey(o) === disasterFocusKey(label)
+  );
+  return idx === -1 ? DISASTER_FOCUS_ORDER.length : idx;
+};
+
+const disasterFocusMatches = (selectedFocuses, focus) => {
+  if (!selectedFocuses.length) return true;
+  const key = disasterFocusKey(focus);
+  return selectedFocuses.some((selected) => disasterFocusKey(selected) === key);
 };
 
 const SUPABASE_STORAGE = 'https://mmlqltdcpsuxirbqhugw.supabase.co/storage/v1/object/public/project-data';
@@ -867,6 +1120,8 @@ const Dashboard = () => {
         return '#27ae60';
       case 'Grey Infrastructure':
       case 'Grey':
+      case 'Gray Infrastructure':
+      case 'Gray':
         return '#95a5a6';
       case 'Hybrid':
         return '#9b59b6'; // Purple for hybrid infrastructure
@@ -1430,8 +1685,8 @@ const Dashboard = () => {
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/light-v11',
-      center: [-80.70, 26.15],
-      zoom: 11,
+      center: MIAMI_DADE_DEFAULT_CENTER,
+      zoom: MIAMI_DADE_DEFAULT_ZOOM,
       attributionControl: false
     });
 
@@ -1545,6 +1800,16 @@ const Dashboard = () => {
             ? parseFloat(rawCost.replace(/[$,]/g, ''))
             : parseFloat(rawCost);
           return Number.isFinite(numericCost) && numericCost > 0;
+        }).map((feature) => {
+          const props = feature?.properties;
+          if (!props) return feature;
+          const next = { ...props };
+          for (const key of ['Infrastruc', 'Infrastructure Type', 'Type']) {
+            if (next[key] != null && next[key] !== '') {
+              next[key] = canonicalizeInfrastructureTypeValue(next[key]);
+            }
+          }
+          return { ...feature, properties: next };
         });
 
         const filteredData = { ...data, features: costFilteredFeatures };
@@ -1675,22 +1940,9 @@ const Dashboard = () => {
 
         setAllMarkers(markers);
 
-        // Use marker positions (valid points only) to compute initial bounds
+        // Frame the dense Miami-Dade project cluster (not full county extent / empty fringes)
         if (markers.length > 0) {
-          const bounds = new mapboxgl.LngLatBounds();
-          markers.forEach(marker => {
-            const coords = marker.getLngLat();
-            bounds.extend([coords.lng, coords.lat]);
-          });
-          if (!bounds.isEmpty()) {
-            // Use shifted bounds for default position (shifted northeast)
-            const shiftedBounds = shiftBoundsNortheast(bounds);
-            map.current.fitBounds(shiftedBounds, { 
-              padding: { top: 10, bottom: 300, left: 200, right: 10 },
-              maxZoom: 13,
-              duration: 0 // No animation on initial load
-            });
-          }
+          fitMapToMostProjects(map.current, markers, { duration: 0, maxZoom: 11 });
         }
 
         setLoading(false);
@@ -2049,10 +2301,36 @@ const Dashboard = () => {
   const infrastructureTypes = getUniqueValues('Infrastruc');
   const legacyTypes = getUniqueValues('Infrastructure Type');
   const fallbackTypes = getUniqueValues('Type');
-  const uniqueTypes = infrastructureTypes.length > 0 ? infrastructureTypes : (legacyTypes.length > 0 ? legacyTypes : fallbackTypes);
+  const uniqueTypes = (
+    infrastructureTypes.length > 0 ? infrastructureTypes : (legacyTypes.length > 0 ? legacyTypes : fallbackTypes)
+  ).slice().sort((a, b) => {
+    const diff = infrastructureTypeSortKey(a) - infrastructureTypeSortKey(b);
+    if (diff !== 0) return diff;
+    return (formatInfrastructureType(a) || '').localeCompare(formatInfrastructureType(b) || '', undefined, { sensitivity: 'base' });
+  });
   const disasterFocusNew = getUniqueValues('Disaster_F');
   const disasterFocusLegacy = getUniqueValues('Disaster Focus');
-  const uniqueDisasterFocus = disasterFocusNew.length > 0 ? disasterFocusNew : disasterFocusLegacy;
+  const uniqueDisasterFocusRaw = disasterFocusNew.length > 0 ? disasterFocusNew : disasterFocusLegacy;
+  // Dedupe case-insensitively so Multi-Hazard / Multi-hazard appear once
+  const disasterFocusByKey = new Map();
+  uniqueDisasterFocusRaw.forEach((focus) => {
+    const key = disasterFocusKey(focus);
+    if (!key) return;
+    if (!disasterFocusByKey.has(key)) {
+      disasterFocusByKey.set(key, formatDisasterFocus(focus));
+    }
+  });
+  const uniqueDisasterFocus = Array.from(disasterFocusByKey.values()).sort((a, b) => {
+    const diff = disasterFocusSortKey(a) - disasterFocusSortKey(b);
+    if (diff !== 0) return diff;
+    return (a || '').localeCompare(b || '', undefined, { sensitivity: 'base' });
+  });
+  const disasterFocusGridItems = uniqueDisasterFocus.filter(
+    (focus) => disasterFocusKey(focus) !== 'critical infrastructure'
+  );
+  const disasterFocusCritical = uniqueDisasterFocus.find(
+    (focus) => disasterFocusKey(focus) === 'critical infrastructure'
+  );
   // Get unique cities - prefer NAME field, fallback to City; dedupe case-insensitively so "Miami"/"miami"/"MIAMI" show once
   const uniqueCitiesRaw = getUniqueValues('NAME');
   const cityByLower = new Map();
@@ -2092,18 +2370,12 @@ const Dashboard = () => {
     });
 
     if (!bounds.isEmpty()) {
-      // If "All Cities" is selected, shift bounds to avoid south and west areas
+      // "All Cities": frame where most projects are; specific city: exact marker bounds
       if (!cityName || cityName === '') {
-        const shiftedBounds = shiftBoundsNortheast(bounds);
-
-        map.current.fitBounds(shiftedBounds, {
-          padding: { top: 10, bottom: 300, left: 200, right: 10 },
-          maxZoom: 13,
-          duration: 1500
-        });
+        fitMapToMostProjects(map.current, markersToZoom, { duration: 1500, maxZoom: 11 });
       } else {
         map.current.fitBounds(bounds, {
-          padding: { top: 10, bottom: 300, left: 200, right: 10 },
+          padding: OVERVIEW_FIT_PADDING,
           maxZoom: 12,
           duration: 1500
         });
@@ -2120,11 +2392,11 @@ const Dashboard = () => {
       const props = marker.feature.properties || {};
       const type = props['Infrastruc'] || props['Infrastructure Type'] || props['Type'];
       const disasterFocus = props['Disaster_F'] || props['Disaster Focus'];
-      const projectStatus = getProjectStatusCategory(props);
+      const projectStatus = getProjectStatus(props);
       const city = (props['NAME'] || props['City']) ? (props['NAME'] || props['City']).trim() : (props['NAME'] || props['City']);
 
       const typeMatch = selectedTypes.length === 0 || selectedTypes.includes(type);
-      const disasterMatch = selectedDisasterFocus.length === 0 || selectedDisasterFocus.includes(disasterFocus);
+      const disasterMatch = disasterFocusMatches(selectedDisasterFocus, disasterFocus);
       const statusMatch = selectedProjectStatuses.length === 0 || selectedProjectStatuses.includes(projectStatus);
       const selectedCityTrimmed = selectedCity ? selectedCity.trim() : selectedCity;
       const cityMatch = !selectedCityTrimmed || selectedCityTrimmed === '' || (city || '').toLowerCase() === (selectedCityTrimmed || '').toLowerCase();
@@ -2172,11 +2444,11 @@ const Dashboard = () => {
       const props = feature.properties || {};
       const type = props['Infrastruc'] || props['Infrastructure Type'] || props['Type'];
       const disasterFocus = props['Disaster_F'] || props['Disaster Focus'];
-      const projectStatus = getProjectStatusCategory(props);
+      const projectStatus = getProjectStatus(props);
       const city = (props['NAME'] || props['City']) ? (props['NAME'] || props['City']).trim() : (props['NAME'] || props['City']);
       
       const typeMatch = selectedTypes.length === 0 || selectedTypes.includes(type);
-      const disasterMatch = selectedDisasterFocus.length === 0 || selectedDisasterFocus.includes(disasterFocus);
+      const disasterMatch = disasterFocusMatches(selectedDisasterFocus, disasterFocus);
       const statusMatch = selectedProjectStatuses.length === 0 || selectedProjectStatuses.includes(projectStatus);
       const selectedCityTrimmed = selectedCity ? selectedCity.trim() : selectedCity;
       const cityMatch = !selectedCityTrimmed || selectedCityTrimmed === '' || (city || '').toLowerCase() === (selectedCityTrimmed || '').toLowerCase();
@@ -2215,11 +2487,11 @@ const Dashboard = () => {
       const props = feature.properties || {};
       const type = props['Infrastruc'] || props['Infrastructure Type'] || props['Type'];
       const disasterFocus = props['Disaster_F'] || props['Disaster Focus'];
-      const projectStatus = getProjectStatusCategory(props);
+      const projectStatus = getProjectStatus(props);
       const city = (props['NAME'] || props['City']) ? (props['NAME'] || props['City']).trim() : (props['NAME'] || props['City']);
       
       const typeMatch = selectedTypes.length === 0 || selectedTypes.includes(type);
-      const disasterMatch = selectedDisasterFocus.length === 0 || selectedDisasterFocus.includes(disasterFocus);
+      const disasterMatch = disasterFocusMatches(selectedDisasterFocus, disasterFocus);
       const statusMatch = selectedProjectStatuses.length === 0 || selectedProjectStatuses.includes(projectStatus);
       const selectedCityTrimmed = selectedCity ? selectedCity.trim() : selectedCity;
       const cityMatch = !selectedCityTrimmed || selectedCityTrimmed === '' || (city || '').toLowerCase() === (selectedCityTrimmed || '').toLowerCase();
@@ -2239,8 +2511,14 @@ const Dashboard = () => {
         normalizedType = 'Blue';
       } else if (type === 'Green Infrastructure' || type === 'Green') {
         normalizedType = 'Green';
-      } else if (type === 'Grey Infrastructure' || type === 'Grey') {
-        normalizedType = 'Grey';
+      } else if (
+        type === 'Grey Infrastructure' ||
+        type === 'Grey' ||
+        type === 'Gray Infrastructure' ||
+        type === 'Gray' ||
+        (typeof type === 'string' && /^gr[ae]y(\s+infrastructure)?$/i.test(type.trim()))
+      ) {
+        normalizedType = 'Gray';
       } else if (type === 'Hybrid') {
         normalizedType = 'Hybrid';
       }
@@ -2252,7 +2530,7 @@ const Dashboard = () => {
     const colors = {
       'Blue': '#3498db',
       'Green': '#27ae60',
-      'Grey': '#95a5a6',
+      'Gray': '#95a5a6',
       'Hybrid': '#9b59b6',
       'Unknown': '#95a5a6'
     };
@@ -2571,12 +2849,20 @@ const Dashboard = () => {
             )}
           </div>
           
-          {/* Project Status Filter */}
+          {/* Project Status Filter — 2×2: Completed | Ongoing / Funded | Planned */}
           <div style={{ marginBottom: '24px' }}>
             <h2 style={{ fontSize: '1.1em', fontWeight: '500', color: '#2c3e50', marginBottom: '12px' }}>
               Project Status
             </h2>
-            <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                columnGap: '16px',
+                rowGap: '10px',
+                alignItems: 'center',
+              }}
+            >
               {PROJECT_STATUS_OPTIONS.map(status => (
                 <label key={status} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                   <input
@@ -2615,29 +2901,47 @@ const Dashboard = () => {
             )}
           </div>
 
-          {/* Type Filter */}
+          {/* Type Filter — 2×2: Blue | Green / Gray | Hybrid */}
           <div style={{ marginBottom: '24px' }}>
             <h2 style={{ fontSize: '1.1em', fontWeight: '500', color: '#2c3e50', marginBottom: '12px' }}>
               Infrastructure Type
             </h2>
-            <div style={{ maxHeight: '150px', overflowY: 'auto' }}>
-              {uniqueTypes.map(type => (
-                <label key={type} style={{ display: 'flex', alignItems: 'center', marginBottom: '8px', cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    checked={selectedTypes.includes(type)}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedTypes([...selectedTypes, type]);
-                      } else {
-                        setSelectedTypes(selectedTypes.filter(t => t !== type));
-                      }
-                    }}
-                    style={{ marginRight: '8px', cursor: 'pointer' }}
-                  />
-                  <span style={{ color: '#445461', fontSize: '0.9em' }}>{type}</span>
-                </label>
-              ))}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                columnGap: '16px',
+                rowGap: '10px',
+                alignItems: 'center',
+              }}
+            >
+              {uniqueTypes.map(type => {
+                const typeLabel = formatInfrastructureType(type);
+                const typeDefinition = getInfrastructureTypeDefinition(type);
+                return (
+                  <div key={type} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', gap: '4px', minWidth: 0 }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedTypes.includes(type)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedTypes([...selectedTypes, type]);
+                          } else {
+                            setSelectedTypes(selectedTypes.filter(t => t !== type));
+                          }
+                        }}
+                        style={{ marginRight: '4px', cursor: 'pointer' }}
+                      />
+                      <span style={{ color: '#445461', fontSize: '0.9em' }}>{typeLabel}</span>
+                    </label>
+                    <InfrastructureTypeInfoIcon
+                      label={typeLabel}
+                      definition={typeDefinition}
+                    />
+                  </div>
+                );
+              })}
             </div>
             {selectedTypes.length > 0 && (
               <button
@@ -2659,14 +2963,22 @@ const Dashboard = () => {
             )}
           </div>
 
-          {/* Disaster Focus Filter */}
+          {/* Disaster Focus Filter — 2×2 then Critical Infrastructure full-width */}
           <div style={{ marginBottom: '24px' }}>
             <h2 style={{ fontSize: '1.1em', fontWeight: '500', color: '#2c3e50', marginBottom: '12px' }}>
               Disaster Focus
             </h2>
-            <div style={{ maxHeight: '150px', overflowY: 'auto' }}>
-              {uniqueDisasterFocus.map(focus => (
-                <label key={focus} style={{ display: 'flex', alignItems: 'center', marginBottom: '8px', cursor: 'pointer' }}>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                columnGap: '16px',
+                rowGap: '10px',
+                alignItems: 'center',
+              }}
+            >
+              {disasterFocusGridItems.map(focus => (
+                <label key={focus} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                   <input
                     type="checkbox"
                     checked={selectedDisasterFocus.includes(focus)}
@@ -2682,6 +2994,26 @@ const Dashboard = () => {
                   <span style={{ color: '#445461', fontSize: '0.9em' }}>{focus}</span>
                 </label>
               ))}
+              {disasterFocusCritical && (
+                <label
+                  key={disasterFocusCritical}
+                  style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', gridColumn: '1 / -1' }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedDisasterFocus.includes(disasterFocusCritical)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedDisasterFocus([...selectedDisasterFocus, disasterFocusCritical]);
+                      } else {
+                        setSelectedDisasterFocus(selectedDisasterFocus.filter(f => f !== disasterFocusCritical));
+                      }
+                    }}
+                    style={{ marginRight: '8px', cursor: 'pointer' }}
+                  />
+                  <span style={{ color: '#445461', fontSize: '0.9em' }}>{disasterFocusCritical}</span>
+                </label>
+              )}
             </div>
             {selectedDisasterFocus.length > 0 && (
               <button
@@ -3117,7 +3449,9 @@ const Dashboard = () => {
                     const props = result.properties || {};
                     const projectName = props['Project_Na'] || props['Project Name'] || 'Unnamed Project';
                     const city = (props['NAME'] || props['City']) ? formatCityName((props['NAME'] || props['City']).trim()) : '—';
-                    const infrastructureType = props['Infrastruc'] || props['Infrastructure Type'] || props['Type'] || '—';
+                    const infrastructureType = formatInfrastructureType(
+                      props['Infrastruc'] || props['Infrastructure Type'] || props['Type'] || '—'
+                    );
                     const description = props['New_15_25_'] || props['New 15-25 Words Project Description'] || '';
                     const isSelected = index === selectedResultIndex;
 
@@ -3670,15 +4004,11 @@ const MapboxPopup = ({ map, activeFeature }) => {
           <tbody>
             <tr>
               <td style={{ color: '#34495e', fontWeight: 600, width: 110 }}>Infrastructure Type</td>
-              <td style={{ color: '#2c3e50' }}>{props['Infrastruc'] || props['Infrastructure Type'] || props['Type'] || '—'}</td>
-            </tr>
-            <tr>
-              <td style={{ color: '#34495e', fontWeight: 600 }}>Category</td>
-              <td style={{ color: '#2c3e50' }}>{props['Categories'] || '—'}</td>
+              <td style={{ color: '#2c3e50' }}>{formatInfrastructureType(props['Infrastruc'] || props['Infrastructure Type'] || props['Type'] || '—')}</td>
             </tr>
             <tr>
               <td style={{ color: '#34495e', fontWeight: 600 }}>Focus</td>
-              <td style={{ color: '#2c3e50' }}>{props['Disaster_F'] || props['Disaster Focus'] || '—'}</td>
+              <td style={{ color: '#2c3e50' }}>{formatDisasterFocus(props['Disaster_F'] || props['Disaster Focus'] || '—')}</td>
             </tr>
             <tr>
               <td style={{ color: '#34495e', fontWeight: 600 }}>City</td>
@@ -3686,8 +4016,8 @@ const MapboxPopup = ({ map, activeFeature }) => {
             </tr>
             <tr>
               <td style={{ color: '#34495e', fontWeight: 600 }}>Status</td>
-              <td style={{ color: { Completed: '#27ae60', Ongoing: '#b45309', Planning: '#2563eb' }[getProjectStatusCategory(props)] || '#b45309', fontWeight: 700 }}>
-                {getProjectStatusCategory(props)}
+              <td style={{ color: PROJECT_STATUS_COLORS[getProjectStatus(props)] || '#b45309', fontWeight: 700 }}>
+                {getProjectStatus(props)}
               </td>
             </tr>
             <tr>
@@ -3698,7 +4028,7 @@ const MapboxPopup = ({ map, activeFeature }) => {
           </tbody>
         </table>
         {(props['New_15_25_'] || props['New 15-25 Words Project Description']) && (
-          <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid #ecf0f1', color: '#5d656d', fontSize: '0.85em', lineHeight: 1.4 }}>
+          <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid #ecf0f1', color: '#000000', fontSize: '0.9em', lineHeight: 1.4 }}>
             {props['New_15_25_'] || props['New 15-25 Words Project Description']}
           </div>
         )}

@@ -29,7 +29,7 @@ REVIEW_DESC_COL = "description"
 REVIEW_PRED_COL = "Infrastruc_predicted"
 REVIEW_NOTE_COL = "correction_notes"
 REVIEW_LABEL_ALIASES = {
-    "blue": "Blue", "green": "Green", "grey": "Grey", "gray": "Grey", "hybrid": "Hybrid",
+    "blue": "Blue", "green": "Green", "grey": "Gray", "gray": "Gray", "hybrid": "Hybrid",
 }
 
 OLLAMA_MODEL = "qwen3:8b"
@@ -41,18 +41,20 @@ PASS1_OPTIONS = {"temperature": 0}
 PASS2_OPTIONS = {"temperature": 0.6, "top_p": 0.95, "top_k": 20}
 RECLASSIFY_CONFIDENCES = {"medium", "low"}
 
-ALLOWED_LABELS = ["Blue", "Green", "Grey", "Hybrid"]
+ALLOWED_LABELS = ["Blue", "Green", "Gray", "Hybrid"]
 DEFINITION_KEY_TO_LABEL = {
     "Blue Infrastructure": "Blue",
     "Green Infrastructure": "Green",
-    "Grey Infrastructure": "Grey",
+    "Gray Infrastructure": "Gray",
+    "Grey Infrastructure": "Gray",
     "Hybrid Infrastructure": "Hybrid",
     "Hybrid": "Hybrid",
 }
 LONG_DEFINITION_KEY_TO_LABEL = {
     "Blue Infrastructure": "Blue Infrastructure",
     "Green Infrastructure": "Green Infrastructure",
-    "Grey Infrastructure": "Grey Infrastructure",
+    "Gray Infrastructure": "Gray Infrastructure",
+    "Grey Infrastructure": "Gray Infrastructure",
     "Hybrid Infrastructure": "Hybrid",
     "Hybrid": "Hybrid",
 }
@@ -137,7 +139,7 @@ def order_fewshot_examples(examples: list[dict]) -> list[dict]:
         ordered += [blue, hybrid]
     seen = {id(e) for e in ordered}
     ordered += [e for e in by["Blue"] + by["Hybrid"] if id(e) not in seen]
-    ordered += by["Green"] + by["Grey"]
+    ordered += by["Green"] + by["Gray"]
     return ordered
 
 def load_professor_review_fewshot(
@@ -231,15 +233,15 @@ def load_definitions() -> dict:
         return json.load(f)
 
 def parse_label(raw) -> str:
-    if not raw or not isinstance(raw, str): return "Grey"
+    if not raw or not isinstance(raw, str): return "Gray"
     l = raw.strip().lower()
     for lab in ALLOWED_LABELS:
         if lab.lower() == l: return lab
     if "hybrid" in l: return "Hybrid"
     if "blue" in l: return "Blue"
     if "green" in l: return "Green"
-    if "grey" in l or "gray" in l: return "Grey"
-    return "Grey"
+    if "gray" in l or "grey" in l: return "Gray"
+    return "Gray"
 
 def strip_thinking(raw: str) -> str:
     if not raw: return ""
@@ -248,7 +250,7 @@ def strip_thinking(raw: str) -> str:
 def parse_response(raw: str):
     """(label, confidence, reasoning, parse_failed)"""
     cleaned = strip_thinking(raw)
-    if not cleaned: return "Grey", "low", "", True
+    if not cleaned: return "Gray", "low", "", True
     try:
         clean = cleaned
         if clean.startswith("```"):
@@ -331,7 +333,7 @@ def build_examples(df, pool_indices) -> list[dict]:
                    "description": build_description(row),
                    "label": parse_label(safe_str(row.get(INFRA_COL)))})
     # order_fewshot_examples interleaves Blue/Hybrid first (the main error mode is
-    # true-Hybrid -> predicted-Blue), then Green and Grey.
+    # true-Hybrid -> predicted-Blue), then Green and Gray.
     return order_fewshot_examples(ex)
 
 def build_prompt(
@@ -344,7 +346,7 @@ def build_prompt(
 ) -> str:
     label_map = label_map or DEFINITION_KEY_TO_LABEL
     L = ["You are an expert classifier for climate-resilience and urban-infrastructure projects.",
-         "Assign exactly one type (Blue, Green, Grey, or Hybrid) from the definitions below.", "",
+         "Assign exactly one type (Blue, Green, Gray, or Hybrid) from the definitions below.", "",
          "─── DEFINITIONS ───"]
     for key, d in definitions.items():
         label = label_map.get(key, key)
@@ -353,7 +355,7 @@ def build_prompt(
         "─── HOW TO DECIDE (this dataset's convention — follow in order) ───",
         "1. List the distinct physical components/actions in the project.",
         "2. Categorize each component:",
-        "   • GREY — engineered / structural systems, INCLUDING engineered water CONVEYANCE that moves",
+        "   • GRAY — engineered / structural systems, INCLUDING engineered water CONVEYANCE that moves",
         "     water away: storm sewers, pipes, drainage networks, catch basins, manholes, culverts,",
         "     exfiltration trenches, pump stations, seawalls, floodwalls, flood control, lined/structural",
         "     canals, roads, bridges, buildings, generators, solar, wind/structural retrofits,",
@@ -364,25 +366,25 @@ def build_prompt(
         "     conveyance): stormwater DETENTION / retention ponds and basins, living shorelines, reef",
         "     systems, beach/dune renourishment, restored wetlands, natural water-quality/ecosystem restoration.",
         "3. Decide:",
-        "   • Only Grey-type components (engineered water counts as Grey) → Grey.",
+        "   • Only Gray-type components (engineered water counts as Gray) → Gray.",
         "   • Only Green → Green.   • Only nature-based water (Blue) → Blue.",
-        "   • A Grey/structural element COMBINED with a Green or nature-based element → Hybrid",
+        "   • A Gray/structural element COMBINED with a Green or nature-based element → Hybrid",
         "     (e.g. drainage PLUS tree planting or a park, seawall PLUS a living shoreline/dune,",
         "     'gray & green' / 'integrated' projects).",
         "",
         "CRITICAL CONVENTIONS (these override the general definitions above):",
         "• Engineered water CONVEYANCE that moves water away — pipes, drainage networks, catch basins,",
         "  manholes, culverts, exfiltration trenches, storm sewers, pump stations, seawalls, flood control",
-        "  — is GREY, not Blue. Most drainage/stormwater projects here are Grey.",
+        "  — is GRAY, not Blue. Most drainage/stormwater projects here are Gray.",
         "• Blue = water HELD as the feature (stormwater detention/retention ponds and basins) OR",
         "  nature-based water (living shorelines, reefs, dune renourishment, restored wetlands).",
         "• A drainage/structural project is HYBRID only if it CONSTRUCTS a green feature — grass/vegetated",
         "  swales, bioswales, rain gardens, tree planting, or a park. Pure conveyance (catch basins, manholes,",
-        "  culverts, exfiltration trenches, pipes) is GREY even if it regrades or modifies EXISTING roadway",
+        "  culverts, exfiltration trenches, pipes) is GRAY even if it regrades or modifies EXISTING roadway",
         "  swales/ditches — modifying an existing swale is not a green feature.",
         "• Pure vegetation/parks = Green.",
         "• Do NOT pick Blue merely because water, drainage, canal, or stormwater appears — conveyance",
-        "  (pipes, catch basins, manholes, culverts, exfiltration trenches) is Grey. Blue is only for water",
+        "  (pipes, catch basins, manholes, culverts, exfiltration trenches) is Gray. Blue is only for water",
         "  storage (detention/retention) or genuinely nature-based water.",
         "",
         "─── EXAMPLES ───", ""]
@@ -393,15 +395,15 @@ def build_prompt(
           "Classify the project below. FIRST fill \"components\" with each physical element and its",
           "approach, THEN apply the decision rule. Reply with ONLY valid JSON — no extra text, no markdown.", "",
           "The \"type\" MUST follow from your \"components\":",
-          "• If EVERY component is (Grey) → type = Grey. (A seawall, drainage, or pump tagged (Grey) is GREY,",
+          "• If EVERY component is (Gray) → type = Gray. (A seawall, drainage, or pump tagged (Gray) is GRAY,",
           "  even when the project is coastal or raises elevation — do NOT pick Blue for water/coastal wording",
           "  when no component is (Blue).)",
           "• Only (Green) components → Green.   • Only (Blue) components → Blue.",
-          "• Components include (Grey) AND a (Green) or (Blue) → Hybrid.",
+          "• Components include (Gray) AND a (Green) or (Blue) → Hybrid.",
           "",
           '{',
-          '  "components": ["e.g. \\"seawall (Grey)\\", \\"living shoreline (Blue)\\""],',
-          '  "type": "Blue | Green | Grey | Hybrid",',
+          '  "components": ["e.g. \\"seawall (Gray)\\", \\"living shoreline (Blue)\\""],',
+          '  "type": "Blue | Green | Gray | Hybrid",',
           '  "confidence": "high | medium | low",',
           '  "reasoning": "one concise sentence; if Hybrid, name the two approaches"', '}', "",
           f"Title: {title}",
@@ -449,7 +451,7 @@ def run_pass(df, definitions, examples, row_indices, *, think, options, ckpt_pat
             raw = call_ollama(prompt, think=think, options=options)
             label, conf, reason, failed = parse_response(raw); err = ""
         except Exception as e:  # noqa: BLE001
-            raw, label, conf, reason, failed, err = "", "Grey", "low", "", True, str(e)
+            raw, label, conf, reason, failed, err = "", "Gray", "low", "", True, str(e)
         rec = {"df_index": int(idx), "pass": pass_name, "Project_Na": title, "description": desc,
                "Infrastruc_predicted": label, "confidence": conf, "reasoning": reason,
                "parse_failed": failed, "error": err, "raw_response": raw}

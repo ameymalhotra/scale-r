@@ -11,7 +11,7 @@ data/reviewed/professor_review_infrastructure_2026-06-09.xlsx.
 This is the CSV sibling of classify_infrastructure_ollama.py (which targets the
 older merged Excel). Two key differences:
   - Reads/writes the Claude-merged CSV in data/Merged Using Claude/.
-  - Emits SHORT labels (Blue | Green | Grey | Hybrid) to match the values already
+  - Emits SHORT labels (Blue | Green | Gray | Hybrid) to match the values already
     used in that file, not the long "… Infrastructure" form.
 
 Modes:
@@ -93,31 +93,31 @@ def is_empty_infra(val) -> bool:
 
 
 def parse_label(raw: str) -> str:
-    """Normalize a model/string value to one of ALLOWED_LABELS. Default: Grey."""
+    """Normalize a model/string value to one of ALLOWED_LABELS. Default: Gray."""
     if not raw or not isinstance(raw, str):
-        return "Grey"
+        return "Gray"
     lower = raw.strip().lower()
 
     # Exact short-label match
     for label in ALLOWED_LABELS:
         if label.lower() == lower:
             return label
-    # Keyword containment (handles "Grey Infrastructure", "grayish", etc.)
+    # Keyword containment (handles "Gray Infrastructure", "grayish", etc.)
     if "hybrid" in lower:
         return "Hybrid"
     if "blue" in lower:
         return "Blue"
     if "green" in lower:
         return "Green"
-    if "grey" in lower or "gray" in lower:
-        return "Grey"
-    return "Grey"
+    if "gray" in lower or "grey" in lower:
+        return "Gray"
+    return "Gray"
 
 
 def parse_response(raw: str) -> tuple[str, str, str]:
     """Parse model JSON into (label, confidence, reasoning) with graceful fallback."""
     if not raw:
-        return "Grey", "low", ""
+        return "Gray", "low", ""
     try:
         clean = raw.strip()
         if clean.startswith("```"):
