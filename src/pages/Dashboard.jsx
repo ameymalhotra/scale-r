@@ -309,7 +309,7 @@ const canonicalizeInfrastructureTypeValue = (type) => {
 const INFRASTRUCTURE_TYPE_ORDER = ['Blue', 'Green', 'Gray', 'Hybrid'];
 
 /**
- * Hover definitions for Infrastructure Type filter info icons.
+ * Definitions for Infrastructure Type filter info icons (shown on click).
  */
 const INFRASTRUCTURE_TYPE_DEFINITIONS = {
   Blue:
@@ -335,7 +335,7 @@ const getInfrastructureTypeDefinition = (type) => {
   return '';
 };
 
-/** Info icon with a fixed-position tooltip that stays inside the viewport. */
+/** Info icon with a fixed-position tooltip that stays inside the viewport (click to toggle). */
 function InfrastructureTypeInfoIcon({ label, definition }) {
   const btnRef = useRef(null);
   const tipRef = useRef(null);
@@ -386,20 +386,41 @@ function InfrastructureTypeInfoIcon({ label, definition }) {
     };
   }, [open, definition, updatePosition]);
 
+  useEffect(() => {
+    if (!open) return undefined;
+
+    const onPointerDown = (event) => {
+      const target = event.target;
+      if (btnRef.current?.contains(target) || tipRef.current?.contains(target)) return;
+      setOpen(false);
+    };
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') setOpen(false);
+    };
+
+    document.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [open]);
+
   return (
-    <span
-      className="infra-type-info"
-      onMouseEnter={() => definition && setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
-    >
+    <span className="infra-type-info">
       <button
         ref={btnRef}
         type="button"
         className="infra-type-info__btn"
         aria-label={`About ${label} infrastructure`}
-        aria-describedby={open && definition ? `infra-type-tip-${label}` : undefined}
-        onFocus={() => definition && setOpen(true)}
-        onBlur={() => setOpen(false)}
+        aria-expanded={open}
+        aria-controls={definition ? `infra-type-tip-${label}` : undefined}
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          if (!definition) return;
+          setOpen((prev) => !prev);
+        }}
       >
         <svg
           className="infra-type-info__icon"
@@ -1896,7 +1917,7 @@ const Dashboard = () => {
 
           const marker = new mapboxgl.Marker({
             color: getMarkerColor(properties['Infrastruc'] || properties['Infrastructure Type'] || properties['Type']),
-            scale: isMobileRef.current ? 0.5 : 0.7
+            scale: isMobileRef.current ? 0.35 : 0.49
           })
             .setLngLat(displayCoords);
 

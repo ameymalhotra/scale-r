@@ -237,7 +237,7 @@ html:not(.route-dashboard) .site-navbar {
   border: none;
   background: transparent;
   color: #1a73e8;
-  cursor: help;
+  cursor: pointer;
   line-height: 0;
   border-radius: 50%;
 }
