@@ -467,35 +467,47 @@ const infrastructureTypeSortKey = (type) => {
   return idx === -1 ? INFRASTRUCTURE_TYPE_ORDER.length : idx;
 };
 
-/** Case-insensitive key for disaster focus (handles typos and display aliases). */
+/**
+ * Case-insensitive key for disaster focus. Folds pre-Stage4 category names onto
+ * the current taxonomy so archived exports filter alongside the hosted dataset.
+ */
+const DISASTER_FOCUS_ALIASES = {
+  'storm surge': 'storms & hurricanes',
+  storms: 'storms & hurricanes',
+  'critical infrastructure': 'infrastructure failure',
+  'multi-hazard': 'multi-hazard',
+};
+
 const disasterFocusKey = (focus) => {
   if (typeof focus !== 'string') return '';
   const key = focus.trim().toLowerCase();
-  if (key === 'storm surge' || key === 'storms') return 'storms';
-  return key;
+  return DISASTER_FOCUS_ALIASES[key] ?? key;
 };
 
-/**
- * Canonical display label for disaster focus.
- * Collapses Multi-hazard / Multi-Hazard casing typos to "Multi-Hazard".
- * Maps Storm Surge → Storms.
- */
+/** Canonical display label for a disaster focus key. */
+const DISASTER_FOCUS_LABELS = {
+  flooding: 'Flooding',
+  'storms & hurricanes': 'Storms & Hurricanes',
+  'coastal hazards': 'Coastal Hazards',
+  'extreme heat': 'Extreme Heat',
+  'multi-hazard': 'Multi-Hazard',
+  'infrastructure failure': 'Infrastructure Failure',
+};
+
 const formatDisasterFocus = (focus) => {
   if (!focus || typeof focus !== 'string') return focus;
   const trimmed = focus.trim();
-  const key = disasterFocusKey(trimmed);
-  if (key === 'multi-hazard') return 'Multi-Hazard';
-  if (key === 'storms') return 'Storms';
-  return trimmed;
+  return DISASTER_FOCUS_LABELS[disasterFocusKey(trimmed)] ?? trimmed;
 };
 
-/** Preferred Disaster Focus filter order; Critical Infrastructure is last (full-width row). */
+/** Preferred Disaster Focus filter order; hazard types first, compound/systems last. */
 const DISASTER_FOCUS_ORDER = [
   'Flooding',
-  'Storms',
+  'Storms & Hurricanes',
+  'Coastal Hazards',
   'Extreme Heat',
   'Multi-Hazard',
-  'Critical Infrastructure',
+  'Infrastructure Failure',
 ];
 
 const disasterFocusSortKey = (focus) => {
@@ -2346,12 +2358,6 @@ const Dashboard = () => {
     if (diff !== 0) return diff;
     return (a || '').localeCompare(b || '', undefined, { sensitivity: 'base' });
   });
-  const disasterFocusGridItems = uniqueDisasterFocus.filter(
-    (focus) => disasterFocusKey(focus) !== 'critical infrastructure'
-  );
-  const disasterFocusCritical = uniqueDisasterFocus.find(
-    (focus) => disasterFocusKey(focus) === 'critical infrastructure'
-  );
   // Get unique cities - prefer NAME field, fallback to City; dedupe case-insensitively so "Miami"/"miami"/"MIAMI" show once
   const uniqueCitiesRaw = getUniqueValues('NAME');
   const cityByLower = new Map();
@@ -2984,7 +2990,7 @@ const Dashboard = () => {
             )}
           </div>
 
-          {/* Disaster Focus Filter — 2×2 then Critical Infrastructure full-width */}
+          {/* Disaster Focus Filter — two-column grid */}
           <div style={{ marginBottom: '24px' }}>
             <h2 style={{ fontSize: '1.1em', fontWeight: '500', color: '#2c3e50', marginBottom: '12px' }}>
               Disaster Focus
@@ -2998,7 +3004,7 @@ const Dashboard = () => {
                 alignItems: 'center',
               }}
             >
-              {disasterFocusGridItems.map(focus => (
+              {uniqueDisasterFocus.map(focus => (
                 <label key={focus} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                   <input
                     type="checkbox"
@@ -3015,26 +3021,6 @@ const Dashboard = () => {
                   <span style={{ color: '#445461', fontSize: '0.9em' }}>{focus}</span>
                 </label>
               ))}
-              {disasterFocusCritical && (
-                <label
-                  key={disasterFocusCritical}
-                  style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', gridColumn: '1 / -1' }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedDisasterFocus.includes(disasterFocusCritical)}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedDisasterFocus([...selectedDisasterFocus, disasterFocusCritical]);
-                      } else {
-                        setSelectedDisasterFocus(selectedDisasterFocus.filter(f => f !== disasterFocusCritical));
-                      }
-                    }}
-                    style={{ marginRight: '8px', cursor: 'pointer' }}
-                  />
-                  <span style={{ color: '#445461', fontSize: '0.9em' }}>{disasterFocusCritical}</span>
-                </label>
-              )}
             </div>
             {selectedDisasterFocus.length > 0 && (
               <button

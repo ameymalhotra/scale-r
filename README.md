@@ -239,7 +239,8 @@ Climate-Resilience---Miami-Dade/
 - **`src/App.jsx`** - Main application component containing map logic, filters, search, and UI
 - **`src/utils/searchProjects.js`** - Search algorithm with relevance scoring
 - **`src/utils/highlightText.jsx`** - Text highlighting component for search results
-- **`public/project_inventory_database.geojson`** - Primary project data source
+- **`src/pages/Dashboard.jsx`** - Loads the hosted project layer from Supabase Storage (`projects_merged_conf1.geojson`)
+- **`data/DATA_LOG.md`** - Which project dataset is currently hosted, and its change history
 - **`public/miami_cities.geojson`** - City and district boundary data
 - **`vite.config.js`** - Build configuration and plugin setup
 
@@ -390,10 +391,10 @@ The test suite covers:
 ### Project Inventory Data
 
 **Primary Source:**
-- `public/project_inventory_database.geojson` - Complete project inventory
+- Supabase Storage `project-data/projects_merged_conf1.geojson` - the live project inventory fetched by the dashboard at runtime. Built from `data/data_work_onedrive/LMS-Merge-Stage4-final-07-01-2026.csv` via `npm run seed-merged-conf1` and `npm run upload-geojson-merged-conf1`. See `data/DATA_LOG.md` for the hosted revision and change history.
 
-**Sample Data:**
-- `public/project_inventory_database_Sample.geojson` - Sample dataset for testing
+**Legacy:**
+- `public/project_inventory_database.geojson` and `public/proj_final.geojson` - earlier static exports, no longer loaded by the app.
 
 **Data Fields:**
 - Project name

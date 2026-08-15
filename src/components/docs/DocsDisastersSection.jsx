@@ -9,15 +9,22 @@ const DISASTER_TYPES = [
       'Projects addressing risks from coastal and inland flooding driven by precipitation, tidal influences, and long-term sea-level rise, including stormwater management, drainage systems, and elevation strategies.',
   },
   {
-    icon: 'tsunami',
-    label: 'Storms',
+    icon: 'cyclone',
+    label: 'Storms & Hurricanes',
     accent: '#127ea7',
     text:
-      'Projects aimed at protecting public assets, medical compounds, and vital community facilities from high-velocity winds, cyclones, and hurricane events, including structural hardening, window and roof treatment, and coastal defense systems.',
+      'Projects aimed at protecting public assets, medical compounds, and vital community facilities from high-velocity winds, cyclones, and hurricane events, including structural hardening, window and roof treatment, and wind retrofits.',
+  },
+  {
+    icon: 'waves',
+    label: 'Coastal Hazards',
+    accent: '#0f6b8c',
+    text:
+      'Projects responding to shoreline-specific pressures such as storm surge, tidal inundation, beach and dune erosion, and saltwater intrusion, including seawalls, living shorelines, and coastal defense systems.',
   },
   {
     icon: 'thermostat',
-    label: 'Heat and Extreme Temperatures',
+    label: 'Extreme Heat',
     accent: '#f47321',
     text:
       'Projects focused on mitigating rising temperatures and urban heat island effects through cooling strategies, urban greening, shading, and heat-resilient urban design.',
@@ -31,10 +38,10 @@ const DISASTER_TYPES = [
   },
   {
     icon: 'settings_input_component',
-    label: 'Critical Infrastructure',
+    label: 'Infrastructure Failure',
     accent: '#52606b',
     text:
-      'Projects that enhance the resilient operation of essential systems including energy, communications, and transportation under hazard conditions and disruptive events.',
+      'Projects that enhance the resilient operation of essential systems including energy, water, communications, and transportation under hazard conditions and disruptive events.',
   },
 ];
 
@@ -50,8 +57,9 @@ export default function DocsDisastersSection() {
       </h2>
       <p className="docs-section__lede">
         Projects are organized by primary hazard and system stressors to help
-        users compare how resilience strategies respond to flooding, coastal
-        surge, heat, compound risk, and essential infrastructure disruption.
+        users compare how resilience strategies respond to flooding, storms,
+        coastal hazards, heat, compound risk, and essential infrastructure
+        disruption.
       </p>
 
       <ul className="docs-disaster-rows" role="list">
