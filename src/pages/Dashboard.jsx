@@ -1929,7 +1929,7 @@ const Dashboard = () => {
 
           const marker = new mapboxgl.Marker({
             color: getMarkerColor(properties['Infrastruc'] || properties['Infrastructure Type'] || properties['Type']),
-            scale: isMobileRef.current ? 0.5 : 0.7
+            scale: isMobileRef.current ? 0.35 : 0.49
           })
             .setLngLat(displayCoords);
 
