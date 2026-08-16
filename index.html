@@ -21,6 +21,37 @@
 
     <!-- Mapbox CSS -->
     <link href='https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css' rel='stylesheet' />
+
+    <script>
+      /* The /about hero is the LCP element, but React renders it, so the
+         preload scanner never sees it in the initial HTML and the request
+         waits for the bundle to execute. Injecting the preload here starts it
+         immediately.
+
+         It is route-scoped on purpose: this index.html is served for every
+         route, and an unconditional preload would pull the 1.8 MB hero down on
+         /dashboard, /team and everywhere else that never renders it. It is also
+         placed after the stylesheet links above so the render-blocking CSS is
+         queued first — an image competing with those delays first paint, which
+         costs more than the LCP it buys. */
+      (function () {
+        var path = location.pathname.replace(/\/+$/, '') || '/';
+        if (path !== '/' && path !== '/about') return;
+        var link = document.createElement('link');
+        link.rel = 'preload';
+        link.as = 'image';
+        /* imageSrcset/imageSizes must mirror the <img> exactly. If the preload
+           named a single file instead, a phone would fetch the 3200w original
+           here and then the 1200w candidate for the image itself — downloading
+           both and making things worse than no preload at all. */
+        link.imageSrcset =
+          '/Images/about-scale-r-hero-1200.webp 1200w, /Images/about-scale-r-hero.webp 3200w';
+        link.imageSizes = '100vw';
+        link.href = '/Images/about-scale-r-hero.webp';
+        link.fetchPriority = 'high';
+        document.head.appendChild(link);
+      })();
+    </script>
   </head>
   <body>
     <!-- Set early so first paint can use full-bleed widths under classic scrollbars (100vw is often wrong). -->

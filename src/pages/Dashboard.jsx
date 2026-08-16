@@ -1,6 +1,18 @@
 import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import mapboxgl from 'mapbox-gl';
+/**
+ * mapbox-gl is loaded on demand rather than imported statically.
+ *
+ * It is 1.6 MB of JavaScript — 438 KB over the wire and 87-90% of all script
+ * evaluation on this page. Importing it at the top of this module made it a
+ * static dependency of the app entry, so every route paid to download and
+ * evaluate it, including /about, which has no map at all. Loading it inside the
+ * init effect keeps it entirely off the other routes.
+ *
+ * Everything that touches this binding (marker creation, LngLatBounds maths,
+ * the popup) runs only after the map exists, so it is always assigned by then.
+ */
+let mapboxgl;
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import { searchProjects } from '../utils/searchProjects.js';
 import { highlightText } from '../utils/highlightText.jsx';
@@ -713,6 +725,7 @@ const Dashboard = () => {
   const desktopMapOverlaysRef = useRef(null);
   const mobileMapOverlaysRef = useRef(null);
   const map = useRef(null);
+  const mapInitStartedRef = useRef(false);
   const districtsRef = useRef({});
   const censusDataRef = useRef(null);
   const hoveredCensusIdRef = useRef(null);
@@ -1516,7 +1529,12 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
-    if (map.current) return;
+    // Guarded with a ref rather than `map.current` because the map is now
+    // created after an await: two effect runs (StrictMode double-invokes in
+    // development) would both get past a `map.current` check before either had
+    // assigned it, and build two maps.
+    if (mapInitStartedRef.current) return;
+    mapInitStartedRef.current = true;
 
     // Get Mapbox access token from environment variable
     const mapboxToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
@@ -1526,12 +1544,34 @@ const Dashboard = () => {
       setLoading(false);
       return;
     }
-    mapboxgl.accessToken = mapboxToken;
 
     // Long-lived for the page, like the map itself: it is never torn down, so
     // it is not terminated in a cleanup (which StrictMode's double-invoke in
     // development would otherwise kill before the second run could reuse it).
     const dataWorker = new DataParserWorker();
+
+    // Kick the downloads off now, before the map is even constructed.
+    //
+    // These used to be dispatched inside the map's `load` handler, which meant
+    // roughly 950 KB of data sat queued behind mapbox-gl's own evaluation and
+    // style fetch — 1.5s of it on desktop and 5.7s on a throttled phone — before
+    // the first byte was requested. Starting here overlaps the transfers with
+    // that work instead. The results are still applied inside `load`, in the
+    // same order as before, so nothing about the rendered outcome changes.
+    const supabaseBaseUrl = import.meta.env.VITE_SUPABASE_URL || SUPABASE_STORAGE.split('/storage/')[0];
+    const projectsJob = runWorkerTask(dataWorker, 'projects', {
+      url: `${supabaseBaseUrl}/storage/v1/object/public/project-data/${PROJECTS_GEOJSON_FILE}`,
+    });
+    const censusJob = runWorkerTask(dataWorker, 'census', {
+      censusUrl: '/femaindex.geojson',
+      creUrl: '/FL_CRE.csv',
+    });
+    // The `load` handler is what awaits these, and it runs a turn or more later.
+    // Without a handler attached now, a failure in the meantime would surface as
+    // an unhandled rejection. These no-op catches only mark the rejection as
+    // observed; the original promises still reject for the awaits below.
+    projectsJob.catch(() => {});
+    censusJob.catch(() => {});
 
     // miami_cities.geojson (2.0 MB) used to be fetched and parsed here to build
     // districtsRef: a centroid and zoom level per city polygon. The only code
@@ -1539,6 +1579,10 @@ const Dashboard = () => {
     // below and in the style-change handler, so the download, the parse and the
     // per-feature logging produced nothing that reaches the screen. Reviving the
     // district layers means reviving this loader with it.
+
+    const initMap = async () => {
+    mapboxgl = (await import('mapbox-gl')).default;
+    mapboxgl.accessToken = mapboxToken;
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
@@ -1623,19 +1667,10 @@ const Dashboard = () => {
         setLoading(false);
       }
 
-      // Fetching, JSON.parse and all feature reshaping now happen in a worker;
-      // the main thread only applies the results to the map. Both jobs start
-      // together so their downloads overlap, but they are applied in the same
-      // order as before: projects and their markers first, census tracts second.
-      const supabaseBaseUrl = import.meta.env.VITE_SUPABASE_URL || SUPABASE_STORAGE.split('/storage/')[0];
-      const projectsJob = runWorkerTask(dataWorker, 'projects', {
-        url: `${supabaseBaseUrl}/storage/v1/object/public/project-data/${PROJECTS_GEOJSON_FILE}`,
-      });
-      const censusJob = runWorkerTask(dataWorker, 'census', {
-        censusUrl: '/femaindex.geojson',
-        creUrl: '/FL_CRE.csv',
-      });
-
+      // Fetching, JSON.parse and all feature reshaping happen in the worker
+      // (dispatched above, before the map was constructed); the main thread only
+      // applies the results. They are applied in the same order as before:
+      // projects and their markers first, census tracts second.
       try {
         const { filteredData, markerSpecs, skipped, projectsSourceUrl, bufferSourceUrl } =
           await projectsJob;
@@ -1748,6 +1783,13 @@ const Dashboard = () => {
       } catch (censusError) {
         console.error('Error loading census tract data:', censusError);
       }
+    });
+    };
+
+    initMap().catch((err) => {
+      console.error('Map initialization error:', err);
+      setError('Error initializing map');
+      setLoading(false);
     });
   }, [addCensusSourceAndLayers]);
 

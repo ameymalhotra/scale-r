@@ -284,8 +284,17 @@ export default function About() {
           {/* The hero is the LCP element, but it is only discoverable once
               React has rendered, so the browser gives it default priority.
               fetchPriority affects fetch order only, never how it is drawn. */}
+          {/* Two candidates only, and that is deliberate. The selection rule
+              picks the smallest candidate at or above the required width, so a
+              1440px desktop (needing 1440, or 2880 on a retina panel) still
+              resolves to the 3200w original and renders exactly as before,
+              while a phone needing ~1082px takes the 1200w file instead of
+              dragging 1.8MB over a mobile connection. Adding a mid-size
+              candidate would change what desktop loads. */}
           <img
             src="/Images/about-scale-r-hero.webp"
+            srcSet="/Images/about-scale-r-hero-1200.webp 1200w, /Images/about-scale-r-hero.webp 3200w"
+            sizes="100vw"
             alt="Aerial view of Biscayne Bay with boats and the Miami skyline"
             fetchPriority="high"
           />
