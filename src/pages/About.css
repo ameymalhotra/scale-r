@@ -316,7 +316,11 @@
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  background: var(--um-orange);
+  /* Was --um-orange (#f47321), which gives only 2.87:1 against white and fails
+     WCAG AA: the label is 0.95rem/700, i.e. 15.2px, below the 18.66px bold
+     threshold for "large text", so it needs 4.5:1 rather than 3:1. The brand
+     green reaches 9.59:1, clearing AAA. */
+  background: var(--um-green);
   color: #fff;
   padding: 1rem 2rem;
   border-radius: 4px;
@@ -326,11 +330,12 @@
   letter-spacing: -0.01em;
   text-decoration: none;
   transition: transform 0.2s, box-shadow 0.2s;
-  box-shadow: 0 0 40px -10px rgba(158,67,0,0.5);
+  /* Glow re-tinted to match the new background; it was an orange cast. */
+  box-shadow: 0 0 40px -10px rgba(0, 80, 48, 0.5);
 }
 .about-hero-cta:hover {
   transform: scale(1.04);
-  box-shadow: 0 0 60px -8px rgba(158,67,0,0.65);
+  box-shadow: 0 0 60px -8px rgba(0, 80, 48, 0.65);
 }
 /* ── The SCALE-R Difference (left-aligned title + copy + orange left rule) ─ */
 .about-difference {

@@ -9,8 +9,8 @@ import { createPortal } from 'react-dom';
  * evaluate it, including /about, which has no map at all. Loading it inside the
  * init effect keeps it entirely off the other routes.
  *
- * Everything that touches this binding (marker creation, LngLatBounds maths,
- * the popup) runs only after the map exists, so it is always assigned by then.
+ * Everything that touches this binding (LngLatBounds maths, the popup) runs
+ * only after the map exists, so it is always assigned by then.
  */
 let mapboxgl;
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
@@ -136,12 +136,20 @@ const getMostProjectsBounds = (lngLats) => {
   return bounds;
 };
 
+const lngLatFromPin = (pin) => {
+  if (!pin) return null;
+  if (typeof pin.getLngLat === 'function') {
+    const { lng, lat } = pin.getLngLat();
+    return { lng, lat };
+  }
+  if (Array.isArray(pin)) return { lng: pin[0], lat: pin[1] };
+  if (Number.isFinite(pin.lng) && Number.isFinite(pin.lat)) return { lng: pin.lng, lat: pin.lat };
+  return null;
+};
+
 const fitMapToMostProjects = (mapInstance, markers, { duration = 0, maxZoom = 11 } = {}) => {
   if (!mapInstance || !markers?.length) return false;
-  const lngLats = markers.map((marker) => {
-    const { lng, lat } = marker.getLngLat();
-    return { lng, lat };
-  });
+  const lngLats = markers.map(lngLatFromPin).filter(Boolean);
   const bounds = getMostProjectsBounds(lngLats);
   if (!bounds || bounds.isEmpty()) return false;
   mapInstance.fitBounds(bounds, {
@@ -618,6 +626,144 @@ function getRiskLegendIconDataUrl() {
   return riskLegendIconDataUrl;
 }
 
+const PROJECT_PIN_SOURCE_ID = 'project-pins';
+const PROJECT_PIN_LAYER_ID = 'project-pins';
+const PROJECT_PIN_IMAGES = {
+  blue: 'cr-project-pin-blue',
+  green: 'cr-project-pin-green',
+  gray: 'cr-project-pin-gray',
+  hybrid: 'cr-project-pin-hybrid',
+};
+
+/** Same geometry as Mapbox GL JS’s default HTML Marker SVG (27×41 viewBox). */
+const MAPBOX_DEFAULT_PIN_PATH =
+  'M27,13.5C27,19.07 20.25,27 14.75,34.5C14.02,35.5 12.98,35.5 12.25,34.5C6.75,27 0,19.22 0,13.5C0,6.04 6.04,0 13.5,0C20.96,0 27,6.04 27,13.5Z';
+const MAPBOX_DEFAULT_PIN_BORDER_PATH =
+  'M13.5,0C6.04,0 0,6.04 0,13.5C0,19.22 6.75,27 12.25,34.5C13,35.52 14.02,35.5 14.75,34.5C20.25,27 27,19.07 27,13.5C27,6.04 20.96,0 13.5,0ZM13.5,1C20.42,1 26,6.58 26,13.5C26,15.9 24.5,19.18 22.22,22.74C19.95,26.3 16.71,30.14 13.94,33.91C13.74,34.18 13.61,34.32 13.5,34.44C13.39,34.32 13.26,34.18 13.06,33.91C10.28,30.13 7.41,26.31 5.02,22.77C2.62,19.23 1,15.95 1,13.5C1,6.58 6.58,1 13.5,1Z';
+
+function createProjectPinImageData(fillHex) {
+  const pixelRatio = 2;
+  const width = 27 * pixelRatio;
+  const height = 41 * pixelRatio;
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  try {
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    ctx.scale(pixelRatio, pixelRatio);
+
+    const shadow = ctx.createRadialGradient(13.5, 34.8, 1, 13.5, 34.8, 10.5);
+    shadow.addColorStop(0.1, 'rgba(0,0,0,0.4)');
+    shadow.addColorStop(1, 'rgba(0,0,0,0.05)');
+    ctx.fillStyle = shadow;
+    ctx.beginPath();
+    if (typeof ctx.ellipse === 'function') {
+      ctx.ellipse(13.5, 34.8, 10.5, 5.25, 0, 0, Math.PI * 2);
+    } else {
+      ctx.arc(13.5, 34.8, 10.5, 0, Math.PI * 2);
+    }
+    ctx.fill();
+
+    if (typeof Path2D === 'function') {
+      ctx.fillStyle = fillHex;
+      ctx.fill(new Path2D(MAPBOX_DEFAULT_PIN_PATH));
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      ctx.fill(new Path2D(MAPBOX_DEFAULT_PIN_BORDER_PATH), 'evenodd');
+    } else {
+      ctx.fillStyle = fillHex;
+      ctx.beginPath();
+      ctx.arc(13.5, 13.5, 13.5, Math.PI * 0.85, Math.PI * 0.15);
+      ctx.lineTo(13.5, 35);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    ctx.beginPath();
+    ctx.fillStyle = '#ffffff';
+    ctx.arc(13.5, 13.5, 5.5, 0, Math.PI * 2);
+    ctx.fill();
+    return ctx.getImageData(0, 0, width, height);
+  } catch {
+    return null;
+  }
+}
+
+function pinImageIdForColor(color) {
+  switch (color) {
+    case '#3498db':
+      return PROJECT_PIN_IMAGES.blue;
+    case '#27ae60':
+      return PROJECT_PIN_IMAGES.green;
+    case '#9b59b6':
+      return PROJECT_PIN_IMAGES.hybrid;
+    default:
+      return PROJECT_PIN_IMAGES.gray;
+  }
+}
+
+function registerProjectPinImages(mapInstance) {
+  if (!mapInstance) return;
+  const colors = {
+    [PROJECT_PIN_IMAGES.blue]: '#3498db',
+    [PROJECT_PIN_IMAGES.green]: '#27ae60',
+    [PROJECT_PIN_IMAGES.gray]: '#95a5a6',
+    [PROJECT_PIN_IMAGES.hybrid]: '#9b59b6',
+  };
+  Object.entries(colors).forEach(([id, hex]) => {
+    const imageData = createProjectPinImageData(hex);
+    if (!imageData) return;
+    try {
+      if (typeof mapInstance.hasImage === 'function' && mapInstance.hasImage(id)) {
+        mapInstance.removeImage(id);
+      }
+      mapInstance.addImage(id, imageData, { pixelRatio: 2 });
+    } catch (e) {
+      console.warn('[Projects] addImage failed', id, e);
+    }
+  });
+}
+
+function queryProjectPinsAtPoint(mapInstance, point, pad = 20) {
+  if (!mapInstance?.getLayer?.(PROJECT_PIN_LAYER_ID)) return [];
+  try {
+    return mapInstance.queryRenderedFeatures(
+      [
+        [point.x - pad, point.y - pad],
+        [point.x + pad, point.y + pad],
+      ],
+      { layers: [PROJECT_PIN_LAYER_ID] },
+    );
+  } catch {
+    return [];
+  }
+}
+
+function censusTractPopupHTML(feature) {
+  const props = feature?.properties || {};
+  const tractName = props['L0Census_Tracts.NAME'] || 'Census Tract';
+  const tractId = props['L0Census_Tracts.GEOID'] || feature.id || 'N/A';
+  const riskRating = props['__riskRating'] || props['T_FEMA_National_Risk_Index_$_.FEMAIndexRating'] || 'Not Rated';
+  const pred3PE = props['__pred3PE'];
+  return `
+          <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; min-width: 220px;">
+            <div style="font-size: 1.05em; font-weight: 700; color: #1b3a4b; margin-bottom: 4px;">${tractName}</div>
+            <div style="font-size: 0.85em; color: #445461; margin-bottom: 10px;">Tract ID: ${tractId}</div>
+            <hr style="border: none; border-top: 1px solid #e0e6ed; margin: 8px 0;" />
+            <div style="font-size: 0.9em; color: #1b3a4b; margin-bottom: 4px;">
+              <span style="font-weight: 600;">FEMA Risk Rating:</span>
+              <span style="margin-left: 6px;">${riskRating}</span>
+            </div>
+            ${pred3PE !== null && pred3PE !== undefined ? `
+            <div style="font-size: 0.9em; color: #1b3a4b; margin-bottom: 12px;">
+              <span style="font-weight: 600;">Resilience Index:</span>
+              <span style="margin-left: 6px;">${Number(pred3PE).toFixed(2)}%</span>
+            </div>
+            ` : ''}
+          </div>
+        `;
+}
+
 function registerOverlaySymbolImages(mapInstance) {
   if (!mapInstance) return;
   const reg = (id, imageData) => {
@@ -733,6 +879,9 @@ const Dashboard = () => {
   const censusViewRef = useRef('risk');
   const pred3PEDataRef = useRef({}); // Mapping of GEOID to PRED3_PE values
   const isHoveringMarkerRef = useRef(false);
+  const projectPinsGeoJsonRef = useRef(null);
+  const projectPinEventsBoundRef = useRef(false);
+  const allProjectsDataRef = useRef(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [allMarkers, setAllMarkers] = useState([]);
@@ -746,6 +895,8 @@ const Dashboard = () => {
   const [censusVisible, setCensusVisible] = useState(true);
   const censusEventsBoundRef = useRef(false);
   const censusVisibleRef = useRef(true);
+  const censusPopupRef = useRef(null);
+  const dashboardMapClickRef = useRef(null);
   const [selectedTypes, setSelectedTypes] = useState([]);
   const [selectedDisasterFocus, setSelectedDisasterFocus] = useState([]);
   const [selectedProjectStatuses, setSelectedProjectStatuses] = useState([]);
@@ -853,6 +1004,9 @@ const Dashboard = () => {
       map.current.dragRotate.enable();
       map.current.touchZoomRotate.enableRotation();
     }
+    if (map.current.getLayer(PROJECT_PIN_LAYER_ID)) {
+      map.current.setLayoutProperty(PROJECT_PIN_LAYER_ID, 'icon-size', isMobile ? 0.35 : 0.49);
+    }
   }, [isMobile, loading]);
 
   // Listen for popup close events to reset activeFeature state
@@ -896,21 +1050,6 @@ const Dashboard = () => {
     const coords = feature.geometry.coordinates;
     if (!coords || coords.length < 2) return;
 
-    // Find the corresponding marker (if it exists)
-    const marker = allMarkers.find(m => {
-      if (!m.feature) return false;
-      const markerCoords = m.feature.geometry?.coordinates;
-      if (!markerCoords) return false;
-      // Compare coordinates (with small tolerance for floating point)
-      return Math.abs(markerCoords[0] - coords[0]) < 0.0001 && 
-             Math.abs(markerCoords[1] - coords[1]) < 0.0001;
-    });
-
-    // If marker exists and is hidden, make it visible temporarily
-    if (marker && marker.getElement().style.display === 'none') {
-      marker.getElement().style.display = 'block';
-    }
-
     // Zoom to the project location
     map.current.flyTo({
       center: [coords[0], coords[1]],
@@ -933,7 +1072,7 @@ const Dashboard = () => {
     setShowSearchResults(false);
     setSearchQuery('');
     setSelectedResultIndex(-1);
-  }, [allMarkers]);
+  }, []);
 
   // Handle search query changes (uses debounced value to reduce work per keystroke)
   useEffect(() => {
@@ -1136,6 +1275,119 @@ const Dashboard = () => {
       console.error('Error loading overlay layer:', layerId, err);
     }
   }, [addOverlaySourceAndLayer]);
+
+  const handleDashboardMapClick = useCallback((e) => {
+    const mapInstance = map.current;
+    if (!mapInstance) return;
+
+    const overlayLayerIds = OVERLAY_LAYERS_CONFIG
+      .map((c) => `${c.id}-layer`)
+      .filter((id) => mapInstance.getLayer(id));
+    if (overlayLayerIds.length) {
+      const overlays = mapInstance.queryRenderedFeatures(e.point, { layers: overlayLayerIds });
+      if (overlays.length) return;
+    }
+
+    const dismissNonProjectPopups = () => {
+      if (censusPopupRef.current) {
+        censusPopupRef.current.remove();
+        censusPopupRef.current = null;
+      }
+      document.querySelectorAll('.mapboxgl-popup').forEach((node) => {
+        if (!node.querySelector('.portal-content')) node.remove();
+      });
+    };
+
+    const pins = queryProjectPinsAtPoint(mapInstance, e.point);
+    if (pins.length) {
+      const hit = pins[0];
+      const idx = Number(hit.properties?.__featureIndex);
+      const original = allProjectsDataRef.current?.features?.[idx];
+      isSwitchingFeatureRef.current = true;
+      setActiveFeature(
+        original
+          ? { ...original, geometry: { type: 'Point', coordinates: hit.geometry.coordinates } }
+          : { type: 'Feature', geometry: hit.geometry, properties: hit.properties },
+      );
+      dismissNonProjectPopups();
+      requestAnimationFrame(dismissNonProjectPopups);
+      setTimeout(dismissNonProjectPopups, 0);
+      setTimeout(() => {
+        isSwitchingFeatureRef.current = false;
+      }, 100);
+      return;
+    }
+
+    if (!censusVisibleRef.current) return;
+    const censusLayerIds = ['census-tracts-risk', 'census-tracts-pred3pe'].filter((id) => {
+      if (!mapInstance.getLayer(id)) return false;
+      try {
+        return mapInstance.getLayoutProperty(id, 'visibility') !== 'none';
+      } catch {
+        return true;
+      }
+    });
+    if (!censusLayerIds.length || !mapboxgl) return;
+    const tracts = mapInstance.queryRenderedFeatures(e.point, { layers: censusLayerIds });
+    if (!tracts.length) return;
+
+    setActiveFeature(null);
+    if (censusPopupRef.current) censusPopupRef.current.remove();
+    censusPopupRef.current = new mapboxgl.Popup({ closeButton: true, closeOnClick: true })
+      .setLngLat(e.lngLat)
+      .setHTML(censusTractPopupHTML(tracts[0]))
+      .addTo(mapInstance);
+  }, []);
+  dashboardMapClickRef.current = handleDashboardMapClick;
+
+  const ensureProjectPinLayer = useCallback((mapInstance) => {
+    if (!mapInstance || !projectPinsGeoJsonRef.current) return;
+    registerProjectPinImages(mapInstance);
+    const geojson = projectPinsGeoJsonRef.current;
+    if (mapInstance.getSource(PROJECT_PIN_SOURCE_ID)) {
+      mapInstance.getSource(PROJECT_PIN_SOURCE_ID).setData(geojson);
+    } else {
+      mapInstance.addSource(PROJECT_PIN_SOURCE_ID, { type: 'geojson', data: geojson });
+    }
+    const iconSize = isMobileRef.current ? 0.35 : 0.49;
+    if (!mapInstance.getLayer(PROJECT_PIN_LAYER_ID)) {
+      mapInstance.addLayer({
+        id: PROJECT_PIN_LAYER_ID,
+        type: 'symbol',
+        source: PROJECT_PIN_SOURCE_ID,
+        layout: {
+          'icon-image': ['get', '__pinImage'],
+          'icon-size': iconSize,
+          'icon-anchor': 'bottom',
+          'icon-allow-overlap': true,
+          'icon-ignore-placement': true,
+        },
+      });
+    } else {
+      mapInstance.setLayoutProperty(PROJECT_PIN_LAYER_ID, 'icon-size', iconSize);
+      if (typeof mapInstance.moveLayer === 'function') {
+        mapInstance.moveLayer(PROJECT_PIN_LAYER_ID);
+      }
+    }
+
+    if (projectPinEventsBoundRef.current) return;
+    mapInstance.on('mouseenter', PROJECT_PIN_LAYER_ID, () => {
+      isHoveringMarkerRef.current = true;
+      if (map.current) map.current.getCanvas().style.cursor = 'pointer';
+      if (hoveredCensusIdRef.current !== null && map.current) {
+        map.current.setFeatureState(
+          { source: 'census-tracts', id: hoveredCensusIdRef.current },
+          { hover: false }
+        );
+        hoveredCensusIdRef.current = null;
+      }
+    });
+    mapInstance.on('mouseleave', PROJECT_PIN_LAYER_ID, () => {
+      isHoveringMarkerRef.current = false;
+      if (map.current) map.current.getCanvas().style.cursor = '';
+    });
+    projectPinEventsBoundRef.current = true;
+  }, []);
 
   const addCensusSourceAndLayers = useCallback(() => {
     if (!map.current || !censusDataRef.current) return;
@@ -1388,46 +1640,7 @@ const Dashboard = () => {
         map.current.getCanvas().style.cursor = '';
       };
 
-      const handleClick = (e) => {
-        if (!map.current) return;
-        const features = map.current.queryRenderedFeatures(e.point);
-        const overlayLayerIds = OVERLAY_LAYERS_CONFIG.map((c) => c.id + '-layer');
-        if (features.length > 0 && overlayLayerIds.includes(features[0].layer.id)) return;
-        const feature = e.features && e.features[0];
-        if (!feature) return;
-        const props = feature.properties || {};
-        const tractName = props['L0Census_Tracts.NAME'] || 'Census Tract';
-        const tractId = props['L0Census_Tracts.GEOID'] || feature.id || 'N/A';
-        const riskRating = props['__riskRating'] || props['T_FEMA_National_Risk_Index_$_.FEMAIndexRating'] || 'Not Rated';
-        const pred3PE = props['__pred3PE'];
-        // Removed: riskIndexRaw - only showing rating now
-
-        const popupHtml = `
-          <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; min-width: 220px;">
-            <div style="font-size: 1.05em; font-weight: 700; color: #1b3a4b; margin-bottom: 4px;">${tractName}</div>
-            <div style="font-size: 0.85em; color: #445461; margin-bottom: 10px;">Tract ID: ${tractId}</div>
-            <hr style="border: none; border-top: 1px solid #e0e6ed; margin: 8px 0;" />
-            <div style="font-size: 0.9em; color: #1b3a4b; margin-bottom: 4px;">
-              <span style="font-weight: 600;">FEMA Risk Rating:</span>
-              <span style="margin-left: 6px;">${riskRating}</span>
-            </div>
-            ${pred3PE !== null && pred3PE !== undefined ? `
-            <div style="font-size: 0.9em; color: #1b3a4b; margin-bottom: 12px;">
-              <span style="font-weight: 600;">Resilience Index:</span>
-              <span style="margin-left: 6px;">${pred3PE.toFixed(2)}%</span>
-            </div>
-            ` : ''}
-          </div>
-        `;
-
-        new mapboxgl.Popup({ closeButton: true, closeOnClick: true })
-          .setLngLat(e.lngLat)
-          .setHTML(popupHtml)
-          .addTo(map.current);
-      };
-
       censusLayerIds.forEach((layerId) => {
-        map.current.on('click', layerId, handleClick);
         map.current.on('mouseenter', layerId, () => {
           if (map.current) {
             map.current.getCanvas().style.cursor = 'pointer';
@@ -1440,8 +1653,16 @@ const Dashboard = () => {
       censusEventsBoundRef.current = true;
     }
 
+    if (map.current.getLayer(PROJECT_PIN_LAYER_ID)) {
+      if (typeof map.current.moveLayer === 'function') {
+        map.current.moveLayer(PROJECT_PIN_LAYER_ID);
+      }
+    } else {
+      ensureProjectPinLayer(map.current);
+    }
+
     setCensusLayersReady(true);
-  }, []);
+  }, [ensureProjectPinLayer]);
 
   // Toggle between satellite and standard map
   const toggleMapStyle = () => {
@@ -1506,12 +1727,8 @@ const Dashboard = () => {
         });
       }); */
 
-      // Re-add project markers
-      if (allProjectsData) {
-        allMarkers.forEach(marker => {
-          marker.addTo(map.current);
-        });
-      }
+      registerProjectPinImages(map.current);
+      ensureProjectPinLayer(map.current);
 
       addCensusSourceAndLayers();
 
@@ -1599,6 +1816,10 @@ const Dashboard = () => {
       unit: 'imperial'
     }), 'bottom-left');
 
+    map.current.on('click', (e) => {
+      dashboardMapClickRef.current?.(e);
+    });
+
     const applyMobileRotation = () => {
       if (!map.current) return;
       if (isMobileRef.current) {
@@ -1680,6 +1901,7 @@ const Dashboard = () => {
         }
 
         setAllProjectsData(filteredData);
+        allProjectsDataRef.current = filteredData;
 
         // Both sources are handed to mapbox as blob: URLs, so mapbox fetches and
         // parses them inside its own worker instead of on the main thread.
@@ -1696,58 +1918,43 @@ const Dashboard = () => {
           data: bufferSourceUrl
         });
 
-        const markers = markerSpecs.map(({ featureIndex, lngLat, color }) => {
+        const pins = markerSpecs.map(({ featureIndex, lngLat, color }) => {
           const feature = filteredData.features[featureIndex];
-
-          const marker = new mapboxgl.Marker({
-            color,
-            scale: isMobileRef.current ? 0.35 : 0.49
-          })
-            .setLngLat(lngLat);
-
-          marker.getElement().addEventListener('click', (e) => {
-            e.stopPropagation();
-            // Mark that we're switching features to prevent popupClosed from clearing it
-            isSwitchingFeatureRef.current = true;
-            setActiveFeature(feature);
-            // Reset the flag after a short delay to allow the popup to update
-            setTimeout(() => {
-              isSwitchingFeatureRef.current = false;
-            }, 100);
-          });
-
-          if (!isMobileRef.current) {
-            marker.getElement().addEventListener('mouseenter', (e) => {
-              e.stopPropagation();
-              // Set flag to prevent census hover
-              isHoveringMarkerRef.current = true;
-              // Clear any active census hover state
-              if (hoveredCensusIdRef.current !== null && map.current) {
-                map.current.setFeatureState(
-                  { source: 'census-tracts', id: hoveredCensusIdRef.current },
-                  { hover: false }
-                );
-                hoveredCensusIdRef.current = null;
-              }
-            });
-
-            marker.getElement().addEventListener('mouseleave', (e) => {
-              e.stopPropagation();
-              // Clear flag to allow census hover again
-              isHoveringMarkerRef.current = false;
-            });
-          }
-
-          marker.addTo(map.current);
-          marker.feature = feature;
-          return marker;
+          const props = feature.properties || {};
+          const type = props['Infrastruc'] || props['Infrastructure Type'] || props['Type'] || '';
+          const disasterFocus = props['Disaster_F'] || props['Disaster Focus'] || '';
+          const city = (props['NAME'] || props['City'] || '').trim();
+          return {
+            feature,
+            lng: lngLat[0],
+            lat: lngLat[1],
+            pinFeature: {
+              type: 'Feature',
+              id: featureIndex,
+              geometry: { type: 'Point', coordinates: lngLat },
+              properties: {
+                ...props,
+                __pinImage: pinImageIdForColor(color),
+                __type: type,
+                __disasterKey: disasterFocusKey(disasterFocus),
+                __status: getProjectStatus(props),
+                __cityLower: city.toLowerCase(),
+                __featureIndex: featureIndex,
+              },
+            },
+          };
         });
 
-        setAllMarkers(markers);
+        projectPinsGeoJsonRef.current = {
+          type: 'FeatureCollection',
+          features: pins.map((pin) => pin.pinFeature),
+        };
+        ensureProjectPinLayer(map.current);
+        setAllMarkers(pins);
 
         // Frame the dense Miami-Dade project cluster (not full county extent / empty fringes)
-        if (markers.length > 0) {
-          fitMapToMostProjects(map.current, markers, { duration: 0, maxZoom: 11 });
+        if (pins.length > 0) {
+          fitMapToMostProjects(map.current, pins, { duration: 0, maxZoom: 11 });
         }
 
         setLoading(false);
@@ -1791,7 +1998,7 @@ const Dashboard = () => {
       setError('Error initializing map');
       setLoading(false);
     });
-  }, [addCensusSourceAndLayers]);
+  }, [addCensusSourceAndLayers, ensureProjectPinLayer]);
 
   useEffect(() => {
     censusVisibleRef.current = censusVisible;
@@ -2017,26 +2224,29 @@ const Dashboard = () => {
     // If no city selected (All Cities), zoom to all markers (respecting other filters)
     // Filter markers for the selected city, or use all markers if "All Cities"
     const markersToZoom = (!cityName || cityName === '')
-      ? allMarkers.filter(marker => {
-          // Include all markers that are currently visible (respecting Type/Disaster Focus filters)
-          return marker.getElement().style.display !== 'none';
+      ? allMarkers.filter((pin) => {
+          const props = pin.feature?.properties || {};
+          const type = props['Infrastruc'] || props['Infrastructure Type'] || props['Type'];
+          const disasterFocus = props['Disaster_F'] || props['Disaster Focus'];
+          const projectStatus = getProjectStatus(props);
+          const typeMatch = selectedTypes.length === 0 || selectedTypes.includes(type);
+          const disasterMatch = disasterFocusMatches(selectedDisasterFocus, disasterFocus);
+          const statusMatch = selectedProjectStatuses.length === 0 || selectedProjectStatuses.includes(projectStatus);
+          return projectsLayerVisible && typeMatch && disasterMatch && statusMatch;
         })
-      : // Filter markers for the selected city
-        allMarkers.filter(marker => {
-          if (!marker.feature) return false;
-          const props = marker.feature.properties || {};
-          const markerCity = (props['NAME'] || props['City']) ? (props['NAME'] || props['City']).trim() : (props['NAME'] || props['City']);
+      : allMarkers.filter((pin) => {
+          if (!pin.feature) return false;
+          const props = pin.feature.properties || {};
+          const markerCity = (props['NAME'] || props['City'] || '').trim();
           const selectedCityTrimmed = cityName ? cityName.trim() : cityName;
           return (markerCity || '').toLowerCase() === (selectedCityTrimmed || '').toLowerCase();
         });
 
     if (markersToZoom.length === 0) return;
 
-    // Calculate bounding box from marker positions
     const bounds = new mapboxgl.LngLatBounds();
-    markersToZoom.forEach(marker => {
-      const coords = marker.getLngLat();
-      bounds.extend([coords.lng, coords.lat]);
+    markersToZoom.forEach((pin) => {
+      bounds.extend([pin.lng, pin.lat]);
     });
 
     if (!bounds.isEmpty()) {
@@ -2051,51 +2261,47 @@ const Dashboard = () => {
         });
       }
     }
-  }, [allMarkers]);
+  }, [allMarkers, projectsLayerVisible, selectedTypes, selectedDisasterFocus, selectedProjectStatuses]);
 
-  // Filter markers based on selected filters
+  // Filter pins with a Mapbox expression instead of toggling 1,660 DOM nodes.
   useEffect(() => {
-    if (!allMarkers.length || !map.current) return;
+    if (!map.current?.getLayer?.(PROJECT_PIN_LAYER_ID)) return;
 
-    allMarkers.forEach(marker => {
-      if (!marker.feature) return;
-      const props = marker.feature.properties || {};
-      const type = props['Infrastruc'] || props['Infrastructure Type'] || props['Type'];
-      const disasterFocus = props['Disaster_F'] || props['Disaster Focus'];
-      const projectStatus = getProjectStatus(props);
-      const city = (props['NAME'] || props['City']) ? (props['NAME'] || props['City']).trim() : (props['NAME'] || props['City']);
+    map.current.setLayoutProperty(
+      PROJECT_PIN_LAYER_ID,
+      'visibility',
+      projectsLayerVisible ? 'visible' : 'none'
+    );
 
-      const typeMatch = selectedTypes.length === 0 || selectedTypes.includes(type);
-      const disasterMatch = disasterFocusMatches(selectedDisasterFocus, disasterFocus);
-      const statusMatch = selectedProjectStatuses.length === 0 || selectedProjectStatuses.includes(projectStatus);
-      const selectedCityTrimmed = selectedCity ? selectedCity.trim() : selectedCity;
-      const cityMatch = !selectedCityTrimmed || selectedCityTrimmed === '' || (city || '').toLowerCase() === (selectedCityTrimmed || '').toLowerCase();
+    const parts = ['all'];
+    if (selectedTypes.length) {
+      parts.push(['in', ['get', '__type'], ['literal', selectedTypes]]);
+    }
+    if (selectedDisasterFocus.length) {
+      parts.push(['in', ['get', '__disasterKey'], ['literal', selectedDisasterFocus.map(disasterFocusKey)]]);
+    }
+    if (selectedProjectStatuses.length) {
+      parts.push(['in', ['get', '__status'], ['literal', selectedProjectStatuses]]);
+    }
+    const cityTrimmed = selectedCity ? selectedCity.trim() : '';
+    if (cityTrimmed) {
+      parts.push(['==', ['get', '__cityLower'], cityTrimmed.toLowerCase()]);
+    }
+    map.current.setFilter(PROJECT_PIN_LAYER_ID, parts.length === 1 ? null : parts);
 
-      const shouldShow = projectsLayerVisible && typeMatch && disasterMatch && statusMatch && cityMatch;
-
-      // Only write when the value actually changes. This effect also re-runs on
-      // every popup open/close (activeFeature is a dependency, and must stay one
-      // so a filtered-out project's popup still closes), which otherwise meant
-      // 1,664 redundant inline-style writes per popup interaction.
-      const element = marker.getElement();
-      if (shouldShow) {
-        if (element.style.display !== 'block') element.style.display = 'block';
-      } else {
-        if (element.style.display !== 'none') element.style.display = 'none';
-        // Close popup if the hidden marker's feature is currently active
-        if (activeFeature && marker.feature) {
-          // Check if it's the same feature (same object reference or same coordinates)
-          const isSameFeature = activeFeature === marker.feature ||
-            (activeFeature.geometry?.coordinates && marker.feature.geometry?.coordinates &&
-             activeFeature.geometry.coordinates[0] === marker.feature.geometry.coordinates[0] &&
-             activeFeature.geometry.coordinates[1] === marker.feature.geometry.coordinates[1]);
-          
-          if (isSameFeature) {
-            setActiveFeature(null);
-          }
-        }
-      }
-    });
+    if (!activeFeature) return;
+    const props = activeFeature.properties || {};
+    const type = props['Infrastruc'] || props['Infrastructure Type'] || props['Type'];
+    const disasterFocus = props['Disaster_F'] || props['Disaster Focus'];
+    const projectStatus = getProjectStatus(props);
+    const city = (props['NAME'] || props['City'] || '').trim();
+    const typeMatch = selectedTypes.length === 0 || selectedTypes.includes(type);
+    const disasterMatch = disasterFocusMatches(selectedDisasterFocus, disasterFocus);
+    const statusMatch = selectedProjectStatuses.length === 0 || selectedProjectStatuses.includes(projectStatus);
+    const cityMatch = !cityTrimmed || city.toLowerCase() === cityTrimmed.toLowerCase();
+    if (!(projectsLayerVisible && typeMatch && disasterMatch && statusMatch && cityMatch)) {
+      setActiveFeature(null);
+    }
   }, [projectsLayerVisible, selectedTypes, selectedDisasterFocus, selectedProjectStatuses, selectedCity, allMarkers, activeFeature]);
 
   // Zoom to city when selected (including "All Cities")

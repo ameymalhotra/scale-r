@@ -28,7 +28,11 @@ vi.mock('mapbox-gl', () => {
     getLayer: vi.fn(() => null),
     setPaintProperty: vi.fn(),
     setLayoutProperty: vi.fn(),
+    setFilter: vi.fn(),
     setStyle: vi.fn(),
+    addImage: vi.fn(),
+    hasImage: vi.fn(() => false),
+    moveLayer: vi.fn(),
     getCanvas: vi.fn(() => ({
       style: {},
     })),
