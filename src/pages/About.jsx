@@ -9,7 +9,7 @@ const goals = [
   {
     title: 'Cross-Sector Partnerships',
     icon: 'groups',
-    photoSrc: '/Images/goals/cross-sector.jpg',
+    photoSrc: '/Images/goals/cross-sector.webp',
     body: (
       <>
         Fostering meaningful collaborations among academia, communities, and
@@ -21,7 +21,7 @@ const goals = [
   {
     title: 'Mapping the Resilience Landscape',
     icon: 'hub',
-    photoSrc: '/Images/goals/mapping.png',
+    photoSrc: '/Images/goals/mapping.webp',
     cardClassName: 'about-goal-card--scrim-middle',
     body: (
       <>
@@ -34,7 +34,7 @@ const goals = [
   {
     title: 'Decision-Support Tools',
     icon: 'analytics',
-    photoSrc: '/Images/goals/decision-support-tools.png',
+    photoSrc: '/Images/goals/decision-support-tools.webp',
     body: (
       <>
         Designing an integrated dashboard that supports the collaborative
@@ -111,7 +111,7 @@ const engagementItems = [
     title: 'Miami-Dade Environmental Stewards workshop',
     detail:
       'A workshop was held at the Stephen P. Clark Government Center on 26/9/2024 with the Miami-Dade County experts, enabling a discussion between leaders from the Divisions of Planning, Resilience, Transportation, Historic Preservation, Planning Research, and Zoning with the researchers and students involved in this project.',
-    imageSrc: '/Images/community-engagement/workshop-full.png',
+    imageSrc: '/Images/community-engagement/workshop-full.webp',
     imageAlt:
       'Meeting room workshop with participants seated around a long table facing a presentation screen',
     imageObjectPosition: 'center center',
@@ -121,7 +121,7 @@ const engagementItems = [
     title: 'Awareness and engagement with high school students',
     detail:
       'An interaction with the Human Geography students and faculty was organized at the Palmer Trinity School on April 23, 2025, enabling greater awareness and knowledge dissemination among the young learners in the broader community.',
-    imageSrc: '/Images/community-engagement/awareness.jpg',
+    imageSrc: '/Images/community-engagement/awareness.webp',
     imageAlt:
       'Classroom presentation with students seated at desks watching a climate change talk',
   },
@@ -130,7 +130,7 @@ const engagementItems = [
     title: 'Presentation to leaders in the field at the UN World Urban Forum',
     detail:
       'The PI, Dr. Sarbeswar Praharaj, shared the findings from this project at the World Urban Forum 2024 (WUF12) organized by the United Nations Human Settlement Program from 4-8 November 2024, in Cairo, Egypt.',
-    imageSrc: '/Images/community-engagement/presentation.jpg',
+    imageSrc: '/Images/community-engagement/presentation.webp',
     imageAlt:
       'Presentation at the UN World Urban Forum with attendees facing a screen',
   },
@@ -139,7 +139,7 @@ const engagementItems = [
     title: 'Hands-on training for the next generation of students',
     detail:
       'We partnered with the MDC Office of Historic Preservation, providing hands-on training for graduate researchers and students on how climate resilience impacts cultural landscapes and how conservation practices and advocacy can help address these challenges.',
-    imageSrc: '/Images/community-engagement/hands-on.jpg',
+    imageSrc: '/Images/community-engagement/hands-on.webp',
     imageAlt:
       'Hands-on student training session gathered around a table with materials',
   },
@@ -148,7 +148,7 @@ const engagementItems = [
     title: 'Global impact through interdisciplinary education and curricula',
     detail:
       "The PI joined a premier Research and Academia Roundtable at the UN-Habitat's World Urban Forum 2024, as a member of Habitat UNI (UN-Habitat's network for university/research partners), and his contribution was focused on advancing urban climate resilience through interdisciplinary education and curricula.",
-    imageSrc: '/Images/community-engagement/global-impact.jpg',
+    imageSrc: '/Images/community-engagement/global-impact.webp',
     imageAlt:
       'Roundtable and conference setting representing interdisciplinary education at the World Urban Forum',
     imageObjectPosition: '78% center',
@@ -158,7 +158,7 @@ const engagementItems = [
     title: 'Disseminating knowledge with the Greater Miami stakeholders',
     detail:
       'We are making efforts to engage with key stakeholders and networks to share our findings from this project and gather valuable feedback. One such platform was the Smart City Expo Miami (23 – 25 September 2024), where the PI delivered a talk titled "Anticipating Change and Designing Future-Ready Communities."',
-    imageSrc: '/Images/community-engagement/disseminating.jpg',
+    imageSrc: '/Images/community-engagement/disseminating.webp',
     imageAlt:
       'Audience watching a presentation at Smart City Expo Miami',
     imageObjectPosition: '32% center',
@@ -173,7 +173,7 @@ const recentEvents = [
       'Simulating Coastal Adaptation and Local Exposure for Enhanced Resilience (SCALE-R) — Dr. Sarbeswar Praharaj',
     location:
       'American Association of Geographers – AAG Annual Meeting, Union Square 12, 4th Floor, Hilton, Tower 3, San Francisco',
-    imageSrc: '/Images/recent-events/aag-2026-session.png',
+    imageSrc: '/Images/recent-events/aag-2026-session.webp',
     imageAlt:
       'AAG 2026 San Francisco promotional graphic for the core session Environmental Justice and Coastal Inequities',
   },
@@ -184,7 +184,7 @@ const recentEvents = [
       'Using geospatial information dashboards to advance urban resilience — Dr. Sarbeswar Praharaj',
     location:
       'ESRI and University of Southern California, USC Spatial Sciences Institute, Los Angeles',
-    imageSrc: '/Images/recent-events/security-first-book.png',
+    imageSrc: '/Images/recent-events/security-first-book.webp',
     imageAlt:
       'Book cover for Security First: Geospatial Workflows for a Safe and Equitable World, Esri Press',
     ctaHref: 'https://indiepubs.com/products/security-first-9781589487857',
@@ -281,9 +281,13 @@ export default function About() {
       {/* ── Hero ─────────────────────────────────────────────── */}
       <header className="about-hero">
         <div className="about-hero-bg">
+          {/* The hero is the LCP element, but it is only discoverable once
+              React has rendered, so the browser gives it default priority.
+              fetchPriority affects fetch order only, never how it is drawn. */}
           <img
-            src="/Images/about-scale-r-hero.jpg"
+            src="/Images/about-scale-r-hero.webp"
             alt="Aerial view of Biscayne Bay with boats and the Miami skyline"
+            fetchPriority="high"
           />
         </div>
 
@@ -727,7 +731,7 @@ export default function About() {
             <div className="about-ack-logo-wrap">
               <img
                 className="about-ack-logo"
-                src="/Images/1019px-NSF_logo.png"
+                src="/Images/1019px-NSF_logo.webp"
                 alt="U.S. National Science Foundation logo"
                 loading="lazy"
                 decoding="async"
