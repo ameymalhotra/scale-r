@@ -25,6 +25,10 @@ scripts/*
 scripts/python/*
 !scripts/python/infra_common.py
 !scripts/python/classify_infrastructure_lms_csv.py
+!scripts/js/
+scripts/js/*
+!scripts/js/audit-performance.mjs
+!scripts/js/gtmetrix-benchmark.mjs
 supabase/
 data/*
 !data/input/
@@ -50,6 +54,12 @@ ols_tract_data.csv
 ols_tract_data_enriched.csv
 geocode_checkpoint.csv
 geocode_failures.csv
+
+# Performance audit output (regenerate with `npm run audit:perf`)
+.lighthouse/
+
+# Visual-regression snapshots (regenerate with scripts/js/visual-snapshot.mjs)
+.visual/
 
 # Python artifacts
 __pycache__/

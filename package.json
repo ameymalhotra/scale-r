@@ -10,6 +10,8 @@
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
     "a11y": "vitest run src/a11y --reporter=verbose",
+    "audit:perf": "node scripts/js/audit-performance.mjs",
+    "audit:gtmetrix": "node scripts/js/gtmetrix-benchmark.mjs",
     "seed": "node --env-file=.env scripts/js/seed-supabase.js",
     "seed-merged": "node --env-file=.env scripts/js/seed-supabase-merged.js",
     "seed-merged-conf1": "node --env-file=.env scripts/js/seed-supabase-merged-conf1.js",

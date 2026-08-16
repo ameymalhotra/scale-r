@@ -4,6 +4,8 @@ import mapboxgl from 'mapbox-gl';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import { searchProjects } from '../utils/searchProjects.js';
 import { highlightText } from '../utils/highlightText.jsx';
+import { reprojectFeatureCollectionIfNeeded } from '../utils/geoProcessing.js';
+import DataParserWorker from '../workers/dataParser.worker.js?worker';
 
 const DASHBOARD_CITY_LISTBOX_ID = 'dashboard-city-listbox';
 const DASHBOARD_CITY_TRIGGER_ID = 'dashboard-city-trigger';
@@ -11,13 +13,23 @@ const DASHBOARD_SEARCH_LISTBOX_ID = 'dashboard-search-listbox';
 const DASHBOARD_SEARCH_INPUT_ID = 'dashboard-project-search';
 const DASHBOARD_SEARCH_LIVE_ID = 'dashboard-search-live';
 
-const parseNumericValue = (value) => {
-  if (value === null || value === undefined) return null;
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  const cleaned = String(value).replace(/[^0-9eE.+-]/g, '');
-  const parsed = Number(cleaned);
-  return Number.isFinite(parsed) ? parsed : null;
-};
+/**
+ * Promise wrapper around one round-trip to the data-parsing worker.
+ * Each task carries an id so several can be in flight at once.
+ */
+let workerTaskId = 0;
+const runWorkerTask = (worker, task, payload) =>
+  new Promise((resolve, reject) => {
+    const id = ++workerTaskId;
+    const onMessage = (event) => {
+      if (event.data?.id !== id) return;
+      worker.removeEventListener('message', onMessage);
+      if (event.data.ok) resolve(event.data.result);
+      else reject(new Error(event.data.error));
+    };
+    worker.addEventListener('message', onMessage);
+    worker.postMessage({ id, task, payload });
+  });
 
 // Canonical project status values from the dataset `Project__1` column.
 // Filter UI order (2×2): Completed | Ongoing / Funded | Planned
@@ -39,64 +51,6 @@ const getProjectStatus = (props = {}) => {
   return matched ?? (raw || 'Ongoing');
 };
 
-const toWgs84Coordinate = ([x, y]) => {
-  const originShift = 20037508.34;
-  const lon = (x / originShift) * 180;
-  let lat = (y / originShift) * 180;
-  lat = (180 / Math.PI) * (2 * Math.atan(Math.exp((lat * Math.PI) / 180)) - Math.PI / 2);
-  return [lon, lat];
-};
-
-const transformToWgs84 = (coords) => {
-  if (!Array.isArray(coords)) return coords;
-  if (typeof coords[0] === 'number' && typeof coords[1] === 'number') {
-    return toWgs84Coordinate(coords);
-  }
-  return coords.map(transformToWgs84);
-};
-
-const walkCoordinates = (geometry, callback) => {
-  if (!geometry || !geometry.coordinates) return;
-  const traverse = (coords) => {
-    if (!Array.isArray(coords)) return;
-    if (typeof coords[0] === 'number' && typeof coords[1] === 'number') {
-      callback(coords);
-      return;
-    }
-    coords.forEach(traverse);
-  };
-  traverse(geometry.coordinates);
-};
-
-const reprojectFeatureCollectionIfNeeded = (featureCollection) => {
-  if (!featureCollection?.features?.length) return featureCollection;
-  let firstCoord = null;
-  for (const feature of featureCollection.features) {
-    if (!feature?.geometry) continue;
-    walkCoordinates(feature.geometry, (coord) => {
-      if (!firstCoord) firstCoord = coord;
-    });
-    if (firstCoord) break;
-  }
-  if (!firstCoord) return featureCollection;
-  const needsReprojection = Math.abs(firstCoord[0]) > 180 || Math.abs(firstCoord[1]) > 90;
-  if (!needsReprojection) return featureCollection;
-  console.info('[Census] Reprojecting GeoJSON from EPSG:3857 to EPSG:4326');
-  return {
-    ...featureCollection,
-    features: featureCollection.features.map((feature) => {
-      if (!feature?.geometry) return feature;
-      return {
-        ...feature,
-        geometry: {
-          ...feature.geometry,
-          coordinates: transformToWgs84(feature.geometry.coordinates)
-        }
-      };
-    })
-  };
-};
-
 // Rewrite Point geometry to use lon/lat from feature properties (e.g. for EPSG:3087 layers that store X,Y in props)
 const applyLonLatFromProperties = (featureCollection, lonField, latField) => {
   if (!featureCollection?.features?.length || !lonField || !latField) return featureCollection;
@@ -112,70 +66,6 @@ const applyLonLatFromProperties = (featureCollection, lonField, latField) => {
       return feature;
     })
   };
-};
-
-const getRangeStats = (values) => {
-  if (!values.length) return { min: null, mid: null, max: null };
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const mid = min + (max - min) / 2;
-  return { min, mid, max };
-};
-
-/**
- * Spread co-located markers into a circle so every project is visible.
- * Returns a Map<coordKey, offsetCoord[]> where each entry is the list of
- * [lng, lat] positions (original position kept for singletons).
- */
-const computeSpiderOffsets = (features, radiusMeters = 40) => {
-  const groups = new Map();
-  features.forEach((feature, index) => {
-    const coords = feature.geometry?.coordinates;
-    if (!coords) return;
-    const key = `${coords[0]},${coords[1]}`;
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key).push(index);
-  });
-
-  const offsets = new Map();
-  groups.forEach((indices, key) => {
-    const [lng, lat] = key.split(',').map(Number);
-    if (indices.length === 1) {
-      offsets.set(indices[0], [lng, lat]);
-      return;
-    }
-    const n = indices.length;
-    indices.forEach((featureIndex, i) => {
-      const angle = (i * 2 * Math.PI) / n - Math.PI / 2;
-      const latOffset = (radiusMeters * Math.sin(angle)) / 111000;
-      const lngOffset = (radiusMeters * Math.cos(angle)) / (111000 * Math.cos((lat * Math.PI) / 180));
-      offsets.set(featureIndex, [lng + lngOffset, lat + latOffset]);
-    });
-  });
-
-  return offsets;
-};
-
-// Create a small circle polygon around a point to use as a buffer zone
-const createCircleBuffer = (center, radiusInMeters = 50) => {
-  const [lng, lat] = center;
-  const points = 32; // Number of points in the circle
-  const circle = [];
-  
-  for (let i = 0; i <= points; i++) {
-    const angle = (i * 360) / points;
-    const dx = radiusInMeters * Math.cos((angle * Math.PI) / 180);
-    const dy = radiusInMeters * Math.sin((angle * Math.PI) / 180);
-    
-    // Approximate conversion: 1 degree latitude ≈ 111,000 meters
-    // 1 degree longitude ≈ 111,000 * cos(latitude) meters
-    const latOffset = dy / 111000;
-    const lngOffset = dx / (111000 * Math.cos((lat * Math.PI) / 180));
-    
-    circle.push([lng + lngOffset, lat + latOffset]);
-  }
-  
-  return circle;
 };
 
 /** Miami-Dade urban core — where most inventory projects cluster. */
@@ -292,17 +182,6 @@ const formatInfrastructureType = (type) => {
   // American English: normalize British "Grey" → "Gray"
   if (/^grey$/i.test(short)) return 'Gray';
   return short;
-};
-
-/** Canonicalize stored infrastructure type values to American English "Gray". */
-const canonicalizeInfrastructureTypeValue = (type) => {
-  if (!type || typeof type !== 'string') return type;
-  const trimmed = type.trim();
-  if (/^grey$/i.test(trimmed)) return 'Gray';
-  if (/^grey\s+infrastructure$/i.test(trimmed)) return 'Gray Infrastructure';
-  if (/^gray$/i.test(trimmed)) return 'Gray';
-  if (/^gray\s+infrastructure$/i.test(trimmed)) return 'Gray Infrastructure';
-  return trimmed;
 };
 
 /** Preferred Infrastructure Type filter order (2×2 grid). */
@@ -1143,26 +1022,6 @@ const Dashboard = () => {
   
 
   // Get marker color based on project type
-  const getMarkerColor = (projectType) => {
-    switch(projectType) {
-      case 'Blue Infrastructure':
-      case 'Blue':
-        return '#3498db';
-      case 'Green Infrastructure':
-      case 'Green':
-        return '#27ae60';
-      case 'Grey Infrastructure':
-      case 'Grey':
-      case 'Gray Infrastructure':
-      case 'Gray':
-        return '#95a5a6';
-      case 'Hybrid':
-        return '#9b59b6'; // Purple for hybrid infrastructure
-      default:
-        return '#95a5a6';
-    }
-  };
-
   const addOverlaySourceAndLayer = useCallback((mapInstance, layerId, config, geojson) => {
     if (!mapInstance || !config) return;
     const layerMapId = layerId + '-layer';
@@ -1668,52 +1527,18 @@ const Dashboard = () => {
       return;
     }
     mapboxgl.accessToken = mapboxToken;
-    
-    const loadDistricts = async () => {
-    try {
-      const response = await fetch('/miami_cities.geojson');
-      const geojson = await response.json();
 
-      const districts = {};
+    // Long-lived for the page, like the map itself: it is never torn down, so
+    // it is not terminated in a cleanup (which StrictMode's double-invoke in
+    // development would otherwise kill before the second run could reuse it).
+    const dataWorker = new DataParserWorker();
 
-      geojson.features.forEach((feature) => {
-        const coordinates = feature.geometry.coordinates[0];
-        const lngs = coordinates.map(c => c[0]);
-        const lats = coordinates.map(c => c[1]);
-        const name = feature.properties['NAME'];
-        const center = {
-          lng: lngs.reduce((a, b) => a + b) / lngs.length,
-          lat: lats.reduce((a, b) => a + b) / lats.length
-        };
-        const districtId = feature.properties['OBJECTID'];
-        const cn = Math.pow(-(Math.min(...lngs) - Math.max(...lngs)), 0.12);
-        const cs = Math.pow(-(Math.min(...lats) - Math.max(...lats)), 0.12);
-        let cf = 0;
-        if(cn > cs) {
-          cf = cn;
-        } else {
-          cf = cs;
-        }
-        const zoom = 9 / cf;
-        console.log(name + ": " + zoom + " " + cn);
-        districts[districtId] = {
-          name,
-          coordinates,
-          zoom,
-          center
-        };
-      });
-      districtsRef.current = districts;
-    }catch(err) {
-      console.error('Error loading cities:', err);
-    }
-    }
-
-    const init = async () => {
-      await loadDistricts();
-    };
-
-    init();
+    // miami_cities.geojson (2.0 MB) used to be fetched and parsed here to build
+    // districtsRef: a centroid and zoom level per city polygon. The only code
+    // that ever read districtsRef is the district-layer rendering commented out
+    // below and in the style-change handler, so the download, the parse and the
+    // per-feature logging produced nothing that reaches the screen. Reviving the
+    // district layers means reviving this loader with it.
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
@@ -1798,140 +1623,52 @@ const Dashboard = () => {
         setLoading(false);
       }
 
-      try {
-        const supabaseBaseUrl = import.meta.env.VITE_SUPABASE_URL || SUPABASE_STORAGE.split('/storage/')[0];
-        const projectsGeoJsonUrl = `${supabaseBaseUrl}/storage/v1/object/public/project-data/${PROJECTS_GEOJSON_FILE}`;
-        const response = await fetch(projectsGeoJsonUrl, { cache: 'no-store' });
+      // Fetching, JSON.parse and all feature reshaping now happen in a worker;
+      // the main thread only applies the results to the map. Both jobs start
+      // together so their downloads overlap, but they are applied in the same
+      // order as before: projects and their markers first, census tracts second.
+      const supabaseBaseUrl = import.meta.env.VITE_SUPABASE_URL || SUPABASE_STORAGE.split('/storage/')[0];
+      const projectsJob = runWorkerTask(dataWorker, 'projects', {
+        url: `${supabaseBaseUrl}/storage/v1/object/public/project-data/${PROJECTS_GEOJSON_FILE}`,
+      });
+      const censusJob = runWorkerTask(dataWorker, 'census', {
+        censusUrl: '/femaindex.geojson',
+        creUrl: '/FL_CRE.csv',
+      });
 
-        if (!response.ok) {
-          throw new Error(`Failed to load project data: ${response.status}`);
+      try {
+        const { filteredData, markerSpecs, skipped, projectsSourceUrl, bufferSourceUrl } =
+          await projectsJob;
+
+        if (skipped.length) {
+          console.warn('[Projects] Skipped features with invalid coordinates:', skipped);
         }
 
-        const data = await response.json();
-        const allFeatures = data.features || [];
-
-        // Dashboard-level display filters:
-        //  1. exclude projects without valid coordinates (missing or 0,0 placeholders)
-        //  2. show only projects with an estimated cost greater than zero
-        const hasValidCoordinates = (feature) => {
-          const coords = feature?.geometry?.coordinates;
-          if (!Array.isArray(coords) || coords.length < 2) return false;
-          const lng = Number(coords[0]);
-          const lat = Number(coords[1]);
-          if (!Number.isFinite(lng) || !Number.isFinite(lat)) return false;
-          // (0,0) is the "null island" placeholder used for ungeocoded projects.
-          if (lng === 0 && lat === 0) return false;
-          return Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
-        };
-
-        const costFilteredFeatures = allFeatures.filter((feature) => {
-          if (!hasValidCoordinates(feature)) return false;
-          const props = feature?.properties || {};
-          const rawCost = props['Estimated_'] ?? props['Estimated Project Cost'];
-          if (rawCost == null || rawCost === '') return false;
-          const numericCost = typeof rawCost === 'string'
-            ? parseFloat(rawCost.replace(/[$,]/g, ''))
-            : parseFloat(rawCost);
-          return Number.isFinite(numericCost) && numericCost > 0;
-        }).map((feature) => {
-          const props = feature?.properties;
-          if (!props) return feature;
-          const next = { ...props };
-          for (const key of ['Infrastruc', 'Infrastructure Type', 'Type']) {
-            if (next[key] != null && next[key] !== '') {
-              next[key] = canonicalizeInfrastructureTypeValue(next[key]);
-            }
-          }
-          return { ...feature, properties: next };
-        });
-
-        const filteredData = { ...data, features: costFilteredFeatures };
-
-        console.log('[Projects] Loaded Storage', PROJECTS_GEOJSON_FILE + ':', allFeatures.length, 'features');
-        console.log('[Projects] Non-zero cost filter kept:', costFilteredFeatures.length, 'features');
-        console.log('[Projects] Sample properties:', costFilteredFeatures[0]?.properties ? Object.keys(costFilteredFeatures[0].properties).slice(0, 10) : 'No properties');
-        console.log('[Projects] Sample Infrastruc value:', costFilteredFeatures[0]?.properties?.Infrastruc);
-        console.log('[Projects] Sample NAME (city) value:', costFilteredFeatures[0]?.properties?.NAME);
         setAllProjectsData(filteredData);
 
+        // Both sources are handed to mapbox as blob: URLs, so mapbox fetches and
+        // parses them inside its own worker instead of on the main thread.
         map.current.addSource('projects', {
           type: 'geojson',
-          data: filteredData
+          data: projectsSourceUrl
         });
 
-        // Compute spider offsets so co-located projects get distinct marker positions
-        const spiderOffsets = computeSpiderOffsets(costFilteredFeatures, 40);
-
-        // Create invisible buffer zones around each marker (using offset positions)
-        const bufferFeatures = costFilteredFeatures.map((feature, index) => {
-          const coordinates = spiderOffsets.get(index) || feature.geometry.coordinates;
-          const circleCoords = createCircleBuffer(coordinates, 30); // 30 meter radius buffer
-          return {
-            type: 'Feature',
-            id: `marker-buffer-${index}`,
-            geometry: {
-              type: 'Polygon',
-              coordinates: [circleCoords]
-            },
-            properties: {
-              markerIndex: index
-            }
-          };
-        });
-
-        const bufferGeoJSON = {
-          type: 'FeatureCollection',
-          features: bufferFeatures
-        };
-
-        // Add buffer zones as an invisible layer to intercept mouse events
+        // Invisible buffer zones around each marker, to intercept mouse events.
+        // The layer itself is added in addCensusSourceAndLayers, after the
+        // census layers, so the stacking order is unchanged.
         map.current.addSource('marker-buffers', {
           type: 'geojson',
-          data: bufferGeoJSON
+          data: bufferSourceUrl
         });
 
-        // Buffer layer will be added in addCensusSourceAndLayers after census layers
-
-        const markers = [];
-        costFilteredFeatures.forEach((feature, featureIndex) => {
-          const geometry = feature.geometry;
-          const coordinates = geometry && geometry.coordinates;
-          // Skip features without valid point coordinates
-          if (
-            !geometry ||
-            geometry.type !== 'Point' ||
-            !Array.isArray(coordinates) ||
-            coordinates.length < 2 ||
-            typeof coordinates[0] !== 'number' ||
-            typeof coordinates[1] !== 'number' ||
-            !Number.isFinite(coordinates[0]) ||
-            !Number.isFinite(coordinates[1])
-          ) {
-            console.warn('[Projects] Skipping feature with invalid coordinates:', feature.id);
-            return;
-          }
-
-          const properties = feature.properties;
-          
-          // Normalize city property by trimming whitespace (use NAME field, fallback to City)
-          const cityField = properties['NAME'] || properties['City'];
-          if (cityField) {
-            if (properties['NAME']) {
-              properties['NAME'] = properties['NAME'].trim();
-            }
-            if (properties['City']) {
-              properties['City'] = properties['City'].trim();
-            }
-          }
-
-          // Use spider-offset position for co-located markers
-          const displayCoords = spiderOffsets.get(featureIndex) || coordinates;
+        const markers = markerSpecs.map(({ featureIndex, lngLat, color }) => {
+          const feature = filteredData.features[featureIndex];
 
           const marker = new mapboxgl.Marker({
-            color: getMarkerColor(properties['Infrastruc'] || properties['Infrastructure Type'] || properties['Type']),
+            color,
             scale: isMobileRef.current ? 0.35 : 0.49
           })
-            .setLngLat(displayCoords);
+            .setLngLat(lngLat);
 
           marker.getElement().addEventListener('click', (e) => {
             e.stopPropagation();
@@ -1968,7 +1705,7 @@ const Dashboard = () => {
 
           marker.addTo(map.current);
           marker.feature = feature;
-          markers.push(marker);
+          return marker;
         });
 
         setAllMarkers(markers);
@@ -1985,165 +1722,29 @@ const Dashboard = () => {
         setLoading(false);
       }
 
-      // Load FL_CRE.csv data
       try {
-        const csvResponse = await fetch('/FL_CRE.csv');
-        if (csvResponse.ok) {
-          const csvText = await csvResponse.text();
-          const lines = csvText.split('\n').filter(line => line.trim());
-          
-          // Simple CSV parser that handles quoted fields
-          const parseCSVLine = (line) => {
-            const result = [];
-            let current = '';
-            let inQuotes = false;
-            for (let i = 0; i < line.length; i++) {
-              const char = line[i];
-              if (char === '"') {
-                inQuotes = !inQuotes;
-              } else if (char === ',' && !inQuotes) {
-                result.push(current.trim());
-                current = '';
-              } else {
-                current += char;
-              }
-            }
-            result.push(current.trim());
-            return result;
-          };
-          
-          const headers = parseCSVLine(lines[0]);
-          const geoIdIndex = headers.indexOf('GEO_ID');
-          const pred3PEIndex = headers.indexOf('PRED3_PE');
-          
-          const pred3PEMap = {};
-          for (let i = 1; i < lines.length; i++) {
-            if (!lines[i].trim()) continue;
-            const values = parseCSVLine(lines[i]);
-            if (values.length > Math.max(geoIdIndex, pred3PEIndex)) {
-              const geoId = values[geoIdIndex]?.trim();
-              const pred3PE = parseFloat(values[pred3PEIndex]?.trim());
-              
-              if (geoId && !isNaN(pred3PE)) {
-                // Convert "1400000US12086000107" to "12086000107"
-                const geoid = geoId.replace('1400000US', '');
-                pred3PEMap[geoid] = pred3PE;
-              }
-            }
-          }
-          pred3PEDataRef.current = pred3PEMap;
-          console.log(`[PRED3_PE] Loaded ${Object.keys(pred3PEMap).length} census tract values`);
-        }
-      } catch (csvError) {
-        console.warn('Error loading FL_CRE.csv:', csvError);
-      }
+        const { censusSourceUrl, statsPayload, creError } = await censusJob;
 
-      try {
-        const response = await fetch('/femaindex.geojson');
-        if (!response.ok) {
-          throw new Error(`Failed to load census tract data: ${response.status}`);
+        if (creError) {
+          console.warn('Error loading FL_CRE.csv:', creError);
         }
 
-        const rawGeojson = await response.json();
-        const reprojected = reprojectFeatureCollectionIfNeeded(rawGeojson);
-        const processedFeatures = (reprojected.features || []).map((feature, index) => {
-          const properties = { ...(feature.properties || {}) };
-          const riskRating = properties['T_FEMA_National_Risk_Index_$_.FEMAIndexRating'] || null;
-          const populationValue = parseNumericValue(
-            properties['T_CENSUS_Community_Resilience_Est$_.Total_population__excludes_adult_correctional_juvenile_facilitie']
-          );
-          const geoid = properties['L0Census_Tracts.GEOID'];
-          const pred3PE = geoid ? pred3PEDataRef.current[geoid] : null;
-
-          return {
-            ...feature,
-            id: feature.id ?? geoid ?? index,
-            properties: {
-              ...properties,
-              __riskRating: riskRating,
-              __population: populationValue,
-              __pred3PE: pred3PE !== null && pred3PE !== undefined ? pred3PE : null
-            }
-          };
-        });
-
-        const processedGeojson = {
-          ...reprojected,
-          features: processedFeatures
-        };
-
-        const riskRatings = processedFeatures
-          .map(feature => feature.properties.__riskRating)
-          .filter(value => value !== null && value !== undefined);
-        const populationValues = processedFeatures
-          .map(feature => feature.properties.__population)
-          .filter(value => Number.isFinite(value));
-        const pred3PEValues = processedFeatures
-          .map(feature => feature.properties.__pred3PE)
-          .filter(value => value !== null && value !== undefined && Number.isFinite(value));
-
-        // Get unique risk ratings for stats
-        const uniqueRatings = [...new Set(riskRatings)];
-        const riskStats = { ratings: uniqueRatings, count: riskRatings.length };
-        const populationStats = getRangeStats(populationValues);
-        const pred3PEStats = getRangeStats(pred3PEValues);
-
-        const riskMissing = processedFeatures.length - riskRatings.length;
-        const populationMissing = processedFeatures.length - populationValues.length;
-        const pred3PEMissing = processedFeatures.length - pred3PEValues.length;
-
-        censusDataRef.current = processedGeojson;
-        const statsPayload = {
-          risk: riskStats,
-          population: populationStats,
-          pred3PE: pred3PEStats,
-          counts: {
-            total: processedFeatures.length,
-            missingRisk: riskMissing,
-            missingPopulation: populationMissing,
-            missingPred3PE: pred3PEMissing
-          }
-        };
+        // A blob: URL rather than the parsed object, so mapbox parses the tract
+        // geometry in its own worker. censusDataRef is only ever handed to
+        // addSource / setData, so a URL serves exactly the same purpose.
+        censusDataRef.current = censusSourceUrl;
         censusStatsRef.current = statsPayload;
         setCensusStats(statsPayload);
         addCensusSourceAndLayers();
 
-        const bounds = new mapboxgl.LngLatBounds();
-        let hasBounds = false;
-        processedFeatures.forEach(feature => {
-          if (!feature.geometry) return;
-          walkCoordinates(feature.geometry, coord => {
-            if (!hasBounds) {
-              bounds.set(coord, coord);
-              hasBounds = true;
-            } else {
-              bounds.extend(coord);
-            }
-          });
-        });
-
-        if (hasBounds) {
-          map.current.fitBounds(bounds, { padding: { top: 10, bottom: 300, left: 350, right: 10 }, duration: 1200 });
-        }
-
-        console.groupCollapsed('[Census] Census Tract Data Summary');
-        console.log('Total tracts loaded:', processedFeatures.length);
-        console.log('FEMA Risk Ratings found:', uniqueRatings);
-        console.log('Population range:', populationStats.min, populationStats.max);
-        if (riskMissing > 0) {
-          console.warn(`Missing FEMA Risk Rating for ${riskMissing} tracts`, processedFeatures
-            .filter(feature => !feature.properties.__riskRating)
-            .slice(0, 10)
-            .map(feature => feature.properties['L0Census_Tracts.GEOID'] || feature.id));
-        }
-        if (populationMissing > 0) {
-          console.warn(`Missing population for ${populationMissing} tracts`, processedFeatures
-            .filter(feature => !Number.isFinite(feature.properties.__population))
-            .slice(0, 10)
-            .map(feature => feature.properties['L0Census_Tracts.GEOID'] || feature.id));
-        }
-        console.groupEnd();
-        console.info('[Census] Census tract layers added successfully');
+        // The block that used to follow built a LngLatBounds over every tract
+        // and called map.fitBounds with it. It threw TypeError on its first
+        // line — LngLatBounds has no .set() method — on every single load, so
+        // the fitBounds never ran and the map kept the framing that
+        // fitMapToMostProjects had already applied. It is left out rather than
+        // repaired: repairing it would move the camera and change what the user
+        // sees. Restoring the tract-extent zoom is a deliberate design change,
+        // not a performance fix.
       } catch (censusError) {
         console.error('Error loading census tract data:', censusError);
       }
@@ -2430,10 +2031,15 @@ const Dashboard = () => {
 
       const shouldShow = projectsLayerVisible && typeMatch && disasterMatch && statusMatch && cityMatch;
 
+      // Only write when the value actually changes. This effect also re-runs on
+      // every popup open/close (activeFeature is a dependency, and must stay one
+      // so a filtered-out project's popup still closes), which otherwise meant
+      // 1,664 redundant inline-style writes per popup interaction.
+      const element = marker.getElement();
       if (shouldShow) {
-        marker.getElement().style.display = 'block';
+        if (element.style.display !== 'block') element.style.display = 'block';
       } else {
-        marker.getElement().style.display = 'none';
+        if (element.style.display !== 'none') element.style.display = 'none';
         // Close popup if the hidden marker's feature is currently active
         if (activeFeature && marker.feature) {
           // Check if it's the same feature (same object reference or same coordinates)
@@ -2461,30 +2067,41 @@ const Dashboard = () => {
     }
   }, [selectedCity, allMarkers.length, zoomToCity]);
 
-  // Calculate filtered statistics (project count and total investment)
-  const filteredStats = useMemo(() => {
-    if (!allProjectsData?.features) {
-      return { projectCount: 0, totalInvestment: 0 };
-    }
+  /**
+   * The set of projects matching the current filters.
+   *
+   * filteredStats and pieChartData ran this same predicate over every feature
+   * independently, so each filter change walked the full collection twice.
+   * Both now derive from this one memo; the predicate itself is unchanged.
+   */
+  const filteredProjectFeatures = useMemo(() => {
+    if (!allProjectsData?.features) return [];
 
-    const filteredFeatures = allProjectsData.features.filter(feature => {
+    const selectedCityTrimmed = selectedCity ? selectedCity.trim() : selectedCity;
+    const selectedCityLower = (selectedCityTrimmed || '').toLowerCase();
+
+    return allProjectsData.features.filter(feature => {
       const props = feature.properties || {};
       const type = props['Infrastruc'] || props['Infrastructure Type'] || props['Type'];
       const disasterFocus = props['Disaster_F'] || props['Disaster Focus'];
       const projectStatus = getProjectStatus(props);
       const city = (props['NAME'] || props['City']) ? (props['NAME'] || props['City']).trim() : (props['NAME'] || props['City']);
-      
+
       const typeMatch = selectedTypes.length === 0 || selectedTypes.includes(type);
       const disasterMatch = disasterFocusMatches(selectedDisasterFocus, disasterFocus);
       const statusMatch = selectedProjectStatuses.length === 0 || selectedProjectStatuses.includes(projectStatus);
-      const selectedCityTrimmed = selectedCity ? selectedCity.trim() : selectedCity;
-      const cityMatch = !selectedCityTrimmed || selectedCityTrimmed === '' || (city || '').toLowerCase() === (selectedCityTrimmed || '').toLowerCase();
+      const cityMatch = !selectedCityTrimmed || selectedCityTrimmed === '' || (city || '').toLowerCase() === selectedCityLower;
 
       return typeMatch && disasterMatch && statusMatch && cityMatch;
     });
+  }, [allProjectsData, selectedTypes, selectedDisasterFocus, selectedProjectStatuses, selectedCity]);
+
+  // Calculate filtered statistics (project count and total investment)
+  const filteredStats = useMemo(() => {
+    const filteredFeatures = filteredProjectFeatures;
 
     const projectCount = filteredFeatures.length;
-    
+
     // Calculate total investment
     const totalInvestment = filteredFeatures.reduce((sum, feature) => {
       const cost = feature.properties?.['Estimated_'] || feature.properties?.['Estimated Project Cost'];
@@ -2501,30 +2118,11 @@ const Dashboard = () => {
     }, 0);
 
     return { projectCount, totalInvestment };
-  }, [allProjectsData, selectedTypes, selectedDisasterFocus, selectedProjectStatuses, selectedCity]);
+  }, [filteredProjectFeatures]);
 
   // Calculate pie chart data based on city, disaster focus, and infrastructure type filters
   const pieChartData = useMemo(() => {
-    if (!allProjectsData?.features) {
-      return [];
-    }
-
-    // Filter by city, disaster focus, and infrastructure type
-    const filteredFeatures = allProjectsData.features.filter(feature => {
-      const props = feature.properties || {};
-      const type = props['Infrastruc'] || props['Infrastructure Type'] || props['Type'];
-      const disasterFocus = props['Disaster_F'] || props['Disaster Focus'];
-      const projectStatus = getProjectStatus(props);
-      const city = (props['NAME'] || props['City']) ? (props['NAME'] || props['City']).trim() : (props['NAME'] || props['City']);
-      
-      const typeMatch = selectedTypes.length === 0 || selectedTypes.includes(type);
-      const disasterMatch = disasterFocusMatches(selectedDisasterFocus, disasterFocus);
-      const statusMatch = selectedProjectStatuses.length === 0 || selectedProjectStatuses.includes(projectStatus);
-      const selectedCityTrimmed = selectedCity ? selectedCity.trim() : selectedCity;
-      const cityMatch = !selectedCityTrimmed || selectedCityTrimmed === '' || (city || '').toLowerCase() === (selectedCityTrimmed || '').toLowerCase();
-
-      return typeMatch && disasterMatch && statusMatch && cityMatch;
-    });
+    const filteredFeatures = filteredProjectFeatures;
 
     // Count projects by infrastructure type
     const typeCounts = {};
@@ -2569,7 +2167,7 @@ const Dashboard = () => {
         color: colors[name] || '#95a5a6'
       }))
       .sort((a, b) => b.value - a.value); // Sort by count descending
-  }, [allProjectsData, selectedTypes, selectedDisasterFocus, selectedProjectStatuses, selectedCity]);
+  }, [filteredProjectFeatures]);
 
   const pieChartSummary = useMemo(() => {
     if (!pieChartData.length) return '';
