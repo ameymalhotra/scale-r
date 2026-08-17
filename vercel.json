@@ -1,9 +1,19 @@
 {
+  "headers": [
+    {
+      "source": "/llms.txt",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "text/plain; charset=utf-8"
+        }
+      ]
+    }
+  ],
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/((?!llms\\.txt$|robots\\.txt$).*)",
       "destination": "/index.html"
     }
   ]
 }
-

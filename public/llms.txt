@@ -1,0 +1,18 @@
+# SCALE-R: Miami-Dade Climate Resilience
+
+> SCALE-R (Simulating Coastal Adaptation and Local Exposure for Enhanced Resilience) is an NSF-funded University of Miami initiative that maps coastal adaptation projects and models their impact on disaster risk reduction across Miami-Dade County.
+
+This site is a public decision-support dashboard. Unlike tools that only show risk and vulnerability, SCALE-R highlights resilience investments, infrastructure types, and place-based interventions.
+
+## Pages
+
+- [About the project](https://scale-r.miami.edu/about): Mission, goals, and community engagement for SCALE-R.
+- [Dashboard](https://scale-r.miami.edu/dashboard): Interactive map of resilience projects, filters, and modeling layers.
+- [Team](https://scale-r.miami.edu/team): Principal investigators and research team.
+- [Partners](https://scale-r.miami.edu/partners): Academic, government, and community partners.
+- [Technical documentation](https://scale-r.miami.edu/docs): Data sources, infrastructure types, disaster focus, modeling layers, and use cases.
+- [Outputs](https://scale-r.miami.edu/outputs): Research products, datasets, and program deliverables.
+
+## Optional
+
+- [NSF Award 2435008](https://www.nsf.gov/awardsearch/showAward?AWD_ID=2435008): National Science Foundation grant supporting this research.

@@ -10,6 +10,8 @@ const goals = [
     title: 'Cross-Sector Partnerships',
     icon: 'groups',
     photoSrc: '/Images/goals/cross-sector.webp',
+    photoWidth: 930,
+    photoHeight: 698,
     body: (
       <>
         Fostering meaningful collaborations among academia, communities, and
@@ -22,6 +24,8 @@ const goals = [
     title: 'Mapping the Resilience Landscape',
     icon: 'hub',
     photoSrc: '/Images/goals/mapping.webp',
+    photoWidth: 866,
+    photoHeight: 698,
     cardClassName: 'about-goal-card--scrim-middle',
     body: (
       <>
@@ -35,6 +39,8 @@ const goals = [
     title: 'Decision-Support Tools',
     icon: 'analytics',
     photoSrc: '/Images/goals/decision-support-tools.webp',
+    photoWidth: 932,
+    photoHeight: 698,
     body: (
       <>
         Designing an integrated dashboard that supports the collaborative
@@ -112,6 +118,8 @@ const engagementItems = [
     detail:
       'A workshop was held at the Stephen P. Clark Government Center on 26/9/2024 with the Miami-Dade County experts, enabling a discussion between leaders from the Divisions of Planning, Resilience, Transportation, Historic Preservation, Planning Research, and Zoning with the researchers and students involved in this project.',
     imageSrc: '/Images/community-engagement/workshop-full.webp',
+    imageWidth: 1537,
+    imageHeight: 1152,
     imageAlt:
       'Meeting room workshop with participants seated around a long table facing a presentation screen',
     imageObjectPosition: 'center center',
@@ -122,6 +130,8 @@ const engagementItems = [
     detail:
       'An interaction with the Human Geography students and faculty was organized at the Palmer Trinity School on April 23, 2025, enabling greater awareness and knowledge dissemination among the young learners in the broader community.',
     imageSrc: '/Images/community-engagement/awareness.webp',
+    imageWidth: 1536,
+    imageHeight: 1152,
     imageAlt:
       'Classroom presentation with students seated at desks watching a climate change talk',
   },
@@ -131,6 +141,8 @@ const engagementItems = [
     detail:
       'The PI, Dr. Sarbeswar Praharaj, shared the findings from this project at the World Urban Forum 2024 (WUF12) organized by the United Nations Human Settlement Program from 4-8 November 2024, in Cairo, Egypt.',
     imageSrc: '/Images/community-engagement/presentation.webp',
+    imageWidth: 1536,
+    imageHeight: 1152,
     imageAlt:
       'Presentation at the UN World Urban Forum with attendees facing a screen',
   },
@@ -140,6 +152,8 @@ const engagementItems = [
     detail:
       'We partnered with the MDC Office of Historic Preservation, providing hands-on training for graduate researchers and students on how climate resilience impacts cultural landscapes and how conservation practices and advocacy can help address these challenges.',
     imageSrc: '/Images/community-engagement/hands-on.webp',
+    imageWidth: 1941,
+    imageHeight: 1152,
     imageAlt:
       'Hands-on student training session gathered around a table with materials',
   },
@@ -149,6 +163,8 @@ const engagementItems = [
     detail:
       "The PI joined a premier Research and Academia Roundtable at the UN-Habitat's World Urban Forum 2024, as a member of Habitat UNI (UN-Habitat's network for university/research partners), and his contribution was focused on advancing urban climate resilience through interdisciplinary education and curricula.",
     imageSrc: '/Images/community-engagement/global-impact.webp',
+    imageWidth: 1149,
+    imageHeight: 712,
     imageAlt:
       'Roundtable and conference setting representing interdisciplinary education at the World Urban Forum',
     imageObjectPosition: '78% center',
@@ -159,6 +175,8 @@ const engagementItems = [
     detail:
       'We are making efforts to engage with key stakeholders and networks to share our findings from this project and gather valuable feedback. One such platform was the Smart City Expo Miami (23 – 25 September 2024), where the PI delivered a talk titled "Anticipating Change and Designing Future-Ready Communities."',
     imageSrc: '/Images/community-engagement/disseminating.webp',
+    imageWidth: 1225,
+    imageHeight: 701,
     imageAlt:
       'Audience watching a presentation at Smart City Expo Miami',
     imageObjectPosition: '32% center',
@@ -174,6 +192,8 @@ const recentEvents = [
     location:
       'American Association of Geographers – AAG Annual Meeting, Union Square 12, 4th Floor, Hilton, Tower 3, San Francisco',
     imageSrc: '/Images/recent-events/aag-2026-session.webp',
+    imageWidth: 1024,
+    imageHeight: 682,
     imageAlt:
       'AAG 2026 San Francisco promotional graphic for the core session Environmental Justice and Coastal Inequities',
   },
@@ -185,6 +205,8 @@ const recentEvents = [
     location:
       'ESRI and University of Southern California, USC Spatial Sciences Institute, Los Angeles',
     imageSrc: '/Images/recent-events/security-first-book.webp',
+    imageWidth: 1024,
+    imageHeight: 576,
     imageAlt:
       'Book cover for Security First: Geospatial Workflows for a Safe and Equitable World, Esri Press',
     ctaHref: 'https://indiepubs.com/products/security-first-9781589487857',
@@ -195,23 +217,33 @@ const partners = [
   {
     src: '/strategic-partners/miami-dade-county.png',
     alt: 'Miami-Dade County',
+    width: 500,
+    height: 235,
   },
   {
     src: '/strategic-partners/university-of-miami.png',
     alt: 'University of Miami',
+    width: 689,
+    height: 179,
   },
   {
     src: '/strategic-partners/coral-gables.webp',
     alt: 'City of Coral Gables',
+    width: 510,
+    height: 510,
     logoClass: 'partner-logo--boost partner-logo--coral',
   },
   {
     src: '/strategic-partners/miami-waterkeeper.png',
     alt: 'Miami Waterkeeper',
+    width: 426,
+    height: 97,
   },
   {
     src: '/strategic-partners/everglades-foundation.png',
     alt: 'The Everglades Foundation',
+    width: 933,
+    height: 622,
     logoClass: 'partner-logo--boost',
   },
 ];
@@ -284,19 +316,18 @@ export default function About() {
           {/* The hero is the LCP element, but it is only discoverable once
               React has rendered, so the browser gives it default priority.
               fetchPriority affects fetch order only, never how it is drawn. */}
-          {/* Two candidates only, and that is deliberate. The selection rule
-              picks the smallest candidate at or above the required width, so a
-              1440px desktop (needing 1440, or 2880 on a retina panel) still
-              resolves to the 3200w original and renders exactly as before,
-              while a phone needing ~1082px takes the 1200w file instead of
-              dragging 1.8MB over a mobile connection. Adding a mid-size
-              candidate would change what desktop loads. */}
+          {/* 1200w for phones, 1920w for typical (and Lighthouse) desktops,
+              3200w for large retina panels. The browser picks the smallest
+              candidate at or above the required CSS width × DPR. */}
           <img
-            src="/Images/about-scale-r-hero.webp"
-            srcSet="/Images/about-scale-r-hero-1200.webp 1200w, /Images/about-scale-r-hero.webp 3200w"
+            src="/Images/about-scale-r-hero-1920.webp"
+            srcSet="/Images/about-scale-r-hero-1200.webp 1200w, /Images/about-scale-r-hero-1920.webp 1920w, /Images/about-scale-r-hero.webp 3200w"
             sizes="100vw"
+            width={3200}
+            height={2097}
             alt="Aerial view of Biscayne Bay with boats and the Miami skyline"
             fetchPriority="high"
+            decoding="async"
           />
         </div>
 
@@ -379,7 +410,9 @@ export default function About() {
                     className="about-goal-card__media-img"
                     src={g.photoSrc}
                     alt=""
-                    loading="eager"
+                    width={g.photoWidth}
+                    height={g.photoHeight}
+                    loading="lazy"
                     decoding="async"
                   />
                   <div className="about-goal-card__media-scrim" />
@@ -548,8 +581,9 @@ export default function About() {
                         <img
                           src={item.imageSrc}
                           alt={item.imageAlt}
-                          loading={index === 0 ? 'eager' : 'lazy'}
-                          fetchPriority={index === 0 ? 'high' : 'auto'}
+                          width={item.imageWidth}
+                          height={item.imageHeight}
+                          loading="lazy"
                           decoding="async"
                           style={
                             item.imageObjectPosition
@@ -615,6 +649,8 @@ export default function About() {
                       className="recent-event-card__img"
                       src={event.imageSrc}
                       alt={event.imageAlt ?? ''}
+                      width={event.imageWidth}
+                      height={event.imageHeight}
                       loading="lazy"
                       decoding="async"
                     />
@@ -703,6 +739,8 @@ export default function About() {
                       className={['partner-logo', p.logoClass].filter(Boolean).join(' ')}
                       src={p.src}
                       alt={p.alt}
+                      width={p.width}
+                      height={p.height}
                       loading="lazy"
                       decoding="async"
                     />
@@ -716,6 +754,8 @@ export default function About() {
                       className={['partner-logo', p.logoClass].filter(Boolean).join(' ')}
                       src={p.src}
                       alt=""
+                      width={p.width}
+                      height={p.height}
                       loading="lazy"
                       decoding="async"
                     />
@@ -742,6 +782,8 @@ export default function About() {
                 className="about-ack-logo"
                 src="/Images/1019px-NSF_logo.webp"
                 alt="U.S. National Science Foundation logo"
+                width={1019}
+                height={1024}
                 loading="lazy"
                 decoding="async"
               />

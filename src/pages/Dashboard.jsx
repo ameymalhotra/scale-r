@@ -1,5 +1,14 @@
-import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react';
 import { createPortal } from 'react-dom';
+import { searchProjects } from '../utils/searchProjects.js';
+import { highlightText } from '../utils/highlightText.jsx';
+import { reprojectFeatureCollectionIfNeeded } from '../utils/geoProcessing.js';
+import DataParserWorker from '../workers/dataParser.worker.js?worker';
+
+const InfrastructureTypeChart = lazy(
+  () => import('../components/dashboard/InfrastructureTypeChart.jsx'),
+);
+
 /**
  * mapbox-gl is loaded on demand rather than imported statically.
  *
@@ -13,11 +22,6 @@ import { createPortal } from 'react-dom';
  * only after the map exists, so it is always assigned by then.
  */
 let mapboxgl;
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
-import { searchProjects } from '../utils/searchProjects.js';
-import { highlightText } from '../utils/highlightText.jsx';
-import { reprojectFeatureCollectionIfNeeded } from '../utils/geoProcessing.js';
-import DataParserWorker from '../workers/dataParser.worker.js?worker';
 
 const DASHBOARD_CITY_LISTBOX_ID = 'dashboard-city-listbox';
 const DASHBOARD_CITY_TRIGGER_ID = 'dashboard-city-trigger';
@@ -1798,7 +1802,15 @@ const Dashboard = () => {
     // district layers means reviving this loader with it.
 
     const initMap = async () => {
-    mapboxgl = (await import('mapbox-gl')).default;
+    // Load the stylesheet with the library rather than from a <link> in
+    // index.html. The CDN copy was render-blocking on every route (and pinned
+    // to v2.15.0 while the bundled JS is v3.15.0). Importing from the package
+    // keeps CSS off the critical path until the map actually initialises.
+    const [{ default: mapboxglModule }] = await Promise.all([
+      import('mapbox-gl'),
+      import('mapbox-gl/dist/mapbox-gl.css').catch(() => null),
+    ]);
+    mapboxgl = mapboxglModule;
     mapboxgl.accessToken = mapboxToken;
 
     map.current = new mapboxgl.Map({
@@ -2990,38 +3002,9 @@ const Dashboard = () => {
                   boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08), inset 0 0 0 1px rgba(255, 255, 255, 0.5)',
                 }}
               >
-                <ResponsiveContainer width="100%" height={180}>
-                  <PieChart>
-                    <Pie
-                      data={pieChartData}
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={55}
-                      fill="#8884d8"
-                      dataKey="value"
-                      isAnimationActive={false}
-                    >
-                      {pieChartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} stroke="#ffffff" strokeWidth={1} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      formatter={(value) => [`${value} projects`, 'Count']}
-                      contentStyle={{
-                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                        border: '1px solid rgba(0, 0, 0, 0.1)',
-                        borderRadius: '8px',
-                        padding: '8px',
-                      }}
-                    />
-                    <Legend
-                      verticalAlign="bottom"
-                      height={36}
-                      iconType="circle"
-                      wrapperStyle={{ fontSize: '0.75em', paddingTop: '8px', color: '#445461' }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
+                <Suspense fallback={<div style={{ height: 180 }} aria-hidden="true" />}>
+                  <InfrastructureTypeChart data={pieChartData} />
+                </Suspense>
               </div>
             </figure>
           )}

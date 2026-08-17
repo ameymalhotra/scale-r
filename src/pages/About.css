@@ -16,7 +16,7 @@
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 
-/* Fonts loaded via index.html <link> */
+/* Fonts are self-hosted in src/styles/fonts.css */
 .about-root {
   --about-bg: #fafaf9;
   /* Matches --about-bg (#fafaf9) for rgba(var(--about-bg-rgb), α) */

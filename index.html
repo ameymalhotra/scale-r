@@ -4,38 +4,33 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta
+      name="description"
+      content="SCALE-R is an NSF-funded University of Miami initiative that maps coastal adaptation interventions and models disaster risk reduction across Miami-Dade County."
+    />
     <title>Miami-Dade Climate Resilience Dashboard</title>
-    
-    <!-- Google Fonts: Manrope + Inter -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <!-- Mapbox serves both the stylesheet below and every map tile; Supabase
-         serves the project GeoJSON, which is requested as soon as the map
-         loads. Opening both connections early only moves the handshake
-         earlier, it does not change what is requested. -->
-    <link rel="preconnect" href="https://api.mapbox.com" crossorigin />
-    <link rel="preconnect" href="https://mmlqltdcpsuxirbqhugw.supabase.co" crossorigin />
-
-    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet" />
-
-    <!-- Mapbox CSS -->
-    <link href='https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css' rel='stylesheet' />
 
     <script>
-      /* The /about hero is the LCP element, but React renders it, so the
-         preload scanner never sees it in the initial HTML and the request
-         waits for the bundle to execute. Injecting the preload here starts it
-         immediately.
-
-         It is route-scoped on purpose: this index.html is served for every
-         route, and an unconditional preload would pull the 1.8 MB hero down on
-         /dashboard, /team and everywhere else that never renders it. It is also
-         placed after the stylesheet links above so the render-blocking CSS is
-         queued first — an image competing with those delays first paint, which
-         costs more than the LCP it buys. */
+      /* Route-scoped hints. This document is served for every path, so an
+         unconditional preconnect or image preload would fetch dashboard-only
+         origins (and the About hero) on routes that never use them. */
       (function () {
         var path = location.pathname.replace(/\/+$/, '') || '/';
+
+        if (path === '/dashboard') {
+          ;[
+            'https://api.mapbox.com',
+            'https://mmlqltdcpsuxirbqhugw.supabase.co',
+          ].forEach(function (origin) {
+            var pre = document.createElement('link');
+            pre.rel = 'preconnect';
+            pre.href = origin;
+            pre.crossOrigin = '';
+            document.head.appendChild(pre);
+          });
+          return;
+        }
+
         if (path !== '/' && path !== '/about') return;
         var link = document.createElement('link');
         link.rel = 'preload';
@@ -45,9 +40,9 @@
            here and then the 1200w candidate for the image itself — downloading
            both and making things worse than no preload at all. */
         link.imageSrcset =
-          '/Images/about-scale-r-hero-1200.webp 1200w, /Images/about-scale-r-hero.webp 3200w';
+          '/Images/about-scale-r-hero-1200.webp 1200w, /Images/about-scale-r-hero-1920.webp 1920w, /Images/about-scale-r-hero.webp 3200w';
         link.imageSizes = '100vw';
-        link.href = '/Images/about-scale-r-hero.webp';
+        link.href = '/Images/about-scale-r-hero-1920.webp';
         link.fetchPriority = 'high';
         document.head.appendChild(link);
       })();

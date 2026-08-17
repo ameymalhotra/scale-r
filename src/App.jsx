@@ -15,16 +15,51 @@ const Partners = lazy(() => import('./pages/Partners.jsx'));
 const TechnicalDocs = lazy(() => import('./pages/TechnicalDocs.jsx'));
 const Outputs = lazy(() => import('./pages/Outputs.jsx'));
 
-const ROUTE_TITLES = {
-  '/about': 'About the project',
-  '/dashboard': 'Dashboard',
-  '/team': 'Team',
-  '/partners': 'Partners',
-  '/docs': 'Technical documentation',
-  '/outputs': 'Outputs',
+const ROUTE_META = {
+  '/about': {
+    title: 'About the project',
+    description:
+      'SCALE-R is an NSF-funded University of Miami initiative that maps coastal adaptation interventions and models disaster risk reduction across Miami-Dade County.',
+  },
+  '/dashboard': {
+    title: 'Dashboard',
+    description:
+      'Explore SCALE-R’s interactive map of climate resilience projects, infrastructure types, and disaster-risk layers across Miami-Dade County.',
+  },
+  '/team': {
+    title: 'Team',
+    description:
+      'Meet the University of Miami researchers and students building SCALE-R, an NSF-funded coastal resilience decision-support project for Miami-Dade County.',
+  },
+  '/partners': {
+    title: 'Partners',
+    description:
+      'Academic, government, and community partners collaborating on SCALE-R to advance coastal adaptation in Miami-Dade County.',
+  },
+  '/docs': {
+    title: 'Technical documentation',
+    description:
+      'Data sources, infrastructure types, disaster-focus layers, and modeling methods behind the SCALE-R Miami-Dade climate resilience dashboard.',
+  },
+  '/outputs': {
+    title: 'Outputs',
+    description:
+      'Research products, datasets, and program deliverables from the SCALE-R coastal resilience project at the University of Miami.',
+  },
 };
 
 const BASE_TITLE = 'Miami-Dade Climate Resilience';
+const DEFAULT_META = ROUTE_META['/about'];
+
+function setMetaDescription(text) {
+  let el = document.querySelector('meta[name="description"]');
+  if (!el) {
+    el = document.createElement('meta');
+    el.setAttribute('name', 'description');
+    document.head.appendChild(el);
+  }
+  el.setAttribute('content', text);
+}
 
 export default function App() {
   const location = useLocation();
@@ -38,8 +73,9 @@ export default function App() {
 
   useEffect(() => {
     const path = location.pathname;
-    const page = ROUTE_TITLES[path] || ROUTE_TITLES['/about'];
-    document.title = `${page} | ${BASE_TITLE}`;
+    const meta = ROUTE_META[path] || DEFAULT_META;
+    document.title = `${meta.title} | ${BASE_TITLE}`;
+    setMetaDescription(meta.description);
   }, [location.pathname]);
 
   return (

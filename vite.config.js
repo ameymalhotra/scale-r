@@ -1,9 +1,75 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
+/**
+ * Inline the entry stylesheet into index.html and preload the navbar font.
+ *
+ * The 9 KiB app CSS is same-origin and already cheap, but a <link rel=
+ * "stylesheet"> is still a render-blocking request in Lighthouse. Inlining
+ * removes that request without deferring styles (which would flash unstyled
+ * content). Mapbox CSS is not inlined: it is a dynamic import that only loads
+ * with the map.
+ *
+ * Manrope is the navbar face on every route, including /dashboard whose LCP
+ * is text. Preloading the latin woff2 lets the browser start the font file
+ * before it finishes parsing the inlined @font-face.
+ */
+function inlineEntryCssAndPreloadFonts() {
+  return {
+    name: 'inline-entry-css-and-preload-fonts',
+    apply: 'build',
+    enforce: 'post',
+    transformIndexHtml: {
+      order: 'post',
+      handler(html, ctx) {
+        const bundle = ctx.bundle
+        if (!bundle) return html
+
+        let nextHtml = html.replace(
+          /<link\b[^>]*\brel=["']stylesheet["'][^>]*>/gi,
+          (match) => {
+            const hrefMatch = match.match(/\bhref=["']([^"']+)["']/i)
+            if (!hrefMatch) return match
+            const fileName = hrefMatch[1].replace(/^\//, '').split('?')[0]
+            const assetKey = Object.keys(bundle).find(
+              (key) => bundle[key].type === 'asset' && bundle[key].fileName === fileName,
+            )
+            const asset = assetKey ? bundle[assetKey] : null
+            if (!asset || asset.source == null) return match
+            const css =
+              typeof asset.source === 'string'
+                ? asset.source
+                : Buffer.from(asset.source).toString('utf8')
+            delete bundle[assetKey]
+            return `<style>${css}</style>`
+          },
+        )
+
+        const manrope = Object.values(bundle).find(
+          (asset) =>
+            asset.type === 'asset' &&
+            typeof asset.fileName === 'string' &&
+            asset.fileName.endsWith('.woff2') &&
+            asset.fileName.includes('manrope-latin'),
+        )
+        if (manrope) {
+          const preload =
+            `    <link rel="preload" href="/${manrope.fileName}" as="font" type="font/woff2" crossorigin>\n`
+          const marker = '    <link rel="preconnect" href="https://api.mapbox.com"'
+          nextHtml = nextHtml.includes(marker)
+            ? nextHtml.replace(marker, `${preload}${marker}`)
+            : nextHtml.replace('<head>', `<head>\n${preload}`)
+        }
+
+        return nextHtml
+      },
+    },
+  }
+}
+
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), inlineEntryCssAndPreloadFonts()],
   publicDir: 'public',
   base: '/',
   build: {
