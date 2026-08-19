@@ -880,7 +880,9 @@ const Dashboard = () => {
   const censusDataRef = useRef(null);
   const hoveredCensusIdRef = useRef(null);
   const censusStatsRef = useRef(null);
-  const censusViewRef = useRef('risk');
+  const censusViewRef = useRef('none');
+  const dataWorkerRef = useRef(null);
+  const censusLoadPromiseRef = useRef(null);
   const pred3PEDataRef = useRef({}); // Mapping of GEOID to PRED3_PE values
   const isHoveringMarkerRef = useRef(false);
   const projectPinsGeoJsonRef = useRef(null);
@@ -895,10 +897,11 @@ const Dashboard = () => {
   const isSwitchingFeatureRef = useRef(false);
   const [censusStats, setCensusStats] = useState(null);
   const [censusLayersReady, setCensusLayersReady] = useState(false);
-  const [activeCensusView, setActiveCensusView] = useState('risk');
-  const [censusVisible, setCensusVisible] = useState(true);
+  const [censusLoading, setCensusLoading] = useState(false);
+  const [activeCensusView, setActiveCensusView] = useState('none');
+  const [censusVisible, setCensusVisible] = useState(false);
   const censusEventsBoundRef = useRef(false);
-  const censusVisibleRef = useRef(true);
+  const censusVisibleRef = useRef(false);
   const censusPopupRef = useRef(null);
   const dashboardMapClickRef = useRef(null);
   const [selectedTypes, setSelectedTypes] = useState([]);
@@ -1393,6 +1396,46 @@ const Dashboard = () => {
     projectPinEventsBoundRef.current = true;
   }, []);
 
+  const ensureMarkerBufferLayer = useCallback(() => {
+    if (!map.current?.getSource('marker-buffers') || map.current.getLayer('marker-buffers')) return;
+
+    map.current.addLayer({
+      id: 'marker-buffers',
+      type: 'fill',
+      source: 'marker-buffers',
+      paint: {
+        'fill-color': 'transparent',
+        'fill-opacity': 0
+      }
+    });
+
+    map.current.on('mouseenter', 'marker-buffers', () => {
+      isHoveringMarkerRef.current = true;
+      if (hoveredCensusIdRef.current !== null && map.current) {
+        map.current.setFeatureState(
+          { source: 'census-tracts', id: hoveredCensusIdRef.current },
+          { hover: false }
+        );
+        hoveredCensusIdRef.current = null;
+      }
+    });
+
+    map.current.on('mouseleave', 'marker-buffers', () => {
+      isHoveringMarkerRef.current = false;
+    });
+
+    map.current.on('mousemove', 'marker-buffers', () => {
+      isHoveringMarkerRef.current = true;
+      if (hoveredCensusIdRef.current !== null && map.current) {
+        map.current.setFeatureState(
+          { source: 'census-tracts', id: hoveredCensusIdRef.current },
+          { hover: false }
+        );
+        hoveredCensusIdRef.current = null;
+      }
+    });
+  }, []);
+
   const addCensusSourceAndLayers = useCallback(() => {
     if (!map.current || !censusDataRef.current) return;
 
@@ -1567,44 +1610,9 @@ const Dashboard = () => {
       map.current.setLayoutProperty('census-tracts-outline', 'visibility', outlineVisibility);
     }
 
-    // Add marker buffer layer above census layers if it exists
-    if (map.current.getSource('marker-buffers') && !map.current.getLayer('marker-buffers')) {
-      map.current.addLayer({
-        id: 'marker-buffers',
-        type: 'fill',
-        source: 'marker-buffers',
-        paint: {
-          'fill-color': 'transparent',
-          'fill-opacity': 0
-        }
-      });
-
-      // Add event handlers to buffer layer to prevent census hover
-      map.current.on('mouseenter', 'marker-buffers', () => {
-        isHoveringMarkerRef.current = true;
-        if (hoveredCensusIdRef.current !== null && map.current) {
-          map.current.setFeatureState(
-            { source: 'census-tracts', id: hoveredCensusIdRef.current },
-            { hover: false }
-          );
-          hoveredCensusIdRef.current = null;
-        }
-      });
-
-      map.current.on('mouseleave', 'marker-buffers', () => {
-        isHoveringMarkerRef.current = false;
-      });
-
-      map.current.on('mousemove', 'marker-buffers', () => {
-        isHoveringMarkerRef.current = true;
-        if (hoveredCensusIdRef.current !== null && map.current) {
-          map.current.setFeatureState(
-            { source: 'census-tracts', id: hoveredCensusIdRef.current },
-            { hover: false }
-          );
-          hoveredCensusIdRef.current = null;
-        }
-      });
+    ensureMarkerBufferLayer();
+    if (map.current.getLayer('marker-buffers') && typeof map.current.moveLayer === 'function') {
+      map.current.moveLayer('marker-buffers');
     }
 
     if (!censusEventsBoundRef.current) {
@@ -1666,7 +1674,7 @@ const Dashboard = () => {
     }
 
     setCensusLayersReady(true);
-  }, [ensureProjectPinLayer]);
+  }, [ensureMarkerBufferLayer, ensureProjectPinLayer]);
 
   // Toggle between satellite and standard map
   const toggleMapStyle = () => {
@@ -1770,29 +1778,16 @@ const Dashboard = () => {
     // it is not terminated in a cleanup (which StrictMode's double-invoke in
     // development would otherwise kill before the second run could reuse it).
     const dataWorker = new DataParserWorker();
+    dataWorkerRef.current = dataWorker;
 
-    // Kick the downloads off now, before the map is even constructed.
-    //
-    // These used to be dispatched inside the map's `load` handler, which meant
-    // roughly 950 KB of data sat queued behind mapbox-gl's own evaluation and
-    // style fetch — 1.5s of it on desktop and 5.7s on a throttled phone — before
-    // the first byte was requested. Starting here overlaps the transfers with
-    // that work instead. The results are still applied inside `load`, in the
-    // same order as before, so nothing about the rendered outcome changes.
+    // Start project GeoJSON now so the transfer overlaps Mapbox eval. Census
+    // tracts (femaindex + CRE) wait until the user picks FEMA Risk or
+    // Resilience Index — they are not on the first-load path.
     const supabaseBaseUrl = import.meta.env.VITE_SUPABASE_URL || SUPABASE_STORAGE.split('/storage/')[0];
     const projectsJob = runWorkerTask(dataWorker, 'projects', {
       url: `${supabaseBaseUrl}/storage/v1/object/public/project-data/${PROJECTS_GEOJSON_FILE}`,
     });
-    const censusJob = runWorkerTask(dataWorker, 'census', {
-      censusUrl: '/femaindex.geojson',
-      creUrl: '/FL_CRE.csv',
-    });
-    // The `load` handler is what awaits these, and it runs a turn or more later.
-    // Without a handler attached now, a failure in the meantime would surface as
-    // an unhandled rejection. These no-op catches only mark the rejection as
-    // observed; the original promises still reject for the awaits below.
     projectsJob.catch(() => {});
-    censusJob.catch(() => {});
 
     // miami_cities.geojson (2.0 MB) used to be fetched and parsed here to build
     // districtsRef: a centroid and zoom level per city polygon. The only code
@@ -1900,10 +1895,8 @@ const Dashboard = () => {
         setLoading(false);
       }
 
-      // Fetching, JSON.parse and all feature reshaping happen in the worker
-      // (dispatched above, before the map was constructed); the main thread only
-      // applies the results. They are applied in the same order as before:
-      // projects and their markers first, census tracts second.
+      // Fetching and JSON.parse happen in the worker (dispatched before the
+      // map was constructed); the main thread only applies the results.
       try {
         const { filteredData, markerSpecs, skipped, projectsSourceUrl, bufferSourceUrl } =
           await projectsJob;
@@ -1923,12 +1916,11 @@ const Dashboard = () => {
         });
 
         // Invisible buffer zones around each marker, to intercept mouse events.
-        // The layer itself is added in addCensusSourceAndLayers, after the
-        // census layers, so the stacking order is unchanged.
         map.current.addSource('marker-buffers', {
           type: 'geojson',
           data: bufferSourceUrl
         });
+        ensureMarkerBufferLayer();
 
         const pins = markerSpecs.map(({ featureIndex, lngLat, color }) => {
           const feature = filteredData.features[featureIndex];
@@ -1975,33 +1967,6 @@ const Dashboard = () => {
         setError('Unable to load project data. Please ensure the GeoJSON file is available or use a CORS proxy.');
         setLoading(false);
       }
-
-      try {
-        const { censusSourceUrl, statsPayload, creError } = await censusJob;
-
-        if (creError) {
-          console.warn('Error loading FL_CRE.csv:', creError);
-        }
-
-        // A blob: URL rather than the parsed object, so mapbox parses the tract
-        // geometry in its own worker. censusDataRef is only ever handed to
-        // addSource / setData, so a URL serves exactly the same purpose.
-        censusDataRef.current = censusSourceUrl;
-        censusStatsRef.current = statsPayload;
-        setCensusStats(statsPayload);
-        addCensusSourceAndLayers();
-
-        // The block that used to follow built a LngLatBounds over every tract
-        // and called map.fitBounds with it. It threw TypeError on its first
-        // line — LngLatBounds has no .set() method — on every single load, so
-        // the fitBounds never ran and the map kept the framing that
-        // fitMapToMostProjects had already applied. It is left out rather than
-        // repaired: repairing it would move the camera and change what the user
-        // sees. Restoring the tract-extent zoom is a deliberate design change,
-        // not a performance fix.
-      } catch (censusError) {
-        console.error('Error loading census tract data:', censusError);
-      }
     });
     };
 
@@ -2010,7 +1975,60 @@ const Dashboard = () => {
       setError('Error initializing map');
       setLoading(false);
     });
-  }, [addCensusSourceAndLayers, ensureProjectPinLayer]);
+  }, [ensureMarkerBufferLayer, ensureProjectPinLayer]);
+
+  const ensureCensusChoroplethLoaded = useCallback(() => {
+    if (!map.current || !dataWorkerRef.current) return;
+
+    const applyCached = () => {
+      if (!censusDataRef.current) return;
+      addCensusSourceAndLayers();
+    };
+
+    if (censusDataRef.current) {
+      applyCached();
+      return;
+    }
+
+    if (censusLoadPromiseRef.current) {
+      censusLoadPromiseRef.current.then(applyCached).catch(() => {});
+      return;
+    }
+
+    setCensusLoading(true);
+    censusLoadPromiseRef.current = runWorkerTask(dataWorkerRef.current, 'census', {
+      censusUrl: '/femaindex.geojson',
+      creUrl: '/FL_CRE.csv',
+    })
+      .then((result) => {
+        const { censusSourceUrl, statsPayload, creError } = result;
+        if (creError) {
+          console.warn('Error loading FL_CRE.csv:', creError);
+        }
+        censusDataRef.current = censusSourceUrl;
+        censusStatsRef.current = statsPayload;
+        setCensusStats(statsPayload);
+        const view = censusViewRef.current;
+        if (view === 'risk' || view === 'pred3pe') {
+          addCensusSourceAndLayers();
+        }
+        return result;
+      })
+      .catch((censusError) => {
+        censusLoadPromiseRef.current = null;
+        console.error('Error loading census tract data:', censusError);
+        throw censusError;
+      })
+      .finally(() => {
+        setCensusLoading(false);
+      });
+  }, [addCensusSourceAndLayers]);
+
+  useEffect(() => {
+    if (loading) return;
+    if (activeCensusView !== 'risk' && activeCensusView !== 'pred3pe') return;
+    ensureCensusChoroplethLoaded();
+  }, [loading, activeCensusView, ensureCensusChoroplethLoaded]);
 
   useEffect(() => {
     censusVisibleRef.current = censusVisible;
@@ -3395,7 +3413,7 @@ const Dashboard = () => {
             <MapboxPopup map={map.current} activeFeature={activeFeature} />
           )}
 
-          {censusLayersReady && censusStats && (
+          {!loading && (
             <>
               {isMobile ? (
                 <>
@@ -3545,7 +3563,13 @@ const Dashboard = () => {
                 display: 'flex',
                 flexDirection: 'column',
               }}>
-                {!(censusVisible && activeCensusView === 'risk' && sortedRatings.length > 0) &&
+                {censusLoading && (activeCensusView === 'risk' || activeCensusView === 'pred3pe') && (
+                  <div style={{ fontSize: '0.95em', fontWeight: 600, color: '#1b3a4b' }}>
+                    Loading layer
+                  </div>
+                )}
+                {!censusLoading &&
+                 !(censusVisible && activeCensusView === 'risk' && sortedRatings.length > 0) &&
                  !(censusVisible && activeCensusView === 'pred3pe' && censusStats?.pred3PE) &&
                  !(censusVisible && activeCensusView === 'critical-infrastructure' && criticalInfraLegendItems.length > 0) && (
                   <div style={{ fontSize: '0.95em', fontWeight: 600, color: '#1b3a4b' }}>
