@@ -649,6 +649,9 @@ function getRiskLegendIconDataUrl() {
 
 const PROJECT_PIN_SOURCE_ID = 'project-pins';
 const PROJECT_PIN_LAYER_ID = 'project-pins';
+/** Mapbox `icon-size` relative to the 27×41 pin sprite (20% smaller than prior 0.35 / 0.49). */
+const PROJECT_PIN_ICON_SIZE_MOBILE = 0.28;
+const PROJECT_PIN_ICON_SIZE_DESKTOP = 0.392;
 const PROJECT_PIN_IMAGES = {
   blue: 'cr-project-pin-blue',
   green: 'cr-project-pin-green',
@@ -1029,7 +1032,11 @@ const Dashboard = () => {
       map.current.touchZoomRotate.enableRotation();
     }
     if (map.current.getLayer(PROJECT_PIN_LAYER_ID)) {
-      map.current.setLayoutProperty(PROJECT_PIN_LAYER_ID, 'icon-size', isMobile ? 0.35 : 0.49);
+      map.current.setLayoutProperty(
+        PROJECT_PIN_LAYER_ID,
+        'icon-size',
+        isMobile ? PROJECT_PIN_ICON_SIZE_MOBILE : PROJECT_PIN_ICON_SIZE_DESKTOP
+      );
     }
   }, [isMobile, loading]);
 
@@ -1373,7 +1380,7 @@ const Dashboard = () => {
     } else {
       mapInstance.addSource(PROJECT_PIN_SOURCE_ID, { type: 'geojson', data: geojson });
     }
-    const iconSize = isMobileRef.current ? 0.35 : 0.49;
+    const iconSize = isMobileRef.current ? PROJECT_PIN_ICON_SIZE_MOBILE : PROJECT_PIN_ICON_SIZE_DESKTOP;
     if (!mapInstance.getLayer(PROJECT_PIN_LAYER_ID)) {
       mapInstance.addLayer({
         id: PROJECT_PIN_LAYER_ID,
