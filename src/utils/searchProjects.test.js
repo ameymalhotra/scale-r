@@ -340,4 +340,41 @@ describe('searchProjects', () => {
       expect(results).toHaveLength(1);
     });
   });
+
+  describe('SCALE-R inventory field names', () => {
+    const scalerData = {
+      type: 'FeatureCollection',
+      features: [
+        {
+          id: 'SCALER-0001',
+          type: 'Feature',
+          geometry: { type: 'Point', coordinates: [-80.139812, 25.95265373] },
+          properties: {
+            Project_Name: 'Emergency Power Generator for Police & Emergency Operations Center',
+            Jurisdiction: 'Aventura',
+            Infrastructure_Type: 'Gray',
+            Hazard_Focus: 'Storms & Hurricanes',
+            Project_Description: 'Installs an emergency backup generator.',
+            Project_Status: 'Ongoing',
+            Estimated_Cost: '550000',
+          },
+        },
+      ],
+    };
+
+    it('should find projects by Project_Name', () => {
+      const results = searchProjects('Emergency Power Generator', scalerData);
+      expect(results).toHaveLength(1);
+    });
+
+    it('should find projects by Jurisdiction', () => {
+      const results = searchProjects('Aventura', scalerData);
+      expect(results).toHaveLength(1);
+    });
+
+    it('should find projects by Hazard_Focus', () => {
+      const results = searchProjects('Storms', scalerData);
+      expect(results).toHaveLength(1);
+    });
+  });
 });

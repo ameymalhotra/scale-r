@@ -11,12 +11,13 @@ export const searchProjects = (query, projectsData) => {
     const props = feature.properties || {};
     
     // Extract searchable fields
-    const projectName = (props['Project_Na'] || props['Project Name'] || '').toLowerCase();
-    const description = (props['New_15_25_'] || props['New 15-25 Words Project Description'] || '').toLowerCase();
-    const city = ((props['NAME'] || props['City']) ? (props['NAME'] || props['City']).trim() : (props['NAME'] || props['City']) || '').toLowerCase();
-    const infrastructureType = (props['Infrastruc'] || props['Infrastructure Type'] || props['Type'] || '').toLowerCase();
-    const categories = (props['Categories'] || '').toLowerCase();
-    const disasterFocus = (props['Disaster_F'] || props['Disaster Focus'] || '').toLowerCase();
+    const projectName = (props['Project_Na'] || props['Project Name'] || props['Project_Name'] || '').toLowerCase();
+    const description = (props['New_15_25_'] || props['New 15-25 Words Project Description'] || props['Project_Description'] || '').toLowerCase();
+    const cityRaw = props['NAME'] || props['City'] || props['Jurisdiction'] || '';
+    const city = (typeof cityRaw === 'string' ? cityRaw.trim() : cityRaw || '').toLowerCase();
+    const infrastructureType = (props['Infrastruc'] || props['Infrastructure Type'] || props['Type'] || props['Infrastructure_Type'] || '').toLowerCase();
+    const categories = (props['Categories'] || props['Spatial_Resolution'] || '').toLowerCase();
+    const disasterFocus = (props['Disaster_F'] || props['Disaster Focus'] || props['Hazard_Focus'] || '').toLowerCase();
 
     // Check if search term matches any field
     const matches = 

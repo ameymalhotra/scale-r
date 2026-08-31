@@ -58,8 +58,25 @@ const PROJECT_STATUS_COLORS = {
   Planned: '#2563eb',
 };
 
+const firstProp = (props, keys) => {
+  if (!props) return '';
+  for (const key of keys) {
+    const value = props[key];
+    if (value != null && String(value).trim() !== '') return value;
+  }
+  return '';
+};
+
+const PROJECT_NAME_KEYS = ['Project_Na', 'Project Name', 'Project_Name'];
+const CITY_KEYS = ['NAME', 'City', 'Jurisdiction'];
+const INFRA_TYPE_KEYS = ['Infrastruc', 'Infrastructure Type', 'Type', 'Infrastructure_Type'];
+const DISASTER_FOCUS_KEYS = ['Disaster_F', 'Disaster Focus', 'Hazard_Focus'];
+const DESCRIPTION_KEYS = ['New_15_25_', 'New 15-25 Words Project Description', 'Project_Description'];
+const COST_KEYS = ['Estimated_', 'Estimated Project Cost', 'Estimated_Cost'];
+const STATUS_KEYS = ['Project__1', 'Project Status', 'Project_Status'];
+
 const getProjectStatus = (props = {}) => {
-  const raw = String(props['Project__1'] ?? props['Project Status'] ?? '').trim();
+  const raw = String(firstProp(props, STATUS_KEYS) || '').trim();
   if (PROJECT_STATUS_OPTIONS.includes(raw)) return raw;
   // Case-insensitive match for slightly inconsistent source values.
   const lower = raw.toLowerCase();
@@ -1925,9 +1942,9 @@ const Dashboard = () => {
         const pins = markerSpecs.map(({ featureIndex, lngLat, color }) => {
           const feature = filteredData.features[featureIndex];
           const props = feature.properties || {};
-          const type = props['Infrastruc'] || props['Infrastructure Type'] || props['Type'] || '';
-          const disasterFocus = props['Disaster_F'] || props['Disaster Focus'] || '';
-          const city = (props['NAME'] || props['City'] || '').trim();
+          const type = firstProp(props, INFRA_TYPE_KEYS);
+          const disasterFocus = firstProp(props, DISASTER_FOCUS_KEYS);
+          const city = String(firstProp(props, CITY_KEYS) || '').trim();
           return {
             feature,
             lng: lngLat[0],
@@ -2197,7 +2214,7 @@ const Dashboard = () => {
         // For city, prefer NAME field, fallback to City
         let value;
         if (field === 'City' || field === 'NAME') {
-          value = f.properties?.['NAME'] || f.properties?.['City'];
+          value = firstProp(f.properties, CITY_KEYS);
         } else {
           value = f.properties?.[field];
         }
@@ -2214,8 +2231,15 @@ const Dashboard = () => {
   const infrastructureTypes = getUniqueValues('Infrastruc');
   const legacyTypes = getUniqueValues('Infrastructure Type');
   const fallbackTypes = getUniqueValues('Type');
+  const scalerTypes = getUniqueValues('Infrastructure_Type');
   const uniqueTypes = (
-    infrastructureTypes.length > 0 ? infrastructureTypes : (legacyTypes.length > 0 ? legacyTypes : fallbackTypes)
+    infrastructureTypes.length > 0
+      ? infrastructureTypes
+      : legacyTypes.length > 0
+        ? legacyTypes
+        : fallbackTypes.length > 0
+          ? fallbackTypes
+          : scalerTypes
   ).slice().sort((a, b) => {
     const diff = infrastructureTypeSortKey(a) - infrastructureTypeSortKey(b);
     if (diff !== 0) return diff;
@@ -2223,7 +2247,13 @@ const Dashboard = () => {
   });
   const disasterFocusNew = getUniqueValues('Disaster_F');
   const disasterFocusLegacy = getUniqueValues('Disaster Focus');
-  const uniqueDisasterFocusRaw = disasterFocusNew.length > 0 ? disasterFocusNew : disasterFocusLegacy;
+  const disasterFocusHazard = getUniqueValues('Hazard_Focus');
+  const uniqueDisasterFocusRaw =
+    disasterFocusNew.length > 0
+      ? disasterFocusNew
+      : disasterFocusLegacy.length > 0
+        ? disasterFocusLegacy
+        : disasterFocusHazard;
   // Dedupe case-insensitively so Multi-Hazard / Multi-hazard appear once
   const disasterFocusByKey = new Map();
   uniqueDisasterFocusRaw.forEach((focus) => {
@@ -2256,8 +2286,8 @@ const Dashboard = () => {
     const markersToZoom = (!cityName || cityName === '')
       ? allMarkers.filter((pin) => {
           const props = pin.feature?.properties || {};
-          const type = props['Infrastruc'] || props['Infrastructure Type'] || props['Type'];
-          const disasterFocus = props['Disaster_F'] || props['Disaster Focus'];
+          const type = firstProp(props, INFRA_TYPE_KEYS);
+          const disasterFocus = firstProp(props, DISASTER_FOCUS_KEYS);
           const projectStatus = getProjectStatus(props);
           const typeMatch = selectedTypes.length === 0 || selectedTypes.includes(type);
           const disasterMatch = disasterFocusMatches(selectedDisasterFocus, disasterFocus);
@@ -2267,7 +2297,7 @@ const Dashboard = () => {
       : allMarkers.filter((pin) => {
           if (!pin.feature) return false;
           const props = pin.feature.properties || {};
-          const markerCity = (props['NAME'] || props['City'] || '').trim();
+          const markerCity = String(firstProp(props, CITY_KEYS) || '').trim();
           const selectedCityTrimmed = cityName ? cityName.trim() : cityName;
           return (markerCity || '').toLowerCase() === (selectedCityTrimmed || '').toLowerCase();
         });
@@ -2321,10 +2351,10 @@ const Dashboard = () => {
 
     if (!activeFeature) return;
     const props = activeFeature.properties || {};
-    const type = props['Infrastruc'] || props['Infrastructure Type'] || props['Type'];
-    const disasterFocus = props['Disaster_F'] || props['Disaster Focus'];
+    const type = firstProp(props, INFRA_TYPE_KEYS);
+    const disasterFocus = firstProp(props, DISASTER_FOCUS_KEYS);
     const projectStatus = getProjectStatus(props);
-    const city = (props['NAME'] || props['City'] || '').trim();
+    const city = String(firstProp(props, CITY_KEYS) || '').trim();
     const typeMatch = selectedTypes.length === 0 || selectedTypes.includes(type);
     const disasterMatch = disasterFocusMatches(selectedDisasterFocus, disasterFocus);
     const statusMatch = selectedProjectStatuses.length === 0 || selectedProjectStatuses.includes(projectStatus);
@@ -2360,10 +2390,10 @@ const Dashboard = () => {
 
     return allProjectsData.features.filter(feature => {
       const props = feature.properties || {};
-      const type = props['Infrastruc'] || props['Infrastructure Type'] || props['Type'];
-      const disasterFocus = props['Disaster_F'] || props['Disaster Focus'];
+      const type = firstProp(props, INFRA_TYPE_KEYS);
+      const disasterFocus = firstProp(props, DISASTER_FOCUS_KEYS);
       const projectStatus = getProjectStatus(props);
-      const city = (props['NAME'] || props['City']) ? (props['NAME'] || props['City']).trim() : (props['NAME'] || props['City']);
+      const city = String(firstProp(props, CITY_KEYS) || '').trim();
 
       const typeMatch = selectedTypes.length === 0 || selectedTypes.includes(type);
       const disasterMatch = disasterFocusMatches(selectedDisasterFocus, disasterFocus);
@@ -2382,7 +2412,7 @@ const Dashboard = () => {
 
     // Calculate total investment
     const totalInvestment = filteredFeatures.reduce((sum, feature) => {
-      const cost = feature.properties?.['Estimated_'] || feature.properties?.['Estimated Project Cost'];
+      const cost = firstProp(feature.properties, COST_KEYS);
       if (!cost || cost === null || cost === undefined) return sum;
       
       // Convert to number if it's a string
@@ -2406,7 +2436,7 @@ const Dashboard = () => {
     const typeCounts = {};
     filteredFeatures.forEach(feature => {
       const props = feature.properties || {};
-      const type = props['Infrastruc'] || props['Infrastructure Type'] || props['Type'] || 'Unknown';
+      const type = firstProp(props, INFRA_TYPE_KEYS) || 'Unknown';
       
       // Normalize type names
       let normalizedType = type;
@@ -3301,12 +3331,13 @@ const Dashboard = () => {
                 >
                   {searchResults.map((result, index) => {
                     const props = result.properties || {};
-                    const projectName = props['Project_Na'] || props['Project Name'] || 'Unnamed Project';
-                    const city = (props['NAME'] || props['City']) ? formatCityName((props['NAME'] || props['City']).trim()) : '—';
+                    const projectName = firstProp(props, PROJECT_NAME_KEYS) || 'Unnamed Project';
+                    const cityRaw = firstProp(props, CITY_KEYS);
+                    const city = cityRaw ? formatCityName(String(cityRaw).trim()) : '—';
                     const infrastructureType = formatInfrastructureType(
-                      props['Infrastruc'] || props['Infrastructure Type'] || props['Type'] || '—'
+                      firstProp(props, INFRA_TYPE_KEYS) || '—'
                     );
-                    const description = props['New_15_25_'] || props['New 15-25 Words Project Description'] || '';
+                    const description = firstProp(props, DESCRIPTION_KEYS) || '';
                     const isSelected = index === selectedResultIndex;
 
                     return (
@@ -3858,21 +3889,21 @@ const MapboxPopup = ({ map, activeFeature }) => {
     <>{createPortal(
       <div className="portal-content" style={{ maxWidth: 360 }}>
         <div style={{ fontSize: '1.05em', fontWeight: 700, color: '#2c3e50', marginBottom: 10 }}>
-          {props['Project_Na'] || props['Project Name'] || 'Project'}
+          {firstProp(props, PROJECT_NAME_KEYS) || 'Project'}
         </div>
         <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 6px', fontSize: '0.9em' }}>
           <tbody>
             <tr>
               <td style={{ color: '#34495e', fontWeight: 600, width: 110 }}>Infrastructure Type</td>
-              <td style={{ color: '#2c3e50' }}>{formatInfrastructureType(props['Infrastruc'] || props['Infrastructure Type'] || props['Type'] || '—')}</td>
+              <td style={{ color: '#2c3e50' }}>{formatInfrastructureType(firstProp(props, INFRA_TYPE_KEYS) || '—')}</td>
             </tr>
             <tr>
               <td style={{ color: '#34495e', fontWeight: 600 }}>Focus</td>
-              <td style={{ color: '#2c3e50' }}>{formatDisasterFocus(props['Disaster_F'] || props['Disaster Focus'] || '—')}</td>
+              <td style={{ color: '#2c3e50' }}>{formatDisasterFocus(firstProp(props, DISASTER_FOCUS_KEYS) || '—')}</td>
             </tr>
             <tr>
               <td style={{ color: '#34495e', fontWeight: 600 }}>City</td>
-              <td style={{ color: '#2c3e50' }}>{(props['NAME'] || props['City']) ? formatCityName((props['NAME'] || props['City']).trim()) : '—'}</td>
+              <td style={{ color: '#2c3e50' }}>{firstProp(props, CITY_KEYS) ? formatCityName(String(firstProp(props, CITY_KEYS)).trim()) : '—'}</td>
             </tr>
             <tr>
               <td style={{ color: '#34495e', fontWeight: 600 }}>Status</td>
@@ -3882,14 +3913,14 @@ const MapboxPopup = ({ map, activeFeature }) => {
             </tr>
             <tr>
               <td style={{ color: '#34495e', fontWeight: 600 }}>Cost</td>
-              <td style={{ color: ((props['Estimated_'] || props['Estimated Project Cost']) == null) ?'#b45309' : '#27ae60', fontWeight: 700 }}>{
-                  formatCostCompact(props['Estimated_'] || props['Estimated Project Cost']) || 'Not Disclosed'}</td>
+              <td style={{ color: firstProp(props, COST_KEYS) ? '#27ae60' : '#b45309', fontWeight: 700 }}>{
+                  formatCostCompact(firstProp(props, COST_KEYS)) || 'Not Disclosed'}</td>
             </tr>
           </tbody>
         </table>
-        {(props['New_15_25_'] || props['New 15-25 Words Project Description']) && (
+        {firstProp(props, DESCRIPTION_KEYS) && (
           <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid #ecf0f1', color: '#000000', fontSize: '0.9em', lineHeight: 1.4 }}>
-            {props['New_15_25_'] || props['New 15-25 Words Project Description']}
+            {firstProp(props, DESCRIPTION_KEYS)}
           </div>
         )}
       </div>,

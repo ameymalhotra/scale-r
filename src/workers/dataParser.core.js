@@ -49,7 +49,7 @@ async function loadProjects({ url }) {
     .filter((feature) => {
       if (!hasValidCoordinates(feature)) return false;
       const props = feature?.properties || {};
-      const rawCost = props['Estimated_'] ?? props['Estimated Project Cost'];
+      const rawCost = props['Estimated_'] ?? props['Estimated Project Cost'] ?? props['Estimated_Cost'];
       if (rawCost == null || rawCost === '') return false;
       const numericCost =
         typeof rawCost === 'string' ? parseFloat(rawCost.replace(/[$,]/g, '')) : parseFloat(rawCost);
@@ -59,7 +59,7 @@ async function loadProjects({ url }) {
       const props = feature?.properties;
       if (!props) return feature;
       const next = { ...props };
-      for (const key of ['Infrastruc', 'Infrastructure Type', 'Type']) {
+      for (const key of ['Infrastruc', 'Infrastructure Type', 'Type', 'Infrastructure_Type']) {
         if (next[key] != null && next[key] !== '') {
           next[key] = canonicalizeInfrastructureTypeValue(next[key]);
         }
@@ -110,17 +110,18 @@ async function loadProjects({ url }) {
     const properties = feature.properties;
 
     // Normalize city property by trimming whitespace (use NAME field, fallback to City)
-    const cityField = properties['NAME'] || properties['City'];
+    const cityField = properties['NAME'] || properties['City'] || properties['Jurisdiction'];
     if (cityField) {
-      if (properties['NAME']) properties['NAME'] = properties['NAME'].trim();
-      if (properties['City']) properties['City'] = properties['City'].trim();
+      if (properties['NAME']) properties['NAME'] = String(properties['NAME']).trim();
+      if (properties['City']) properties['City'] = String(properties['City']).trim();
+      if (properties['Jurisdiction']) properties['Jurisdiction'] = String(properties['Jurisdiction']).trim();
     }
 
     markerSpecs.push({
       featureIndex,
       lngLat: spiderOffsets.get(featureIndex) || coordinates,
       color: getMarkerColor(
-        properties['Infrastruc'] || properties['Infrastructure Type'] || properties['Type']
+        properties['Infrastruc'] || properties['Infrastructure Type'] || properties['Type'] || properties['Infrastructure_Type']
       ),
     });
   });
