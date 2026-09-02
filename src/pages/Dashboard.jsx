@@ -74,6 +74,23 @@ const DISASTER_FOCUS_KEYS = ['Disaster_F', 'Disaster Focus', 'Hazard_Focus'];
 const DESCRIPTION_KEYS = ['New_15_25_', 'New 15-25 Words Project Description', 'Project_Description'];
 const COST_KEYS = ['Estimated_', 'Estimated Project Cost', 'Estimated_Cost'];
 const STATUS_KEYS = ['Project__1', 'Project Status', 'Project_Status'];
+const SOURCE_KEYS = ['Link_to_Da', 'Link to Data Source', 'Data_Source', 'source_url'];
+
+/** Safe http(s) href for the project popup Visit Source button. */
+const parseProjectSource = (raw) => {
+  const value = String(raw ?? '').trim();
+  if (!value) return null;
+  const candidate = /^[a-z][a-z0-9+.-]*:/i.test(value) ? value : `https://${value}`;
+  try {
+    const url = new URL(candidate);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
+    const host = url.hostname.replace(/^www\./i, '');
+    if (!host) return null;
+    return { href: url.href, host };
+  } catch {
+    return null;
+  }
+};
 
 const getProjectStatus = (props = {}) => {
   const raw = String(firstProp(props, STATUS_KEYS) || '').trim();
@@ -3810,6 +3827,43 @@ const Dashboard = () => {
         .mapboxgl-popup {
           z-index: 10000 !important;
         }
+        .project-popup-source {
+          margin-top: 12px;
+          padding-top: 10px;
+          border-top: 1px solid #ecf0f1;
+        }
+        .project-popup-source-btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 5px;
+          box-sizing: border-box;
+          padding: 4px 9px;
+          border: 1px solid rgba(44, 62, 80, 0.2);
+          border-radius: 6px;
+          background: transparent;
+          color: #2c3e50 !important;
+          font-weight: 600;
+          font-size: 0.75em;
+          letter-spacing: 0.01em;
+          line-height: 1.2;
+          text-decoration: none !important;
+          white-space: nowrap;
+          transition: background-color 0.15s ease, border-color 0.15s ease;
+        }
+        .project-popup-source-btn:hover {
+          background: rgba(44, 62, 80, 0.05);
+          border-color: rgba(44, 62, 80, 0.4);
+        }
+        .project-popup-source-btn:focus-visible {
+          outline: 2px solid #2c3e50;
+          outline-offset: 2px;
+        }
+        .project-popup-source-btn-icon {
+          width: 11px;
+          height: 11px;
+          flex-shrink: 0;
+        }
         .mapboxgl-popup-close-button {
           position: absolute;
           top: 6px;
@@ -3891,6 +3945,7 @@ const MapboxPopup = ({ map, activeFeature }) => {
   if (!contentRef.current) return null;
 
   const props = activeFeature?.properties || {};
+  const source = parseProjectSource(firstProp(props, SOURCE_KEYS));
 
   return (
     <>{createPortal(
@@ -3928,6 +3983,32 @@ const MapboxPopup = ({ map, activeFeature }) => {
         {firstProp(props, DESCRIPTION_KEYS) && (
           <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid #ecf0f1', color: '#000000', fontSize: '0.9em', lineHeight: 1.4 }}>
             {firstProp(props, DESCRIPTION_KEYS)}
+          </div>
+        )}
+        {source && (
+          <div className="project-popup-source">
+            <a
+              className="project-popup-source-btn"
+              href={source.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`Visit source (${source.host})`}
+            >
+              Visit Source
+              <svg
+                className="project-popup-source-btn-icon"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M4.5 11.5 11.5 4.5" />
+                <path d="M6.5 4.5h5v5" />
+              </svg>
+            </a>
           </div>
         )}
       </div>,
