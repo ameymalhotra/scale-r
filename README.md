@@ -209,6 +209,9 @@ Climate-Resilience---Miami-Dade/
 │       ├── seed-supabase-merged.js
 │       ├── upload-projects-geojson.js
 │       └── upload-projects-merged-geojson.js
+├── supabase/
+│   ├── sql/                         # SQL to run in the Supabase SQL Editor
+│   └── functions/                   # Edge functions (regenerate-projects-geojson, publish-projects)
 ├── public/                          # Static assets and data files
 │   ├── Images/                      # Logo and branding images
 │   ├── *.geojson                    # Geographic data files
@@ -220,6 +223,7 @@ Climate-Resilience---Miami-Dade/
 │   ├── App.jsx                      # Main application component
 │   ├── main.jsx                      # Application entry point
 │   ├── index.css                    # Global styles
+│   ├── admin/                       # /admin data dashboard (draft, publish, versions)
 │   ├── utils/                       # Utility functions
 │   │   ├── highlightText.jsx        # Text highlighting utility
 │   │   ├── searchProjects.js        # Search algorithm
@@ -391,7 +395,7 @@ The test suite covers:
 ### Project Inventory Data
 
 **Primary Source:**
-- Supabase Storage `project-data/projects_merged_conf1.geojson` - the live project inventory fetched by the dashboard at runtime. Built from `data/data_work_onedrive/SCALE-R_Database.csv` via `npm run seed-merged-conf1` and `npm run upload-geojson-merged-conf1`. See `data/DATA_LOG.md` for the hosted revision and change history.
+- Supabase Storage `project-data/projects_merged_conf1.geojson` - the live project inventory fetched by the dashboard at runtime. Built from `data/data_work_onedrive/SCALE-R_Database.csv` via `npm run seed-merged-conf1` and `npm run upload-geojson-merged-conf1`, and rebuilt from the `projects_merged_conf1` table each time an admin publishes from `/admin`. See `data/DATA_LOG.md` for the hosted revision and change history.
 
 **Legacy:**
 - `public/project_inventory_database.geojson` and `public/proj_final.geojson` - earlier static exports, no longer loaded by the app.
@@ -530,9 +534,35 @@ When `VITE_SUPABASE_URL` is set, the app loads project data from Supabase Storag
 
 After any insert/update/delete on `projects`, run `npm run upload-geojson` again, or deploy the Edge Function `regenerate-projects-geojson` and call it from your upload flow so the file updates automatically.
 
+### Admin dashboard (`/admin`)
+
+Allowlisted users sign in at `/admin/login` to edit the live project inventory (`projects_merged_conf1`). The table and its column names are unchanged; the dashboard only adds tables and functions next to it. The admin area is a separate lazy-loaded chunk that public visitors never download.
+
+| Added object | What it holds |
+|------|---------------|
+| `projects_draft` (table) | The shared working copy edited in `/admin`, with the same columns as `projects_merged_conf1` |
+| `projects_versions` (table) | A full snapshot of every publish, for restore |
+| `admin_users` (table) | Emails allowed to sign in to `/admin` |
+| `project-data/versions/projects_merged_conf1_v{n}.geojson` | Archived map file for version `n` |
+
+- **Data**: an editable table of every field shown on the map. Edit cells inline, add rows, and delete rows. **Save draft** writes changes to `projects_draft`; nothing public changes yet. New or moved rows get their census tract assigned automatically on save.
+- **Publish**: shows what changed since the current version, requires a note, and then (in one transaction) snapshots the draft into `projects_versions` and replaces the rows of `projects_merged_conf1`. The `publish-projects` edge function then rewrites `project-data/projects_merged_conf1.geojson` with the same properties as `npm run upload-geojson-merged-conf1`.
+- **Versions**: every publish, with author and note. You can compare a version to the current one, download it as CSV, or **Restore to draft**. Restoring does not publish; you review it and publish, which creates a new version, so history is never rewritten.
+
+One-time setup:
+
+1. Run [`supabase/sql/add_tract_geoid_column.sql`](supabase/sql/add_tract_geoid_column.sql) if you have not already.
+2. Edit the two emails near the top of [`supabase/sql/admin_dashboard.sql`](supabase/sql/admin_dashboard.sql), then run it in the SQL Editor. It creates the tables above, the save/publish/restore functions, and version 1 (a snapshot of the current data).
+3. In Supabase Auth, create a user (email and password) for each allowlisted email.
+4. Deploy the publish function: `supabase functions deploy publish-projects`.
+
+`npm run seed-merged-conf1` and `npm run sync-tract-geoid` still write to `projects_merged_conf1` directly and bypass the draft and version history. After running either, run `select public.reset_draft_from_published();` in the SQL Editor so the draft matches the live table.
+
 ### Add census tract GEOID (`projects_merged_conf1.tract_geoid`)
 
 The source Excel's `FIPSCODE` column mixes city/place codes and zeros — it does not answer "which census tract is this project in?". To get the 11-digit census tract ID (state FIPS + county FIPS + tract code) per project from its coordinates, the repo derives a separate `tract_geoid` value (the original `FIPSCODE` is left untouched).
+
+Rows added or moved in `/admin` get their tract in the browser on save. The steps below are for bulk backfills.
 
 1. **One-time DB prep** — in Supabase SQL Editor, run [`supabase/sql/add_tract_geoid_column.sql`](supabase/sql/add_tract_geoid_column.sql):
 

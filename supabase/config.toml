@@ -1,0 +1,13 @@
+# Minimal config for Edge Functions deploy. Run `supabase init` and merge if you use local DB.
+# Matches hosted project (see .supabase.co URL). After `supabase link`, CLI may rewrite this.
+project_id = "mmlqltdcpsuxirbqhugw"
+
+# Allow Database Webhooks / pg_net without a user JWT. This function uses the service role from env only;
+# consider adding a shared-secret header check if the endpoint is public (verify_jwt = false).
+[functions.regenerate-projects-geojson]
+verify_jwt = false
+
+# Called by the /admin Publish button with the signed-in user's JWT; the
+# function re-checks admin membership through publish_draft().
+[functions.publish-projects]
+verify_jwt = true

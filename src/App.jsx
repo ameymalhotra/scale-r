@@ -14,6 +14,7 @@ const Team = lazy(() => import('./pages/Team.jsx'));
 const Partners = lazy(() => import('./pages/Partners.jsx'));
 const TechnicalDocs = lazy(() => import('./pages/TechnicalDocs.jsx'));
 const Outputs = lazy(() => import('./pages/Outputs.jsx'));
+const AdminApp = lazy(() => import('./admin/AdminApp.jsx'));
 
 const ROUTE_META = {
   '/about': {
@@ -46,6 +47,10 @@ const ROUTE_META = {
     description:
       'Research products, datasets, and program deliverables from the SCALE-R coastal resilience project at the University of Miami.',
   },
+  '/admin': {
+    title: 'Data admin',
+    description: 'Manage the SCALE-R project data shown on the public map.',
+  },
 };
 
 const BASE_TITLE = 'Miami-Dade Climate Resilience';
@@ -71,19 +76,21 @@ export default function App() {
     );
   }, [location.pathname]);
 
+  const isAdminRoute = location.pathname.startsWith('/admin');
+
   useEffect(() => {
     const path = location.pathname;
-    const meta = ROUTE_META[path] || DEFAULT_META;
+    const meta = ROUTE_META[isAdminRoute ? '/admin' : path] || DEFAULT_META;
     document.title = `${meta.title} | ${BASE_TITLE}`;
     setMetaDescription(meta.description);
-  }, [location.pathname]);
+  }, [location.pathname, isAdminRoute]);
 
   return (
     <div className="app-shell">
       <a href="#main" className="skip-to-content">
         Skip to main content
       </a>
-      <Navbar />
+      {!isAdminRoute && <Navbar />}
 
       <main id="main" className="app-main-scroll" tabIndex={-1}>
         <Suspense fallback={null}>
@@ -95,6 +102,7 @@ export default function App() {
             <Route path="/partners" element={<Partners />} />
             <Route path="/docs" element={<TechnicalDocs />} />
             <Route path="/outputs" element={<Outputs />} />
+            <Route path="/admin/*" element={<AdminApp />} />
           </Routes>
         </Suspense>
       </main>

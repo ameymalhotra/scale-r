@@ -29,7 +29,10 @@ scripts/python/*
 scripts/js/*
 !scripts/js/audit-performance.mjs
 !scripts/js/gtmetrix-benchmark.mjs
-supabase/
+supabase/*
+!supabase/config.toml
+!supabase/functions/
+!supabase/sql/
 data/*
 !data/input/
 data/input/*
