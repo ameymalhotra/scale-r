@@ -57,3 +57,20 @@ export async function writePublishedGeojson(admin: SupabaseClient, versionNo?: n
 
   return { features: geojson.features.length };
 }
+
+export const FILTERS_FILE = 'filters_config.json';
+
+/** Writes the map filter settings the public map reads alongside the GeoJSON. */
+export async function writeFiltersConfig(admin: SupabaseClient, config: unknown, versionNo: number) {
+  const filters = (config as { filters?: unknown } | null)?.filters;
+  if (!Array.isArray(filters)) throw new Error('The filter settings have no filters list');
+  const body = new TextEncoder().encode(
+    JSON.stringify({ version_no: versionNo, published_at: new Date().toISOString(), filters }),
+  );
+  const { error } = await admin.storage.from(BUCKET).upload(FILTERS_FILE, body, {
+    contentType: 'application/json',
+    cacheControl: '0',
+    upsert: true,
+  });
+  if (error) throw new Error(`Uploading ${FILTERS_FILE}: ${error.message}`);
+}

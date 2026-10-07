@@ -44,7 +44,7 @@ function checkRow(row, duplicateIds) {
   for (const field of FIELDS) {
     if (isNewOption(field, row[field.key])) {
       warnings[field.key] = field.filter
-        ? `"${row[field.key]}" is a new value; the map has no filter option for it yet.`
+        ? `"${row[field.key]}" is a new value. Once published it appears in the map filter; set its label and color on the Live tool page.`
         : `"${row[field.key]}" is not one of the usual values.`;
     }
   }

@@ -113,6 +113,68 @@ export async function restoreVersionToDraft(client, versionId) {
   return data;
 }
 
+// ── Map filter settings ────────────────────────────────────────────────────
+
+const FILTER_VERSION_COLUMNS = 'id, version_no, name, note, config, is_current, created_at, created_by';
+
+/** Resolves to { draft: config | null, versions: [...] } (newest first). */
+export async function fetchFilterState(client) {
+  const [draftResult, versionsResult] = await Promise.all([
+    client.from('filters_draft').select('config, updated_at, updated_by').maybeSingle(),
+    client.from('filters_versions').select(FILTER_VERSION_COLUMNS).order('version_no', { ascending: false }),
+  ]);
+  raise(draftResult.error, 'Loading the filter draft');
+  raise(versionsResult.error, 'Loading filter versions');
+  return { draft: draftResult.data?.config ?? null, versions: versionsResult.data };
+}
+
+export async function saveFiltersDraft(client, config) {
+  const { error } = await client.rpc('save_filters_draft', { p_config: config });
+  raise(error, 'Saving the filter draft');
+}
+
+/**
+ * A publish-projects deploy from before map filters ignores the filters body and
+ * answers as if a data publish had no note.
+ */
+async function invokeFiltersPublish(client, body) {
+  try {
+    return await invokePublishFunction(client, body);
+  } catch (e) {
+    if (e.message !== 'A publish note is required') throw e;
+    throw new Error(
+      'The deployed publish-projects edge function does not support map filters yet, so nothing was published. ' +
+        'Redeploy it (supabase functions deploy publish-projects) and try again.',
+    );
+  }
+}
+
+/** Publishes the saved filter draft. Resolves to { version_id, version_no }. */
+export const publishFilters = (client, note, name) => invokeFiltersPublish(client, { filters: { note, name } });
+
+export const makeFiltersVersionLive = (client, versionId) =>
+  invokeFiltersPublish(client, { filtersVersionId: versionId });
+
+export async function restoreFiltersVersion(client, versionId) {
+  const { error } = await client.rpc('restore_filters_version', { p_version_id: versionId });
+  raise(error, 'Restoring filter version');
+}
+
+export async function renameFiltersVersion(client, versionId, name) {
+  const { error } = await client.rpc('rename_filters_version', { p_version_id: versionId, p_name: name });
+  raise(error, 'Renaming filter version');
+}
+
+export async function deleteFiltersVersion(client, versionId) {
+  const { error } = await client.rpc('delete_filters_version', { p_version_id: versionId });
+  raise(error, 'Deleting filter version');
+}
+
+export async function resetFiltersDraft(client) {
+  const { error } = await client.rpc('reset_filters_draft');
+  raise(error, 'Resetting the filter draft');
+}
+
 export async function resetDraftFromPublished(client) {
   const { data, error } = await client.rpc('reset_draft_from_published');
   raise(error, 'Resetting draft');

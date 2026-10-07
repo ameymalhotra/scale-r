@@ -55,7 +55,7 @@ describe('validateRows', () => {
     const issues = result.byId.get(1);
     expect(Object.keys(issues.errors)).toHaveLength(0);
     expect(issues.warnings.estimated_cost).toMatch(/hides/);
-    expect(issues.warnings.infrastruc).toMatch(/no filter option/);
+    expect(issues.warnings.infrastruc).toMatch(/Live tool page/);
     expect(issues.warnings.additional).toMatch(/not one of the usual values/);
     expect(result.errorRows).toBe(0);
     expect(result.warningRows).toBe(1);

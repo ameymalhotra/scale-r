@@ -12,7 +12,7 @@ const formatDate = (iso) =>
 
 const versionLabel = (v) => (v.name ? `"${v.name}" (v${v.version_no})` : `version ${v.version_no}`);
 
-function VersionName({ version, onRename }) {
+export function VersionName({ version, onRename }) {
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState('');
   const [saving, setSaving] = useState(false);
