@@ -6,8 +6,8 @@
  *   csv       header in SCALE-R_Database.csv (used for CSV export)
  *   type      'text' | 'longtext' | 'number' | 'url' | 'enum'
  *   options   known values for columns that drive a map filter. The editor
- *             offers them but accepts new text; new values are flagged because
- *             the map will not have a filter button for them yet.
+ *             offers them but accepts new text; new values are flagged so they
+ *             can be labelled and colored on the Live tool page.
  *   readOnly  derived columns the editor never writes directly
  */
 export const FIELDS = [

@@ -4,6 +4,23 @@ import { searchProjects } from '../utils/searchProjects.js';
 import { highlightText } from '../utils/highlightText.jsx';
 import { reprojectFeatureCollectionIfNeeded } from '../utils/geoProcessing.js';
 import DataParserWorker from '../workers/dataParser.worker.js?worker';
+import {
+  DEFAULT_FILTER_CONFIG,
+  DISASTER_FOCUS_ALIASES,
+  DISASTER_FOCUS_LABELS,
+  DISASTER_FOCUS_ORDER,
+  CUSTOM_FILTER_COLUMNS,
+  FILTERS_CONFIG_FILE,
+  INFRASTRUCTURE_TYPE_ORDER,
+  PROJECT_STATUS_OPTIONS,
+  filterSpec,
+  isBuiltInFilter,
+  mapOptions,
+  normalizeFilterConfig,
+  optionKey,
+  resolveOptions,
+} from '../filters/filterConfig.js';
+import { LOCAL_FILTERS, LOCAL_FILTERS_KEY, readLocalLiveConfig } from '../filters/localFilters.js';
 
 const InfrastructureTypeChart = lazy(
   () => import('../components/dashboard/InfrastructureTypeChart.jsx'),
@@ -46,17 +63,6 @@ const runWorkerTask = (worker, task, payload) =>
     worker.addEventListener('message', onMessage);
     worker.postMessage({ id, task, payload });
   });
-
-// Canonical project status values from the dataset `Project__1` column.
-// Filter UI order (2×2): Completed | Ongoing / Funded | Planned
-const PROJECT_STATUS_OPTIONS = ['Completed', 'Ongoing', 'Funded', 'Planned'];
-
-const PROJECT_STATUS_COLORS = {
-  Completed: '#27ae60',
-  Ongoing: '#b45309',
-  Funded: '#0f766e',
-  Planned: '#2563eb',
-};
 
 const firstProp = (props, keys) => {
   if (!props) return '';
@@ -242,36 +248,6 @@ const formatInfrastructureType = (type) => {
   return short;
 };
 
-/** Preferred Infrastructure Type filter order (2×2 grid). */
-const INFRASTRUCTURE_TYPE_ORDER = ['Blue', 'Green', 'Gray', 'Hybrid'];
-
-/**
- * Definitions for Infrastructure Type filter info icons (shown on click).
- */
-const INFRASTRUCTURE_TYPE_DEFINITIONS = {
-  Blue:
-    'Blue infrastructure encompasses natural and engineered water-based systems that mitigate flooding, support adaptation to sea-level rise, improve water quality, and sustain diverse aquatic ecosystems.',
-  Green:
-    'Green infrastructure integrates vegetation, soils, and ecological processes to mitigate urban heat, manage stormwater, improve air and water quality, and support biodiversity.',
-  Gray:
-    'Gray infrastructure comprises conventional engineered systems constructed with materials such as concrete and steel to deliver essential urban services, including stormwater conveyance, flood control, and transportation.',
-  Hybrid:
-    'Hybrid infrastructure integrates elements of blue, green, and gray systems to deliver adaptive, multi-functional solutions.',
-};
-
-const getInfrastructureTypeDefinition = (type) => {
-  const label = formatInfrastructureType(type);
-  if (!label) return '';
-  const normalized = String(label).trim();
-  const key = Object.keys(INFRASTRUCTURE_TYPE_DEFINITIONS).find(
-    (k) => k.toLowerCase() === normalized.toLowerCase()
-  );
-  if (key) return INFRASTRUCTURE_TYPE_DEFINITIONS[key];
-  // Legacy British spelling still present in some source data
-  if (/^grey$/i.test(normalized)) return INFRASTRUCTURE_TYPE_DEFINITIONS.Gray;
-  return '';
-};
-
 /** Info icon with a fixed-position tooltip that stays inside the viewport (click to toggle). */
 function InfrastructureTypeInfoIcon({ label, definition }) {
   const btnRef = useRef(null);
@@ -404,31 +380,11 @@ const infrastructureTypeSortKey = (type) => {
   return idx === -1 ? INFRASTRUCTURE_TYPE_ORDER.length : idx;
 };
 
-/**
- * Case-insensitive key for disaster focus. Folds pre-Stage4 category names onto
- * the current taxonomy so archived exports filter alongside the hosted dataset.
- */
-const DISASTER_FOCUS_ALIASES = {
-  'storm surge': 'storms & hurricanes',
-  storms: 'storms & hurricanes',
-  'critical infrastructure': 'infrastructure failure',
-  'multi-hazard': 'multi-hazard',
-};
-
+/** Case-insensitive key for disaster focus, with legacy names folded in (see DISASTER_FOCUS_ALIASES). */
 const disasterFocusKey = (focus) => {
   if (typeof focus !== 'string') return '';
   const key = focus.trim().toLowerCase();
   return DISASTER_FOCUS_ALIASES[key] ?? key;
-};
-
-/** Canonical display label for a disaster focus key. */
-const DISASTER_FOCUS_LABELS = {
-  flooding: 'Flooding',
-  'storms & hurricanes': 'Storms & Hurricanes',
-  'coastal hazards': 'Coastal Hazards',
-  'extreme heat': 'Extreme Heat',
-  'multi-hazard': 'Multi-Hazard',
-  'infrastructure failure': 'Infrastructure Failure',
 };
 
 const formatDisasterFocus = (focus) => {
@@ -436,16 +392,6 @@ const formatDisasterFocus = (focus) => {
   const trimmed = focus.trim();
   return DISASTER_FOCUS_LABELS[disasterFocusKey(trimmed)] ?? trimmed;
 };
-
-/** Preferred Disaster Focus filter order; hazard types first, compound/systems last. */
-const DISASTER_FOCUS_ORDER = [
-  'Flooding',
-  'Storms & Hurricanes',
-  'Coastal Hazards',
-  'Extreme Heat',
-  'Multi-Hazard',
-  'Infrastructure Failure',
-];
 
 const disasterFocusSortKey = (focus) => {
   const label = formatDisasterFocus(focus);
@@ -730,27 +676,27 @@ function createProjectPinImageData(fillHex) {
   }
 }
 
+const DEFAULT_PIN_IMAGE_BY_COLOR = {
+  '#3498db': PROJECT_PIN_IMAGES.blue,
+  '#27ae60': PROJECT_PIN_IMAGES.green,
+  '#95a5a6': PROJECT_PIN_IMAGES.gray,
+  '#9b59b6': PROJECT_PIN_IMAGES.hybrid,
+};
+
 function pinImageIdForColor(color) {
-  switch (color) {
-    case '#3498db':
-      return PROJECT_PIN_IMAGES.blue;
-    case '#27ae60':
-      return PROJECT_PIN_IMAGES.green;
-    case '#9b59b6':
-      return PROJECT_PIN_IMAGES.hybrid;
-    default:
-      return PROJECT_PIN_IMAGES.gray;
-  }
+  const hex = String(color || '').toLowerCase();
+  if (DEFAULT_PIN_IMAGE_BY_COLOR[hex]) return DEFAULT_PIN_IMAGE_BY_COLOR[hex];
+  if (/^#[0-9a-f]{6}$/.test(hex)) return `cr-project-pin-${hex.slice(1)}`;
+  return PROJECT_PIN_IMAGES.gray;
 }
+
+/** Extra pin colors chosen on /admin/live-tool; registered with the defaults. */
+let customPinColors = [];
 
 function registerProjectPinImages(mapInstance) {
   if (!mapInstance) return;
-  const colors = {
-    [PROJECT_PIN_IMAGES.blue]: '#3498db',
-    [PROJECT_PIN_IMAGES.green]: '#27ae60',
-    [PROJECT_PIN_IMAGES.gray]: '#95a5a6',
-    [PROJECT_PIN_IMAGES.hybrid]: '#9b59b6',
-  };
+  const colors = Object.fromEntries(Object.entries(DEFAULT_PIN_IMAGE_BY_COLOR).map(([hex, id]) => [id, hex]));
+  for (const hex of customPinColors) colors[pinImageIdForColor(hex)] = hex;
   Object.entries(colors).forEach(([id, hex]) => {
     const imageData = createProjectPinImageData(hex);
     if (!imageData) return;
@@ -945,6 +891,9 @@ const Dashboard = () => {
   const [selectedDisasterFocus, setSelectedDisasterFocus] = useState([]);
   const [selectedProjectStatuses, setSelectedProjectStatuses] = useState([]);
   const [selectedCity, setSelectedCity] = useState('');
+  // Filters added on /admin/live-tool: { [filterId]: [optionKey, ...] }
+  const [customSelections, setCustomSelections] = useState({});
+  const [filterConfig, setFilterConfig] = useState(DEFAULT_FILTER_CONFIG);
   const [cityDropdownOpen, setCityDropdownOpen] = useState(false);
   const [projectsLayerVisible, setProjectsLayerVisible] = useState(true);
   const [showDisclaimer, setShowDisclaimer] = useState(false);
@@ -1979,7 +1928,14 @@ const Dashboard = () => {
               geometry: { type: 'Point', coordinates: lngLat },
               properties: {
                 ...props,
+                ...Object.fromEntries(
+                  CUSTOM_FILTER_COLUMNS.map(({ property }) => [
+                    `__p_${property}`,
+                    String(props[property] ?? '').trim().toLowerCase(),
+                  ]),
+                ),
                 __pinImage: pinImageIdForColor(color),
+                __defaultPinImage: pinImageIdForColor(color),
                 __type: type,
                 __disasterKey: disasterFocusKey(disasterFocus),
                 __status: getProjectStatus(props),
@@ -2301,6 +2257,197 @@ const Dashboard = () => {
   });
   const uniqueCities = Array.from(cityByLower.values()).sort((a, b) => (a || '').localeCompare(b || '', undefined, { sensitivity: 'base' }));
 
+  // Filter settings published from /admin/live-tool decide which filters show,
+  // in what order, and how each data value is labelled. Options always come
+  // from the data; without settings the map shows its built-in filters.
+  const filtersById = useMemo(() => new Map(filterConfig.filters.map((f) => [f.id, f])), [filterConfig]);
+  const orderedFilters = useMemo(() => filterConfig.filters.filter((f) => f.visible), [filterConfig]);
+  const isFilterShown = useCallback((id) => filtersById.get(id)?.visible === true, [filtersById]);
+  const customFilters = useMemo(
+    () => orderedFilters.filter((f) => !isBuiltInFilter(f.id) && filterSpec(f).property),
+    [orderedFilters],
+  );
+  const customFilterMatches = useCallback(
+    (props) =>
+      customFilters.every((f) => {
+        const selected = customSelections[f.id];
+        if (!selected?.length) return true;
+        return selected.includes(optionKey(f.id, props?.[filterSpec(f).property]));
+      }),
+    [customFilters, customSelections],
+  );
+
+  const statusValues = useMemo(() => {
+    const byKey = new Map();
+    for (const feature of allProjectsData?.features ?? []) {
+      const status = getProjectStatus(feature.properties || {});
+      const key = optionKey('status', status);
+      if (key && !byKey.has(key)) byKey.set(key, status);
+    }
+    const rank = (s) => {
+      const i = PROJECT_STATUS_OPTIONS.indexOf(s);
+      return i === -1 ? PROJECT_STATUS_OPTIONS.length : i;
+    };
+    return [...byKey.values()].sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
+  }, [allProjectsData]);
+
+  const customValues = useMemo(() => {
+    const result = new Map();
+    for (const filter of customFilters) {
+      const property = filterSpec(filter).property;
+      const byKey = new Map();
+      for (const feature of allProjectsData?.features ?? []) {
+        const raw = feature.properties?.[property];
+        const key = optionKey(filter.id, raw);
+        if (key && raw !== 'Null' && !byKey.has(key)) byKey.set(key, String(raw).trim());
+      }
+      const values = [...byKey.values()].sort((a, b) =>
+        a.localeCompare(b, undefined, { sensitivity: 'base', numeric: true }),
+      );
+      result.set(filter.id, values.map((value) => ({ value })));
+    }
+    return result;
+  }, [allProjectsData, customFilters]);
+
+  const asDataValues = (values) => values.map((value) => ({ value }));
+  const emptyFilter = (id) => ({ id, options: [] });
+  const cityOptions = mapOptions(filtersById.get('city') ?? emptyFilter('city'), asDataValues(uniqueCities));
+  const statusOptions = mapOptions(filtersById.get('status') ?? emptyFilter('status'), asDataValues(statusValues));
+  const typeOptions = mapOptions(filtersById.get('infrastructure') ?? emptyFilter('infrastructure'), asDataValues(uniqueTypes));
+  const disasterOptions = mapOptions(filtersById.get('disaster') ?? emptyFilter('disaster'), asDataValues(uniqueDisasterFocus));
+  const cityLabel = (city) =>
+    cityOptions.find((o) => o.key === optionKey('city', city))?.label ?? formatCityName(city);
+
+  const allCitiesLabel = (filter) => (filter.label === 'City' ? 'All Cities' : `All (${filter.label})`);
+
+  // Raw values that one option stands for ("Blue" and "Blue Infrastructure" are one checkbox).
+  const rawValuesFor = (filterId, values, key) => values.filter((v) => optionKey(filterId, v) === key);
+
+  const renderCustomFilter = (filter) => {
+    const options = mapOptions(filter, customValues.get(filter.id) ?? []);
+    if (!options.length) return null;
+    const selected = customSelections[filter.id] ?? [];
+    const setSelected = (next) => setCustomSelections((prev) => ({ ...prev, [filter.id]: next }));
+    return (
+      <div key={filter.id} style={{ marginBottom: '24px' }}>
+        <h2 style={{ fontSize: '1.1em', fontWeight: '500', color: '#2c3e50', marginBottom: '12px' }}>{filter.label}</h2>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: '16px', rowGap: '10px', alignItems: 'center' }}>
+          {options.map(({ key, label }) => (
+            <label key={key} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={selected.includes(key)}
+                onChange={(e) => setSelected(e.target.checked ? [...selected, key] : selected.filter((k) => k !== key))}
+                style={{ marginRight: '8px', cursor: 'pointer' }}
+              />
+              <span style={{ color: '#445461', fontSize: '0.9em' }}>{label}</span>
+            </label>
+          ))}
+        </div>
+        {selected.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setSelected([])}
+            style={{
+              marginTop: '8px',
+              padding: '4px 8px',
+              fontSize: '0.85em',
+              background: 'transparent',
+              border: '1px solid #ccc',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              color: '#445461',
+            }}
+          >
+            Clear
+          </button>
+        )}
+      </div>
+    );
+  };
+
+  const infraOptionByKey = useMemo(() => {
+    const filter = filtersById.get('infrastructure') ?? emptyFilter('infrastructure');
+    return new Map(resolveOptions(filter, []).map((o) => [o.key, o]));
+  }, [filtersById]);
+
+  const statusColor = (status) => {
+    const filter = filtersById.get('status') ?? emptyFilter('status');
+    const key = optionKey('status', status);
+    return resolveOptions(filter, [{ value: status }]).find((o) => o.key === key)?.color ?? '#b45309';
+  };
+
+  useEffect(() => {
+    if (!LOCAL_FILTERS) return undefined;
+    // Local test mode: use what /admin/live-tool published in this browser, and
+    // follow it live when the admin tab publishes again.
+    const apply = () => {
+      const local = readLocalLiveConfig();
+      setFilterConfig(local ? normalizeFilterConfig(local) : DEFAULT_FILTER_CONFIG);
+    };
+    apply();
+    const onStorage = (event) => {
+      if (event.key === LOCAL_FILTERS_KEY || event.key === null) apply();
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
+  useEffect(() => {
+    if (LOCAL_FILTERS) return undefined;
+    let cancelled = false;
+    const base = import.meta.env.VITE_SUPABASE_URL || SUPABASE_STORAGE.split('/storage/')[0];
+    try {
+      fetch(`${base}/storage/v1/object/public/project-data/${FILTERS_CONFIG_FILE}`, { cache: 'no-store' })
+        .then((response) => (response.ok ? response.json() : null))
+        .then((raw) => {
+          if (!cancelled && raw) setFilterConfig(normalizeFilterConfig(raw));
+        })
+        .catch(() => {});
+    } catch {
+      // No fetch (tests): keep the built-in filters.
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // A hidden filter must not keep restricting the map.
+  useEffect(() => {
+    if (!isFilterShown('city')) setSelectedCity((prev) => (prev ? '' : prev));
+    if (!isFilterShown('status')) setSelectedProjectStatuses((prev) => (prev.length ? [] : prev));
+    if (!isFilterShown('infrastructure')) setSelectedTypes((prev) => (prev.length ? [] : prev));
+    if (!isFilterShown('disaster')) setSelectedDisasterFocus((prev) => (prev.length ? [] : prev));
+    setCustomSelections((prev) => {
+      const ids = new Set(customFilters.map((f) => f.id));
+      const kept = Object.fromEntries(Object.entries(prev).filter(([id]) => ids.has(id)));
+      return Object.keys(kept).length === Object.keys(prev).length ? prev : kept;
+    });
+  }, [isFilterShown, customFilters]);
+
+  // Pin colors follow the Infrastructure Type colors chosen on /admin/live-tool.
+  useEffect(() => {
+    customPinColors = [...new Set([...infraOptionByKey.values()].map((o) => o.color).filter(Boolean))];
+    const geojson = projectPinsGeoJsonRef.current;
+    if (!geojson || !map.current) return;
+    let changed = false;
+    for (const feature of geojson.features) {
+      const props = feature.properties;
+      const color = infraOptionByKey.get(optionKey('infrastructure', props.__type))?.color;
+      const image = color ? pinImageIdForColor(color) : props.__defaultPinImage;
+      if (props.__pinImage !== image) {
+        props.__pinImage = image;
+        changed = true;
+      }
+    }
+    if (!changed) return;
+    try {
+      ensureProjectPinLayer(map.current);
+    } catch (e) {
+      console.warn('[Projects] Could not apply pin colors', e);
+    }
+  }, [infraOptionByKey, allMarkers, ensureProjectPinLayer]);
+
   // Zoom to city markers when city is selected
   const zoomToCity = useCallback((cityName) => {
     if (!map.current || !allMarkers.length) return;
@@ -2316,7 +2463,7 @@ const Dashboard = () => {
           const typeMatch = selectedTypes.length === 0 || selectedTypes.includes(type);
           const disasterMatch = disasterFocusMatches(selectedDisasterFocus, disasterFocus);
           const statusMatch = selectedProjectStatuses.length === 0 || selectedProjectStatuses.includes(projectStatus);
-          return projectsLayerVisible && typeMatch && disasterMatch && statusMatch;
+          return projectsLayerVisible && typeMatch && disasterMatch && statusMatch && customFilterMatches(props);
         })
       : allMarkers.filter((pin) => {
           if (!pin.feature) return false;
@@ -2345,7 +2492,7 @@ const Dashboard = () => {
         });
       }
     }
-  }, [allMarkers, projectsLayerVisible, selectedTypes, selectedDisasterFocus, selectedProjectStatuses]);
+  }, [allMarkers, projectsLayerVisible, selectedTypes, selectedDisasterFocus, selectedProjectStatuses, customFilterMatches]);
 
   // Filter pins with a Mapbox expression instead of toggling 1,660 DOM nodes.
   useEffect(() => {
@@ -2371,6 +2518,12 @@ const Dashboard = () => {
     if (cityTrimmed) {
       parts.push(['==', ['get', '__cityLower'], cityTrimmed.toLowerCase()]);
     }
+    for (const filter of customFilters) {
+      const selected = customSelections[filter.id];
+      if (selected?.length) {
+        parts.push(['in', ['get', `__p_${filterSpec(filter).property}`], ['literal', selected]]);
+      }
+    }
     map.current.setFilter(PROJECT_PIN_LAYER_ID, parts.length === 1 ? null : parts);
 
     if (!activeFeature) return;
@@ -2383,10 +2536,21 @@ const Dashboard = () => {
     const disasterMatch = disasterFocusMatches(selectedDisasterFocus, disasterFocus);
     const statusMatch = selectedProjectStatuses.length === 0 || selectedProjectStatuses.includes(projectStatus);
     const cityMatch = !cityTrimmed || city.toLowerCase() === cityTrimmed.toLowerCase();
-    if (!(projectsLayerVisible && typeMatch && disasterMatch && statusMatch && cityMatch)) {
+    if (!(projectsLayerVisible && typeMatch && disasterMatch && statusMatch && cityMatch && customFilterMatches(props))) {
       setActiveFeature(null);
     }
-  }, [projectsLayerVisible, selectedTypes, selectedDisasterFocus, selectedProjectStatuses, selectedCity, allMarkers, activeFeature]);
+  }, [
+    projectsLayerVisible,
+    selectedTypes,
+    selectedDisasterFocus,
+    selectedProjectStatuses,
+    selectedCity,
+    allMarkers,
+    activeFeature,
+    customFilters,
+    customSelections,
+    customFilterMatches,
+  ]);
 
   // Zoom to city when selected (including "All Cities")
   useEffect(() => {
@@ -2424,9 +2588,9 @@ const Dashboard = () => {
       const statusMatch = selectedProjectStatuses.length === 0 || selectedProjectStatuses.includes(projectStatus);
       const cityMatch = !selectedCityTrimmed || selectedCityTrimmed === '' || (city || '').toLowerCase() === selectedCityLower;
 
-      return typeMatch && disasterMatch && statusMatch && cityMatch;
+      return typeMatch && disasterMatch && statusMatch && cityMatch && customFilterMatches(props);
     });
-  }, [allProjectsData, selectedTypes, selectedDisasterFocus, selectedProjectStatuses, selectedCity]);
+  }, [allProjectsData, selectedTypes, selectedDisasterFocus, selectedProjectStatuses, selectedCity, customFilterMatches]);
 
   // Calculate filtered statistics (project count and total investment)
   const filteredStats = useMemo(() => {
@@ -2493,13 +2657,16 @@ const Dashboard = () => {
     };
 
     return Object.entries(typeCounts)
-      .map(([name, value]) => ({
-        name,
-        value,
-        color: colors[name] || '#95a5a6'
-      }))
+      .map(([name, value]) => {
+        const option = name === 'Unknown' ? null : infraOptionByKey.get(optionKey('infrastructure', name));
+        return {
+          name: option?.label ?? name,
+          value,
+          color: option?.color ?? colors[name] ?? '#95a5a6',
+        };
+      })
       .sort((a, b) => b.value - a.value); // Sort by count descending
-  }, [filteredProjectFeatures]);
+  }, [filteredProjectFeatures, infraOptionByKey]);
 
   const pieChartSummary = useMemo(() => {
     if (!pieChartData.length) return '';
@@ -2664,10 +2831,14 @@ const Dashboard = () => {
               />
             </button>
           </div>
-          {/* City Filter */}
-          <div style={{ marginBottom: '24px', position: 'relative' }} data-city-dropdown>
+          {/* Filters, in the order and with the names published from /admin/live-tool */}
+          {orderedFilters.map((filter) => {
+            switch (filter.id) {
+              case 'city':
+                return (
+          <div key="city" style={{ marginBottom: '24px', position: 'relative' }} data-city-dropdown>
             <h2 id="dashboard-city-heading" style={{ fontSize: '1.1em', fontWeight: '500', color: '#2c3e50', marginBottom: '12px' }}>
-              City
+              {filter.label}
             </h2>
             <button
               type="button"
@@ -2707,7 +2878,7 @@ const Dashboard = () => {
                 fontFamily: 'inherit',
               }}
             >
-              <span>{selectedCity ? formatCityName(selectedCity) : 'All Cities'}</span>
+              <span>{selectedCity ? cityLabel(selectedCity) : allCitiesLabel(filter)}</span>
               <span style={{ fontSize: '0.7em' }} aria-hidden="true">▼</span>
             </button>
             {cityDropdownOpen && (
@@ -2765,10 +2936,10 @@ const Dashboard = () => {
                       e.currentTarget.style.backgroundColor = selectedCity === '' ? 'rgba(240, 248, 255, 0.7)' : 'transparent';
                     }}
                   >
-                    All Cities
+                    {allCitiesLabel(filter)}
                   </button>
                 </li>
-                {uniqueCities.map((city) => (
+                {cityOptions.map(({ value: city, label }) => (
                   <li key={city} role="presentation" style={{ margin: 0, padding: 0 }}>
                     <button
                       type="button"
@@ -2798,18 +2969,19 @@ const Dashboard = () => {
                         e.currentTarget.style.backgroundColor = selectedCity === city ? 'rgba(240, 248, 255, 0.7)' : 'transparent';
                       }}
                     >
-                      {formatCityName(city)}
+                      {label}
                     </button>
                   </li>
                 ))}
               </ul>
             )}
           </div>
-          
-          {/* Project Status Filter — 2×2: Completed | Ongoing / Funded | Planned */}
-          <div style={{ marginBottom: '24px' }}>
+                );
+              case 'status':
+                return (
+          <div key="status" style={{ marginBottom: '24px' }}>
             <h2 style={{ fontSize: '1.1em', fontWeight: '500', color: '#2c3e50', marginBottom: '12px' }}>
-              Project Status
+              {filter.label}
             </h2>
             <div
               style={{
@@ -2820,23 +2992,26 @@ const Dashboard = () => {
                 alignItems: 'center',
               }}
             >
-              {PROJECT_STATUS_OPTIONS.map(status => (
-                <label key={status} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+              {statusOptions.map(({ key, label }) => {
+                const statuses = rawValuesFor('status', statusValues, key);
+                return (
+                <label key={key} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                   <input
                     type="checkbox"
-                    checked={selectedProjectStatuses.includes(status)}
+                    checked={statuses.some((s) => selectedProjectStatuses.includes(s))}
                     onChange={(e) => {
                       if (e.target.checked) {
-                        setSelectedProjectStatuses([...selectedProjectStatuses, status]);
+                        setSelectedProjectStatuses([...new Set([...selectedProjectStatuses, ...statuses])]);
                       } else {
-                        setSelectedProjectStatuses(selectedProjectStatuses.filter(s => s !== status));
+                        setSelectedProjectStatuses(selectedProjectStatuses.filter(s => !statuses.includes(s)));
                       }
                     }}
                     style={{ marginRight: '8px', cursor: 'pointer' }}
                   />
-                  <span style={{ color: '#445461', fontSize: '0.9em' }}>{status}</span>
+                  <span style={{ color: '#445461', fontSize: '0.9em' }}>{label}</span>
                 </label>
-              ))}
+                );
+              })}
             </div>
             {selectedProjectStatuses.length > 0 && (
               <button
@@ -2857,11 +3032,12 @@ const Dashboard = () => {
               </button>
             )}
           </div>
-
-          {/* Type Filter — 2×2: Blue | Green / Gray | Hybrid */}
-          <div style={{ marginBottom: '24px' }}>
+                );
+              case 'infrastructure':
+                return (
+          <div key="infrastructure" style={{ marginBottom: '24px' }}>
             <h2 style={{ fontSize: '1.1em', fontWeight: '500', color: '#2c3e50', marginBottom: '12px' }}>
-              Infrastructure Type
+              {filter.label}
             </h2>
             <div
               style={{
@@ -2872,20 +3048,19 @@ const Dashboard = () => {
                 alignItems: 'center',
               }}
             >
-              {uniqueTypes.map(type => {
-                const typeLabel = formatInfrastructureType(type);
-                const typeDefinition = getInfrastructureTypeDefinition(type);
+              {typeOptions.map(({ key, label: typeLabel, definition: typeDefinition }) => {
+                const types = rawValuesFor('infrastructure', uniqueTypes, key);
                 return (
-                  <div key={type} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                     <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', gap: '4px', minWidth: 0 }}>
                       <input
                         type="checkbox"
-                        checked={selectedTypes.includes(type)}
+                        checked={types.some((t) => selectedTypes.includes(t))}
                         onChange={(e) => {
                           if (e.target.checked) {
-                            setSelectedTypes([...selectedTypes, type]);
+                            setSelectedTypes([...new Set([...selectedTypes, ...types])]);
                           } else {
-                            setSelectedTypes(selectedTypes.filter(t => t !== type));
+                            setSelectedTypes(selectedTypes.filter(t => !types.includes(t)));
                           }
                         }}
                         style={{ marginRight: '4px', cursor: 'pointer' }}
@@ -2919,11 +3094,12 @@ const Dashboard = () => {
               </button>
             )}
           </div>
-
-          {/* Disaster Focus Filter — two-column grid */}
-          <div style={{ marginBottom: '24px' }}>
+                );
+              case 'disaster':
+                return (
+          <div key="disaster" style={{ marginBottom: '24px' }}>
             <h2 style={{ fontSize: '1.1em', fontWeight: '500', color: '#2c3e50', marginBottom: '12px' }}>
-              Disaster Focus
+              {filter.label}
             </h2>
             <div
               style={{
@@ -2934,7 +3110,7 @@ const Dashboard = () => {
                 alignItems: 'center',
               }}
             >
-              {uniqueDisasterFocus.map(focus => (
+              {disasterOptions.map(({ value: focus, label: focusLabel }) => (
                 <label key={focus} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                   <input
                     type="checkbox"
@@ -2948,7 +3124,7 @@ const Dashboard = () => {
                     }}
                     style={{ marginRight: '8px', cursor: 'pointer' }}
                   />
-                  <span style={{ color: '#445461', fontSize: '0.9em' }}>{focus}</span>
+                  <span style={{ color: '#445461', fontSize: '0.9em' }}>{focusLabel}</span>
                 </label>
               ))}
             </div>
@@ -2971,6 +3147,11 @@ const Dashboard = () => {
               </button>
             )}
           </div>
+                );
+              default:
+                return renderCustomFilter(filter);
+            }
+          })}
 
           {/* Statistics Squares */}
           <div style={{ 
@@ -3465,7 +3646,7 @@ const Dashboard = () => {
           )}
 
           {map.current && (
-            <MapboxPopup map={map.current} activeFeature={activeFeature} />
+            <MapboxPopup map={map.current} activeFeature={activeFeature} statusColor={statusColor} />
           )}
 
           {!loading && (
@@ -3888,7 +4069,7 @@ const Dashboard = () => {
 export default Dashboard;
 
 // React-based Mapbox Popup using a portal to render rich content
-const MapboxPopup = ({ map, activeFeature }) => {
+const MapboxPopup = ({ map, activeFeature, statusColor }) => {
   const popupRef = useRef(null);
   const contentRef = useRef(typeof document !== 'undefined' ? document.createElement('div') : null);
 
@@ -3969,7 +4150,7 @@ const MapboxPopup = ({ map, activeFeature }) => {
             </tr>
             <tr>
               <td style={{ color: '#34495e', fontWeight: 600 }}>Status</td>
-              <td style={{ color: PROJECT_STATUS_COLORS[getProjectStatus(props)] || '#b45309', fontWeight: 700 }}>
+              <td style={{ color: statusColor(getProjectStatus(props)), fontWeight: 700 }}>
                 {getProjectStatus(props)}
               </td>
             </tr>

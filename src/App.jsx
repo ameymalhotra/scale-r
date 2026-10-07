@@ -1,5 +1,6 @@
 import React, { useLayoutEffect, useEffect, Suspense, lazy } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Analytics } from '@vercel/analytics/react';
 import Navbar from './components/Navbar.jsx';
 import About from './pages/About.jsx';
 import Dashboard from './pages/Dashboard.jsx';
@@ -106,6 +107,8 @@ export default function App() {
           </Routes>
         </Suspense>
       </main>
+      {/* Page views for the public site only; /admin visits are not sent. */}
+      <Analytics beforeSend={(event) => (new URL(event.url).pathname.startsWith('/admin') ? null : event)} />
     </div>
   );
 }
