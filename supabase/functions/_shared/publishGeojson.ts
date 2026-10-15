@@ -74,3 +74,25 @@ export async function writeFiltersConfig(admin: SupabaseClient, config: unknown,
   });
   if (error) throw new Error(`Uploading ${FILTERS_FILE}: ${error.message}`);
 }
+
+export const LAYERS_FILE = 'layers_config.json';
+
+/** Writes the uploaded map layers (paths and symbology) the public map reads. */
+export async function writeLayersConfig(admin: SupabaseClient, config: unknown, versionNo: number) {
+  const layers = (config as { layers?: unknown } | null)?.layers;
+  if (!Array.isArray(layers)) throw new Error('The layer settings have no layers list');
+  const body = new TextEncoder().encode(
+    JSON.stringify({
+      version_no: versionNo, published_at: new Date().toISOString(), layers,
+      builtins: (config as { builtins?: unknown }).builtins,
+      order: (config as { order?: unknown }).order,
+      overlayOrder: (config as { overlayOrder?: unknown }).overlayOrder,
+    }),
+  );
+  const { error } = await admin.storage.from(BUCKET).upload(LAYERS_FILE, body, {
+    contentType: 'application/json',
+    cacheControl: '0',
+    upsert: true,
+  });
+  if (error) throw new Error(`Uploading ${LAYERS_FILE}: ${error.message}`);
+}

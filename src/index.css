@@ -208,6 +208,11 @@ html:not(.route-dashboard) .site-navbar {
   left: env(safe-area-inset-left, 0);
 }
 
+.mapboxgl-ctrl-group button.map-style-toggle-ctrl {
+  font-size: 16px;
+  line-height: 1;
+}
+
 /* Dashboard: sit controls just to the right of the frosted filter sidebar (desktop) */
 @media (min-width: 769px) {
   .dashboard-map-area .mapboxgl-ctrl-top-left {

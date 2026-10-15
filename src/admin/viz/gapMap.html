@@ -1,0 +1,167 @@
+<div id="map"></div>
+
+<aside class="panel left" aria-label="Map controls">
+  <nav class="nav"><a href="/admin">← Admin</a><a href="/admin/viz" class="on">Resilience gap map</a><a href="/admin/viz/exposure">Exposure animations</a></nav>
+  <span class="draft">Draft for review · not the final tool</span>
+  <h1>Resilience Gap Map</h1>
+  <p>
+    <b>Question:</b> is resilience investment reaching the Miami-Dade neighborhoods that are most exposed or most
+    vulnerable? Each census tract is scored on <b>need</b> (the measure you pick below) and on
+    <b>investment per resident</b>, then colored by the combination.
+  </p>
+
+  <div class="seg" role="group" aria-label="View">
+    <button id="view-2d" type="button">2D map</button>
+    <button id="view-3d" type="button" class="on">3D skyline</button>
+  </div>
+
+  <label for="metric">Need measure: compare investment against</label>
+  <select id="metric"></select>
+  <div class="src active" id="metric-source" aria-live="polite"></div>
+
+  <div id="controls-3d">
+    <label for="height">Column height shows</label>
+    <select id="height">
+      <option value="exposure">The need measure above</option>
+      <option value="investment_per_capita">Investment per person</option>
+      <option value="investment_total">Total investment</option>
+      <option value="population">Residents</option>
+    </select>
+    <p class="hint" id="height-hint"></p>
+  </div>
+
+  <h2>Color key</h2>
+  <p class="hint" style="margin-top:-4px">
+    Each square is one combination of tiers. Up = more need, right = more investment per person. Hover or click a
+    square to isolate those tracts.
+  </p>
+  <div class="legend-wrap">
+    <div class="y-axis" id="y-label">Need →</div>
+    <div>
+      <div class="grid" id="grid"></div>
+      <div class="x-axis">Investment per person →</div>
+    </div>
+    <div class="legend-notes">
+      <div><span class="swatch" style="background:#c85a5a"></span><b>Gap</b><br />high need,<br />low investment</div>
+      <div style="margin-top:8px"><span class="swatch" style="background:#574249"></span>Matched: high / high</div>
+      <div><span class="swatch" style="background:#64acbe"></span>Low need,<br />high investment</div>
+      <div style="margin-top:8px"><span class="swatch" style="background:#2a2f37;outline:1px solid #555"></span>No residents</div>
+    </div>
+  </div>
+
+  <div class="stat">
+    <div class="big" id="gap-count">–</div>
+    <div class="small" id="gap-detail">tracts in the gap</div>
+  </div>
+
+  <label class="toggle"><input type="checkbox" id="pins" checked /> Show projects (completed, ongoing, funded)</label>
+  <label class="toggle"><input type="checkbox" id="gap-only" /> Highlight the gap only</label>
+  <label class="toggle" id="orbit-row"><input type="checkbox" id="orbit" /> Slowly orbit the camera</label>
+
+  <div class="method" id="method"></div>
+</aside>
+
+<aside class="panel right" id="right" aria-label="About this map">
+  <div class="right-head">
+    <div class="tabs" role="tablist">
+      <button type="button" role="tab" data-tab="sources" class="on">Sources</button>
+      <button type="button" role="tab" data-tab="read">How to read</button>
+      <button type="button" role="tab" data-tab="method">Method &amp; questions</button>
+    </div>
+    <button type="button" class="icon-btn" id="toggle-right" aria-expanded="true" aria-label="Hide panel">–</button>
+  </div>
+
+  <div class="right-body">
+    <section class="tab-body" data-tab="sources">
+      <p class="hint">
+        Every value on this map comes from the datasets below. Nothing is simulated. The card for the need measure
+        currently on screen is outlined.
+      </p>
+      <div id="source-list"></div>
+    </section>
+
+    <section class="tab-body" data-tab="read" hidden>
+      <h2>What one tract shows</h2>
+      <p>
+        A census tract is a Census Bureau neighborhood of roughly 2,000–8,000 people. Miami-Dade has 706 with land,
+        of which 698 have residents. Each one gets two scores:
+      </p>
+      <ol>
+        <li><b>Need</b>: the measure picked in the left panel (sea level rise, storm surge, FEMA loss or risk, social
+          vulnerability, or poverty).</li>
+        <li><b>Investment per person</b>: resilience project dollars assigned to the tract, divided by its residents.</li>
+      </ol>
+      <p>
+        Each score is split into <b>three equal tiers within Miami-Dade</b> (low, medium, high). The tract color is
+        the combination of the two tiers. "High" therefore means the top third <i>of this county</i>, not high on any
+        national scale.
+      </p>
+
+      <h2>The colors</h2>
+      <ul>
+        <li><span class="swatch" style="background:#c85a5a"></span><b>Red, the gap.</b> Top third for need, bottom
+          third for investment per person.</li>
+        <li><span class="swatch" style="background:#574249"></span><b>Dark plum, matched.</b> High need and high
+          investment.</li>
+        <li><span class="swatch" style="background:#64acbe"></span><b>Teal.</b> Low need, high investment.</li>
+        <li><span class="swatch" style="background:#e8e8e8"></span><b>Near-white.</b> Low need, low investment.</li>
+        <li><span class="swatch" style="background:#2a2f37;outline:1px solid #555"></span><b>Dark gray.</b> No
+          residents (airport, port, parkland), so no per-person value.</li>
+      </ul>
+
+      <h2>The 3D columns</h2>
+      <ul>
+        <li>One column per populated tract, standing inside the tract.</li>
+        <li><b>Color</b> is the same 9-color key.</li>
+        <li><b>Height</b> is the tract's <b>rank within the county</b> on the measure chosen in "Column height shows".
+          A tract at the 90th percentile is about 90% as tall as the tallest.</li>
+        <li>Heights are exaggerated for visibility and carry no physical units. Twice as tall means a higher rank,
+          not twice the value.</li>
+        <li>Tracts scoring zero (e.g. no 3 ft sea level rise exposure) have no column, only ground color.</li>
+      </ul>
+      <p>With the default settings, look for <b>tall red columns</b>: highly exposed tracts with little investment
+        per resident.</p>
+
+      <h2>The white dots (2D)</h2>
+      <p>Individual projects that are completed, ongoing or funded. Click one for its type, status, scale and cost.
+        Planned projects are not shown.</p>
+    </section>
+
+    <section class="tab-body" data-tab="method" hidden>
+      <h2>How the map is built</h2>
+      <ol>
+        <li>Project dollars are assigned to tracts by the SCALE-R tract analysis (12 Sep 2026) using each project's
+          spatial scale: parcel, neighborhood and corridor projects go entirely to the tract containing the project
+          point. Municipality projects are shared across that municipality's tracts and county projects across all
+          tracts, both weighted by population.</li>
+        <li>Investment per person = assigned dollars ÷ ACS 2020–2024 population.</li>
+        <li>Need measures are joined by 11-digit tract GEOID. All 706 tracts match.</li>
+        <li>Both scores are cut into county terciles among populated tracts. Where a third or more of tracts are
+          exactly zero (sea level rise, storm surge), "low" means zero and the remaining tracts are split at their
+          median.</li>
+      </ol>
+
+      <h2>Questions for review</h2>
+      <div class="q"><b>1. Is the FEMA composite risk score appropriate here?</b>
+        The team's NRI audit recommends against it for analysis: FEMA builds it from expected annual loss, CDC social
+        vulnerability and Census community resilience, so it mixes hazard with vulnerability. Expected annual loss is
+        offered as the hazard-only alternative.</div>
+      <div class="q"><b>2. Are terciles the right cut-offs?</b>
+        The "gap" count depends on them. Alternatives: quartiles, fixed thresholds, or national percentiles.</div>
+      <div class="q"><b>3. County-wide projects.</b>
+        Spreading county projects by population raises every tract slightly and may understate local benefit near
+        where the work is done.</div>
+      <div class="q"><b>4. Projects without a cost</b> contribute $0, and regional systems (canals, pumps) protect
+        tracts beyond the one they sit in.</div>
+      <div class="q"><b>5. Mixed data years.</b> Population is ACS 2020–2024, poverty is SVI 2022 (ACS 2018–2022),
+        FEMA NRI is the December 2025 file. Acceptable for a draft but should be stated in any write-up.</div>
+      <div class="q"><b>6. Tracts with no residents (e.g. Virginia Key).</b> Nine Census special land-use tracts
+        (98xx) have zero population: PortMiami, Virginia Key + Crandon Park, the airports, Everglades and Biscayne
+        national parks, Turkey Point. FEMA and NOAA data exist for them, but investment per person is undefined, so
+        they are shown dark gray. Virginia Key alone holds 10 projects / $62.5M (Marine Stadium restoration). Show
+        them by total or per-acre investment instead?</div>
+      <div class="q"><b>7. Snapshot.</b> Tract investment is a 12 Sep 2026 snapshot. Project dots load live, so edits
+        made after that date appear as dots but not in the colors until the analysis is re-run.</div>
+    </section>
+  </div>
+</aside>

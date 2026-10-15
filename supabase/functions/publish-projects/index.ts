@@ -13,12 +13,25 @@
 //                            (make_filters_version_live())
 //   Both filter calls then rewrite filters_config.json.
 //
+//   { "layers": { "note": string, "name"?: string } }
+//                            publish the saved map layer draft (publish_layers())
+//   { "layersVersionId": number }
+//                            put an existing layer version back on the map
+//                            (make_layers_version_live())
+//   Both layer calls then rewrite layers_config.json.
+//
 // Called from /admin with the signed-in user's JWT; the database functions
 // re-check admin membership.
 // Secrets: SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY (provided by Supabase).
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
-import { corsHeaders, json, writeFiltersConfig, writePublishedGeojson } from '../_shared/publishGeojson.ts';
+import {
+  corsHeaders,
+  json,
+  writeFiltersConfig,
+  writeLayersConfig,
+  writePublishedGeojson,
+} from '../_shared/publishGeojson.ts';
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
@@ -39,6 +52,8 @@ Deno.serve(async (req: Request) => {
   let rebuild = false;
   let filters: { note: string; name: string | null } | null = null;
   let filtersVersionId: number | null = null;
+  let layers: { note: string; name: string | null } | null = null;
+  let layersVersionId: number | null = null;
   try {
     const body = await req.json();
     note = typeof body?.note === 'string' ? body.note.trim() : '';
@@ -51,6 +66,13 @@ Deno.serve(async (req: Request) => {
       };
     }
     filtersVersionId = Number.isInteger(body?.filtersVersionId) ? body.filtersVersionId : null;
+    if (body?.layers && typeof body.layers === 'object') {
+      layers = {
+        note: typeof body.layers.note === 'string' ? body.layers.note.trim() : '',
+        name: typeof body.layers.name === 'string' ? body.layers.name : null,
+      };
+    }
+    layersVersionId = Number.isInteger(body?.layersVersionId) ? body.layersVersionId : null;
   } catch {
     return json({ error: 'Expected a JSON body' }, 400);
   }
@@ -83,6 +105,30 @@ Deno.serve(async (req: Request) => {
           error: `Filter version ${published.version_no} is live in the database, but updating the map's filter file failed: ${String(e)}`,
           version_no: published.version_no,
           filtersFileFailed: true,
+        },
+        502,
+      );
+    }
+  }
+
+  if (layers || layersVersionId != null) {
+    if (layers && !layers.note) return json({ error: 'A publish note is required' }, 400);
+    const { data: published, error: layersError } = layers
+      ? await asUser.rpc('publish_layers', { p_note: layers.note, p_name: layers.name })
+      : await asUser.rpc('make_layers_version_live', { p_version_id: layersVersionId });
+    if (layersError) {
+      const status = layersError.code === '42501' ? 403 : 400;
+      return json({ error: layersError.message }, status);
+    }
+    try {
+      await writeLayersConfig(admin, published.config, published.version_no);
+      return json({ ok: true, version_id: published.version_id, version_no: published.version_no });
+    } catch (e) {
+      return json(
+        {
+          error: `Layer version ${published.version_no} is live in the database, but updating the map's layer file failed: ${String(e)}`,
+          version_no: published.version_no,
+          layersFileFailed: true,
         },
         502,
       );

@@ -25,6 +25,11 @@ scripts/*
 scripts/python/*
 !scripts/python/infra_common.py
 !scripts/python/classify_infrastructure_lms_csv.py
+!scripts/python/prepare_map_surfaces.py
+!scripts/python/map-surfaces-requirements.txt
+!scripts/python/validate_map_surfaces.py
+!scripts/python/build_viz_tracts.py
+!scripts/python/build_viz_exposure.py
 !scripts/js/
 scripts/js/*
 !scripts/js/audit-performance.mjs
@@ -68,3 +73,14 @@ geocode_failures.csv
 __pycache__/
 *.pyc
 *.pyo
+
+# Local AI-tool settings and caches
+.claude/
+.serena/
+
+# Raw downloaded datasets (9 GB, files over GitHub's 100 MB limit); see DATA_PROCESSING.md for sources
+Modelling Data from Web/tract-level/
+Modelling Data from Web/block-group-level/
+Modelling Data from Web/boundaries/
+Modelling Data from Web/output/
+.Rhistory

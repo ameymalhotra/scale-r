@@ -1,0 +1,122 @@
+{
+  "source": "NOAA Office for Coastal Management, Sea Level Rise Inundation Data (FL_SE), ocean-connected _slr_ layers",
+  "datum": "MHHW",
+  "levels_ft": [
+    0.0,
+    0.5,
+    1.0,
+    1.5,
+    2.0,
+    2.5,
+    3.0,
+    3.5,
+    4.0,
+    4.5,
+    5.0,
+    5.5,
+    6.0
+  ],
+  "resolution_m": 30,
+  "encoding": "pixel value = 18 * (1 + 2 * first flooded level in ft); 0 = dry through 6 ft. Spaced by 18 so Mapbox raster-color lookups never blur adjacent levels.",
+  "land_mask": "Census tracts minus TIGER/Line 2024 area water",
+  "county_land_km2": 4917.1,
+  "projects_counted": 1405,
+  "coordinates": [
+    [
+      -80.874405,
+      25.979435
+    ],
+    [
+      -80.108891,
+      25.979435
+    ],
+    [
+      -80.108891,
+      25.135034
+    ],
+    [
+      -80.874405,
+      25.135034
+    ]
+  ],
+  "stats": [
+    {
+      "ft": 0.0,
+      "km2": 266.0,
+      "pct_land": 5.4,
+      "projects": 6
+    },
+    {
+      "ft": 0.5,
+      "km2": 531.4,
+      "pct_land": 10.8,
+      "projects": 7
+    },
+    {
+      "ft": 1.0,
+      "km2": 739.3,
+      "pct_land": 15.0,
+      "projects": 9
+    },
+    {
+      "ft": 1.5,
+      "km2": 911.0,
+      "pct_land": 18.5,
+      "projects": 19
+    },
+    {
+      "ft": 2.0,
+      "km2": 1089.4,
+      "pct_land": 22.2,
+      "projects": 39
+    },
+    {
+      "ft": 2.5,
+      "km2": 1265.1,
+      "pct_land": 25.7,
+      "projects": 71
+    },
+    {
+      "ft": 3.0,
+      "km2": 1450.6,
+      "pct_land": 29.5,
+      "projects": 131
+    },
+    {
+      "ft": 3.5,
+      "km2": 1569.4,
+      "pct_land": 31.9,
+      "projects": 182
+    },
+    {
+      "ft": 4.0,
+      "km2": 1732.0,
+      "pct_land": 35.2,
+      "projects": 245
+    },
+    {
+      "ft": 4.5,
+      "km2": 2009.9,
+      "pct_land": 40.9,
+      "projects": 312
+    },
+    {
+      "ft": 5.0,
+      "km2": 2362.1,
+      "pct_land": 48.0,
+      "projects": 392
+    },
+    {
+      "ft": 5.5,
+      "km2": 2763.5,
+      "pct_land": 56.2,
+      "projects": 495
+    },
+    {
+      "ft": 6.0,
+      "km2": 2974.9,
+      "pct_land": 60.5,
+      "projects": 654
+    }
+  ]
+}

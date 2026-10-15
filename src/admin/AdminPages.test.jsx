@@ -67,6 +67,16 @@ function renderAdmin(page) {
   return api;
 }
 
+describe('admin layout', () => {
+  it('links to every admin section, including map layers', async () => {
+    renderAdmin(<DataPage />);
+    await screen.findByText('Showing 2 of 2 rows');
+    const nav = screen.getByRole('navigation');
+    expect(within(nav).getByRole('link', { name: 'Map layers' })).toHaveAttribute('href', '/admin/layers');
+    expect(within(nav).getByRole('link', { name: 'Live tool' })).toHaveAttribute('href', '/admin/live-tool');
+  });
+});
+
 describe('admin data page', () => {
   it('shows the draft, its unpublished changes, and the table controls', async () => {
     renderAdmin(<DataPage />);

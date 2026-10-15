@@ -60,6 +60,15 @@ export default function AdminLayout({ children }) {
           >
             Live tool
           </NavLink>
+          <NavLink
+            to="/admin/layers"
+            className={({ isActive }) => `admin-nav__link${isActive ? ' is-active' : ''}`}
+          >
+            Map layers
+          </NavLink>
+          <NavLink to="/admin/viz" className="admin-nav__link">
+            Draft visualizations
+          </NavLink>
           <a className="admin-nav__link" href="/dashboard" target="_blank" rel="noreferrer">
             Open public map ↗
           </a>

@@ -1,0 +1,437 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "site_id": "S-001",
+    "name": "Tide gauge 1",
+    "site_type": "Tide gauge",
+    "status": "Active",
+    "water_level_ft": 4.24,
+    "capacity": null
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -80.38496,
+     25.67132
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "site_id": "S-002",
+    "name": "Groundwater well 2",
+    "site_type": "Groundwater well",
+    "status": "Active",
+    "water_level_ft": 2.14,
+    "capacity": null
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -80.35177,
+     25.64627
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "site_id": "S-003",
+    "name": "Stormwater pump 3",
+    "site_type": "Stormwater pump",
+    "status": "Active",
+    "water_level_ft": 4.24,
+    "capacity": null
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -80.41501,
+     25.69118
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "site_id": "S-004",
+    "name": "Shelter 4",
+    "site_type": "Shelter",
+    "status": "Maintenance",
+    "water_level_ft": 2.63,
+    "capacity": 427
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -80.30791,
+     25.55152
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "site_id": "S-005",
+    "name": "Tide gauge 5",
+    "site_type": "Tide gauge",
+    "status": "Maintenance",
+    "water_level_ft": 2.07,
+    "capacity": null
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -80.39864999999999,
+     25.73905
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "site_id": "S-006",
+    "name": "Groundwater well 6",
+    "site_type": "Groundwater well",
+    "status": "Active",
+    "water_level_ft": 1.51,
+    "capacity": null
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -80.31178999999999,
+     25.62563
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "site_id": "S-007",
+    "name": "Stormwater pump 7",
+    "site_type": "Stormwater pump",
+    "status": "Active",
+    "water_level_ft": 1.32,
+    "capacity": null
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -80.34035,
+     25.89565
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "site_id": "S-008",
+    "name": "Shelter 8",
+    "site_type": "Shelter",
+    "status": "Active",
+    "water_level_ft": 3.15,
+    "capacity": 1126
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -80.20032,
+     25.55087
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "site_id": "S-009",
+    "name": "Tide gauge 9",
+    "site_type": "Tide gauge",
+    "status": "Active",
+    "water_level_ft": 1.39,
+    "capacity": null
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -80.33633,
+     25.56728
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "site_id": "S-010",
+    "name": "Groundwater well 10",
+    "site_type": "Groundwater well",
+    "status": "Maintenance",
+    "water_level_ft": 3.4,
+    "capacity": null
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -80.25499,
+     25.70704
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "site_id": "S-011",
+    "name": "Stormwater pump 11",
+    "site_type": "Stormwater pump",
+    "status": "Active",
+    "water_level_ft": 1.96,
+    "capacity": null
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -80.33788,
+     25.65592
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "site_id": "S-012",
+    "name": "Shelter 12",
+    "site_type": "Shelter",
+    "status": "Active",
+    "water_level_ft": 2.22,
+    "capacity": 779
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -80.32126,
+     25.54345
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "site_id": "S-013",
+    "name": "Tide gauge 13",
+    "site_type": "Tide gauge",
+    "status": "Active",
+    "water_level_ft": 2.14,
+    "capacity": null
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -80.41716000000001,
+     25.64048
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "site_id": "S-014",
+    "name": "Groundwater well 14",
+    "site_type": "Groundwater well",
+    "status": "Active",
+    "water_level_ft": 1.27,
+    "capacity": null
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -80.17632,
+     25.86516
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "site_id": "S-015",
+    "name": "Stormwater pump 15",
+    "site_type": "Stormwater pump",
+    "status": "Maintenance",
+    "water_level_ft": 3.68,
+    "capacity": null
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -80.35472,
+     25.70397
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "site_id": "S-016",
+    "name": "Shelter 16",
+    "site_type": "Shelter",
+    "status": "Active",
+    "water_level_ft": 3.99,
+    "capacity": 1662
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -80.14429,
+     25.637700000000002
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "site_id": "S-017",
+    "name": "Tide gauge 17",
+    "site_type": "Tide gauge",
+    "status": "Active",
+    "water_level_ft": 3.2,
+    "capacity": null
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -80.17012,
+     25.54916
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "site_id": "S-018",
+    "name": "Groundwater well 18",
+    "site_type": "Groundwater well",
+    "status": "Active",
+    "water_level_ft": 4.49,
+    "capacity": null
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -80.14681,
+     25.552130000000002
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "site_id": "S-019",
+    "name": "Stormwater pump 19",
+    "site_type": "Stormwater pump",
+    "status": "Active",
+    "water_level_ft": 0.66,
+    "capacity": null
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -80.26799000000001,
+     25.56989
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "site_id": "S-020",
+    "name": "Shelter 20",
+    "site_type": "Shelter",
+    "status": "Active",
+    "water_level_ft": 1.12,
+    "capacity": 1627
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -80.34996000000001,
+     25.58661
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "site_id": "S-021",
+    "name": "Tide gauge 21",
+    "site_type": "Tide gauge",
+    "status": "Active",
+    "water_level_ft": 3.48,
+    "capacity": null
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -80.304,
+     25.88297
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "site_id": "S-022",
+    "name": "Groundwater well 22",
+    "site_type": "Groundwater well",
+    "status": "Active",
+    "water_level_ft": 2.31,
+    "capacity": null
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -80.24155999999999,
+     25.87488
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "site_id": "S-023",
+    "name": "Stormwater pump 23",
+    "site_type": "Stormwater pump",
+    "status": "Active",
+    "water_level_ft": 2.34,
+    "capacity": null
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -80.39608,
+     25.80133
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "site_id": "S-024",
+    "name": "Shelter 24",
+    "site_type": "Shelter",
+    "status": "Active",
+    "water_level_ft": 2.79,
+    "capacity": 1291
+   },
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     -80.32361999999999,
+     25.65568
+    ]
+   }
+  }
+ ]
+}
