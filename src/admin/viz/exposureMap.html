@@ -1,0 +1,40 @@
+<div id="map"></div>
+<aside class="panel" aria-label="Exposure animation controls">
+  <nav class="nav"><a href="/admin">← Admin</a><a href="/admin/viz">Resilience gap map</a><a href="/admin/viz/exposure" class="on">Exposure animations</a></nav>
+  <span class="draft">Draft for review · not the final tool</span>
+  <h1>Exposure animations</h1>
+  <p id="intro"></p>
+
+  <div class="seg" role="group" aria-label="Hazard">
+    <button type="button" data-mode="slr" class="on">Sea level rise</button>
+    <button type="button" data-mode="heat">Surface heat</button>
+  </div>
+
+  <div class="player">
+    <button type="button" class="play" id="play" aria-label="Play">▶</button>
+    <input type="range" id="slider" aria-label="Scenario" />
+  </div>
+
+  <div class="readout">
+    <div class="big" id="big">–</div>
+    <div class="sub" id="sub"></div>
+  </div>
+  <div class="stats">
+    <div><div class="n" id="stat1">–</div><div class="l" id="stat1-l"></div></div>
+    <div><div class="n" id="stat2">–</div><div class="l" id="stat2-l"></div></div>
+  </div>
+
+  <div id="ramp-wrap">
+    <div class="ramp" id="ramp"></div>
+    <div class="ramp-labels" id="ramp-labels"></div>
+  </div>
+
+  <label class="toggle"><input type="checkbox" id="pins" checked /> Show projects (completed, ongoing, funded)</label>
+
+  <h2>How to read this</h2>
+  <p id="howto"></p>
+  <div class="caveat" id="caveat"></div>
+
+  <h2>Data source</h2>
+  <div class="src" id="source"></div>
+</aside>

@@ -175,6 +175,92 @@ export async function resetFiltersDraft(client) {
   raise(error, 'Resetting the filter draft');
 }
 
+// ── Uploaded map layers ────────────────────────────────────────────────────
+
+const LAYER_VERSION_COLUMNS = FILTER_VERSION_COLUMNS;
+
+/** Resolves to { draft: config | null, versions: [...] } (newest first). */
+export async function fetchLayerState(client) {
+  const [draftResult, versionsResult] = await Promise.all([
+    client.from('layers_draft').select('config, updated_at, updated_by').maybeSingle(),
+    client.from('layers_versions').select(LAYER_VERSION_COLUMNS).order('version_no', { ascending: false }),
+  ]);
+  raise(draftResult.error, 'Loading the layer draft');
+  raise(versionsResult.error, 'Loading layer versions');
+  return { draft: draftResult.data?.config ?? null, versions: versionsResult.data };
+}
+
+export async function saveLayersDraft(client, config) {
+  const { error } = await client.rpc('save_layers_draft', { p_config: config });
+  raise(error, 'Saving the layer draft');
+}
+
+/** A publish-projects deploy from before map layers answers as if a data publish had no note. */
+async function invokeLayersPublish(client, body) {
+  try {
+    return await invokePublishFunction(client, body);
+  } catch (e) {
+    if (e.message !== 'A publish note is required') throw e;
+    throw new Error(
+      'The deployed publish-projects edge function does not support map layers yet, so nothing was published. ' +
+        'Redeploy it (supabase functions deploy publish-projects) and try again.',
+    );
+  }
+}
+
+/** Publishes the saved layer draft. Resolves to { version_id, version_no }. */
+export const publishLayers = (client, note, name) => invokeLayersPublish(client, { layers: { note, name } });
+
+export const makeLayersVersionLive = (client, versionId) =>
+  invokeLayersPublish(client, { layersVersionId: versionId });
+
+export async function restoreLayersVersion(client, versionId) {
+  const { error } = await client.rpc('restore_layers_version', { p_version_id: versionId });
+  raise(error, 'Restoring layer version');
+}
+
+export async function renameLayersVersion(client, versionId, name) {
+  const { error } = await client.rpc('rename_layers_version', { p_version_id: versionId, p_name: name });
+  raise(error, 'Renaming layer version');
+}
+
+export async function deleteLayersVersion(client, versionId) {
+  const { error } = await client.rpc('delete_layers_version', { p_version_id: versionId });
+  raise(error, 'Deleting layer version');
+}
+
+export async function resetLayersDraft(client) {
+  const { error } = await client.rpc('reset_layers_draft');
+  raise(error, 'Resetting the layer draft');
+}
+
+/**
+ * Uploads a layer's GeoJSON (already checked and reprojected) to
+ * project-data/layers/<id>-<random>.geojson. Every upload gets a new path, so
+ * published versions keep pointing at the data they were published with.
+ * Resolves to the storage path.
+ */
+export async function uploadLayerFile(client, layerId, geojson) {
+  const suffix = Math.random().toString(36).slice(2, 10);
+  const path = `layers/${layerId}-${suffix}.geojson`;
+  const body = new Blob([JSON.stringify(geojson)], { type: 'application/geo+json' });
+  const { error } = await client.storage.from('project-data').upload(path, body, {
+    contentType: 'application/geo+json',
+    cacheControl: '31536000',
+    upsert: false,
+  });
+  raise(error, 'Uploading the layer file');
+  return path;
+}
+
+/** Downloads a layer's GeoJSON from the public bucket. */
+export async function fetchLayerGeojson(client, path) {
+  const { data } = client.storage.from('project-data').getPublicUrl(path);
+  const response = await fetch(data.publicUrl);
+  if (!response.ok) throw new Error(`Loading ${path}: HTTP ${response.status}`);
+  return response.json();
+}
+
 export async function resetDraftFromPublished(client) {
   const { data, error } = await client.rpc('reset_draft_from_published');
   raise(error, 'Resetting draft');

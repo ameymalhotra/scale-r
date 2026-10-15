@@ -3,6 +3,7 @@ import { createContext, useContext } from 'react';
 export const AdminAuthContext = createContext(null);
 export const DraftContext = createContext(null);
 export const FiltersContext = createContext(null);
+export const LayersContext = createContext(null);
 
 export const isNewRowId = (id) => typeof id === 'string' && id.startsWith('new-');
 
@@ -21,5 +22,11 @@ export function useDraft() {
 export function useFilters() {
   const ctx = useContext(FiltersContext);
   if (!ctx) throw new Error('useFilters must be used inside FiltersProvider');
+  return ctx;
+}
+
+export function useLayers() {
+  const ctx = useContext(LayersContext);
+  if (!ctx) throw new Error('useLayers must be used inside LayersProvider');
   return ctx;
 }

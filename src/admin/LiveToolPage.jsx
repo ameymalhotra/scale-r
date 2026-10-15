@@ -49,9 +49,10 @@ function Switch({ checked, onChange, label, disabled }) {
   );
 }
 
-function OptionRow({ filter, option, isNew, index, total, onPatch, onMove, onForget }) {
+function OptionRow({ filter, option, isNew, liveCount, index, total, onPatch, onMove, onForget }) {
   const spec = filterSpec(filter);
   const missing = !option.inData;
+  const notLive = !missing && liveCount === 0;
   const placeholder = defaultOptionLabel(filter.id, option.value);
   return (
     <tr className={`${option.visible ? '' : 'is-hidden'} ${missing ? 'is-missing' : ''}`}>
@@ -78,8 +79,21 @@ function OptionRow({ filter, option, isNew, index, total, onPatch, onMove, onFor
       <td>
         <div>{option.value}</div>
         <div className="admin-muted admin-fc__count">
-          {missing ? 'No projects in the live data' : plural(option.count, 'project')}
+          {missing
+            ? liveCount
+              ? `Not in the draft data (${plural(liveCount, 'project')} on the live map)`
+              : 'No projects in the draft data'
+            : plural(option.count, 'project')}
+          {!missing && !notLive && liveCount !== option.count && ` (${liveCount.toLocaleString()} live)`}
           {isNew && <span className="admin-pill admin-pill--info">New in data</span>}
+          {notLive && (
+            <span
+              className="admin-pill admin-pill--warn"
+              title="Only in the draft data. It appears on the map once the data is published."
+            >
+              Not live yet
+            </span>
+          )}
         </div>
       </td>
       <td>
@@ -135,9 +149,28 @@ function OptionRow({ filter, option, isNew, index, total, onPatch, onMove, onFor
   );
 }
 
-function FilterCard({ filter, index, total, dataValues, liveFilter, expanded, onToggle, onChange, onMove, onDelete }) {
+function FilterCard({
+  filter,
+  index,
+  total,
+  dataValues,
+  liveDataValues,
+  liveFilter,
+  expanded,
+  onToggle,
+  onChange,
+  onMove,
+  onDelete,
+}) {
   const spec = filterSpec(filter);
   const resolved = resolveOptions(filter, dataValues);
+  const liveCounts = useMemo(
+    () => new Map(liveDataValues.map((d) => [optionKey(filter.id, d.value), d.count])),
+    [liveDataValues, filter.id],
+  );
+  const draftOnly = resolved.filter((o) => o.inData && !liveCounts.has(o.key)).length;
+  const resolvedKeys = new Set(resolved.map((o) => o.key));
+  const leaving = liveDataValues.filter((d) => !resolvedKeys.has(optionKey(filter.id, d.value)));
   const shown = resolved.filter((o) => o.visible && o.inData).length;
   const inData = resolved.filter((o) => o.inData).length;
   // "New" means neither the live map nor a real setting in the draft covers the
@@ -211,6 +244,7 @@ function FilterCard({ filter, index, total, dataValues, liveFilter, expanded, on
           {shown} of {inData} values shown
         </span>
         {newValues > 0 && <span className="admin-pill admin-pill--info">{plural(newValues, 'new value')} in data</span>}
+        {draftOnly > 0 && <span className="admin-pill admin-pill--warn">{plural(draftOnly, 'value')} not live yet</span>}
         {edited && <span className="admin-pill admin-pill--warn">{edited}</span>}
         <span className="admin-toolbar__spacer" />
         {!isBuiltInFilter(filter.id) && (
@@ -237,11 +271,11 @@ function FilterCard({ filter, index, total, dataValues, liveFilter, expanded, on
             />
           </label>
           <p className="admin-muted">
-            Values come from the live data; change them on the Project data page. Hiding a value removes it from this
-            filter only. Its projects stay on the map.
+            Values come from the saved draft data, so they can be set up before the data goes live; change them on the
+            Project data page. Hiding a value removes it from this filter only. Its projects stay on the map.
           </p>
           {resolved.length === 0 ? (
-            <p className="admin-muted">No project in the live data has a value in this column yet.</p>
+            <p className="admin-muted">No project in the draft data has a value in this column yet.</p>
           ) : (
             <table className="admin-table admin-fc__options">
               <thead>
@@ -264,6 +298,7 @@ function FilterCard({ filter, index, total, dataValues, liveFilter, expanded, on
                     filter={filter}
                     option={option}
                     isNew={isNew(option)}
+                    liveCount={liveCounts.get(option.key) ?? 0}
                     index={i}
                     total={resolved.length}
                     onPatch={patchOption}
@@ -273,6 +308,12 @@ function FilterCard({ filter, index, total, dataValues, liveFilter, expanded, on
                 ))}
               </tbody>
             </table>
+          )}
+          {leaving.length > 0 && (
+            <p className="admin-muted">
+              On the live map but gone from the draft data (they leave the filter when the data is published):{' '}
+              {leaving.map((d) => `${d.value} (${plural(d.count, 'project')})`).join(', ')}
+            </p>
           )}
         </div>
       )}
@@ -331,7 +372,7 @@ function AddFilterDialog({ usedColumns, onAdd, onClose }) {
             />
           </label>
           <p className="admin-muted">
-            Its options are the values in that column of the live data. The filter is added to the draft; it appears on
+            Its options are the values in that column of the draft data. The filter is added to the draft; it appears on
             the map after you publish.
           </p>
         </>
@@ -433,7 +474,7 @@ function Preview({ config, dataByFilter }) {
   const shown = config.filters.filter((f) => f.visible);
   return (
     <aside className="admin-preview" aria-label="Preview of the map filters">
-      <p className="admin-preview__caption">Preview: the map's filter panel with your draft</p>
+      <p className="admin-preview__caption">Preview: the map's filter panel with your draft filters and draft data</p>
       <div className="admin-preview__panel">
         {shown.length === 0 && <p className="admin-muted">No filters shown.</p>}
         {shown.map((filter) => {
@@ -467,13 +508,15 @@ function Preview({ config, dataByFilter }) {
           );
         })}
       </div>
-      <p className="admin-muted">The public map only changes after you publish.</p>
+      <p className="admin-muted">
+        The public map only changes after you publish: the filters here, and the project data on the Project data page.
+      </p>
     </aside>
   );
 }
 
 export default function LiveToolPage() {
-  const { publishedRows, currentVersion, load: dataLoad } = useDraft();
+  const { serverRows, publishedRows, unpublishedCount, currentVersion, load: dataLoad } = useDraft();
   const {
     load,
     busy,
@@ -514,6 +557,12 @@ export default function LiveToolPage() {
   const projectsOnMap = useMemo(() => publishedRows.filter(isShownOnMap).length, [publishedRows]);
 
   const dataByFilter = useMemo(() => {
+    const map = new Map();
+    for (const filter of draft.filters) map.set(filter.id, countFilterValues(filter, serverRows));
+    return map;
+  }, [draft.filters, serverRows]);
+
+  const liveDataByFilter = useMemo(() => {
     const map = new Map();
     for (const filter of draft.filters) map.set(filter.id, countFilterValues(filter, publishedRows));
     return map;
@@ -745,6 +794,13 @@ export default function LiveToolPage() {
               Top to bottom is the order on the map. Switch a filter off to hide it without deleting it. Open a filter
               to label, color, reorder or hide its values.
             </p>
+            {unpublishedCount > 0 && (
+              <p className="admin-notice admin-notice--info" role="note">
+                The draft project data has {plural(unpublishedCount, 'unpublished change')}. The values and preview here
+                include them; the public map gets them once the data is published on the{' '}
+                <Link to="/admin">Project data page</Link>.
+              </p>
+            )}
             {draft.filters.map((filter, i) => (
               <FilterCard
                 key={filter.id}
@@ -752,6 +808,7 @@ export default function LiveToolPage() {
                 index={i}
                 total={draft.filters.length}
                 dataValues={dataByFilter.get(filter.id) ?? []}
+                liveDataValues={liveDataByFilter.get(filter.id) ?? []}
                 liveFilter={liveById.get(filter.id)}
                 expanded={expanded.has(filter.id)}
                 onToggle={() => toggle(filter.id)}

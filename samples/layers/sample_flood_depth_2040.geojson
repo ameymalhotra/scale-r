@@ -1,0 +1,1373 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "cell_id": "C1-1",
+    "flood_zone": "X",
+    "zone_desc": "Minimal hazard",
+    "depth_ft_2040": 0,
+    "population": 5484,
+    "pct_impervious": 31
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -80.48,
+       25.48
+      ],
+      [
+       -80.4233,
+       25.48
+      ],
+      [
+       -80.4233,
+       25.5533
+      ],
+      [
+       -80.48,
+       25.5533
+      ],
+      [
+       -80.48,
+       25.48
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "cell_id": "C1-2",
+    "flood_zone": "X",
+    "zone_desc": "Minimal hazard",
+    "depth_ft_2040": 0.53,
+    "population": 4074,
+    "pct_impervious": 35
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -80.4233,
+       25.48
+      ],
+      [
+       -80.3667,
+       25.48
+      ],
+      [
+       -80.3667,
+       25.5533
+      ],
+      [
+       -80.4233,
+       25.5533
+      ],
+      [
+       -80.4233,
+       25.48
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "cell_id": "C1-3",
+    "flood_zone": "AE",
+    "zone_desc": "1% annual chance",
+    "depth_ft_2040": 2.95,
+    "population": 5367,
+    "pct_impervious": 52
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -80.3667,
+       25.48
+      ],
+      [
+       -80.31,
+       25.48
+      ],
+      [
+       -80.31,
+       25.5533
+      ],
+      [
+       -80.3667,
+       25.5533
+      ],
+      [
+       -80.3667,
+       25.48
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "cell_id": "C1-4",
+    "flood_zone": "AE",
+    "zone_desc": "1% annual chance",
+    "depth_ft_2040": 2.51,
+    "population": 1517,
+    "pct_impervious": 68
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -80.31,
+       25.48
+      ],
+      [
+       -80.2533,
+       25.48
+      ],
+      [
+       -80.2533,
+       25.5533
+      ],
+      [
+       -80.31,
+       25.5533
+      ],
+      [
+       -80.31,
+       25.48
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "cell_id": "C1-5",
+    "flood_zone": "VE",
+    "zone_desc": "Coastal high hazard",
+    "depth_ft_2040": 4.8,
+    "population": 4794,
+    "pct_impervious": 72
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -80.2533,
+       25.48
+      ],
+      [
+       -80.1967,
+       25.48
+      ],
+      [
+       -80.1967,
+       25.5533
+      ],
+      [
+       -80.2533,
+       25.5533
+      ],
+      [
+       -80.2533,
+       25.48
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "cell_id": "C1-6",
+    "flood_zone": "VE",
+    "zone_desc": "Coastal high hazard",
+    "depth_ft_2040": 4.49,
+    "population": 2289,
+    "pct_impervious": 85
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -80.1967,
+       25.48
+      ],
+      [
+       -80.14,
+       25.48
+      ],
+      [
+       -80.14,
+       25.5533
+      ],
+      [
+       -80.1967,
+       25.5533
+      ],
+      [
+       -80.1967,
+       25.48
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "cell_id": "C2-1",
+    "flood_zone": "X",
+    "zone_desc": "Minimal hazard",
+    "depth_ft_2040": 0,
+    "population": 8170,
+    "pct_impervious": 28
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -80.48,
+       25.5533
+      ],
+      [
+       -80.4233,
+       25.5533
+      ],
+      [
+       -80.4233,
+       25.6267
+      ],
+      [
+       -80.48,
+       25.6267
+      ],
+      [
+       -80.48,
+       25.5533
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "cell_id": "C2-2",
+    "flood_zone": "AH",
+    "zone_desc": "Shallow ponding",
+    "depth_ft_2040": 1.69,
+    "population": 7502,
+    "pct_impervious": 33
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -80.4233,
+       25.5533
+      ],
+      [
+       -80.3667,
+       25.5533
+      ],
+      [
+       -80.3667,
+       25.6267
+      ],
+      [
+       -80.4233,
+       25.6267
+      ],
+      [
+       -80.4233,
+       25.5533
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "cell_id": "C2-3",
+    "flood_zone": "AE",
+    "zone_desc": "1% annual chance",
+    "depth_ft_2040": 2.08,
+    "population": 1745,
+    "pct_impervious": 57
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -80.3667,
+       25.5533
+      ],
+      [
+       -80.31,
+       25.5533
+      ],
+      [
+       -80.31,
+       25.6267
+      ],
+      [
+       -80.3667,
+       25.6267
+      ],
+      [
+       -80.3667,
+       25.5533
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "cell_id": "C2-4",
+    "flood_zone": "AE",
+    "zone_desc": "1% annual chance",
+    "depth_ft_2040": 2.93,
+    "population": 4984,
+    "pct_impervious": 63
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -80.31,
+       25.5533
+      ],
+      [
+       -80.2533,
+       25.5533
+      ],
+      [
+       -80.2533,
+       25.6267
+      ],
+      [
+       -80.31,
+       25.6267
+      ],
+      [
+       -80.31,
+       25.5533
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "cell_id": "C2-5",
+    "flood_zone": "AE",
+    "zone_desc": "1% annual chance",
+    "depth_ft_2040": 3.47,
+    "population": 617,
+    "pct_impervious": 68
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -80.2533,
+       25.5533
+      ],
+      [
+       -80.1967,
+       25.5533
+      ],
+      [
+       -80.1967,
+       25.6267
+      ],
+      [
+       -80.2533,
+       25.6267
+      ],
+      [
+       -80.2533,
+       25.5533
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "cell_id": "C2-6",
+    "flood_zone": "VE",
+    "zone_desc": "Coastal high hazard",
+    "depth_ft_2040": 5.99,
+    "population": 9197,
+    "pct_impervious": 92
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -80.1967,
+       25.5533
+      ],
+      [
+       -80.14,
+       25.5533
+      ],
+      [
+       -80.14,
+       25.6267
+      ],
+      [
+       -80.1967,
+       25.6267
+      ],
+      [
+       -80.1967,
+       25.5533
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "cell_id": "C3-1",
+    "flood_zone": "X",
+    "zone_desc": "Minimal hazard",
+    "depth_ft_2040": 0.14,
+    "population": 7808,
+    "pct_impervious": 29
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -80.48,
+       25.6267
+      ],
+      [
+       -80.4233,
+       25.6267
+      ],
+      [
+       -80.4233,
+       25.7
+      ],
+      [
+       -80.48,
+       25.7
+      ],
+      [
+       -80.48,
+       25.6267
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "cell_id": "C3-2",
+    "flood_zone": "X",
+    "zone_desc": "Minimal hazard",
+    "depth_ft_2040": 0.69,
+    "population": 4069,
+    "pct_impervious": 36
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -80.4233,
+       25.6267
+      ],
+      [
+       -80.3667,
+       25.6267
+      ],
+      [
+       -80.3667,
+       25.7
+      ],
+      [
+       -80.4233,
+       25.7
+      ],
+      [
+       -80.4233,
+       25.6267
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "cell_id": "C3-3",
+    "flood_zone": "AH",
+    "zone_desc": "Shallow ponding",
+    "depth_ft_2040": 1.7,
+    "population": 6589,
+    "pct_impervious": 49
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -80.3667,
+       25.6267
+      ],
+      [
+       -80.31,
+       25.6267
+      ],
+      [
+       -80.31,
+       25.7
+      ],
+      [
+       -80.3667,
+       25.7
+      ],
+      [
+       -80.3667,
+       25.6267
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "cell_id": "C3-4",
+    "flood_zone": "AE",
+    "zone_desc": "1% annual chance",
+    "depth_ft_2040": 2.11,
+    "population": 5522,
+    "pct_impervious": 58
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -80.31,
+       25.6267
+      ],
+      [
+       -80.2533,
+       25.6267
+      ],
+      [
+       -80.2533,
+       25.7
+      ],
+      [
+       -80.31,
+       25.7
+      ],
+      [
+       -80.31,
+       25.6267
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "cell_id": "C3-5",
+    "flood_zone": "AE",
+    "zone_desc": "1% annual chance",
+    "depth_ft_2040": 3.91,
+    "population": 3628,
+    "pct_impervious": 71
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -80.2533,
+       25.6267
+      ],
+      [
+       -80.1967,
+       25.6267
+      ],
+      [
+       -80.1967,
+       25.7
+      ],
+      [
+       -80.2533,
+       25.7
+      ],
+      [
+       -80.2533,
+       25.6267
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "cell_id": "C3-6",
+    "flood_zone": "VE",
+    "zone_desc": "Coastal high hazard",
+    "depth_ft_2040": 4.13,
+    "population": 9872,
+    "pct_impervious": 88
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -80.1967,
+       25.6267
+      ],
+      [
+       -80.14,
+       25.6267
+      ],
+      [
+       -80.14,
+       25.7
+      ],
+      [
+       -80.1967,
+       25.7
+      ],
+      [
+       -80.1967,
+       25.6267
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "cell_id": "C4-1",
+    "flood_zone": "X",
+    "zone_desc": "Minimal hazard",
+    "depth_ft_2040": 0,
+    "population": 9936,
+    "pct_impervious": 27
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -80.48,
+       25.7
+      ],
+      [
+       -80.4233,
+       25.7
+      ],
+      [
+       -80.4233,
+       25.7733
+      ],
+      [
+       -80.48,
+       25.7733
+      ],
+      [
+       -80.48,
+       25.7
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "cell_id": "C4-2",
+    "flood_zone": "AH",
+    "zone_desc": "Shallow ponding",
+    "depth_ft_2040": 1.4,
+    "population": 2274,
+    "pct_impervious": 40
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -80.4233,
+       25.7
+      ],
+      [
+       -80.3667,
+       25.7
+      ],
+      [
+       -80.3667,
+       25.7733
+      ],
+      [
+       -80.4233,
+       25.7733
+      ],
+      [
+       -80.4233,
+       25.7
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "cell_id": "C4-3",
+    "flood_zone": "AE",
+    "zone_desc": "1% annual chance",
+    "depth_ft_2040": 2.99,
+    "population": 2305,
+    "pct_impervious": 54
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -80.3667,
+       25.7
+      ],
+      [
+       -80.31,
+       25.7
+      ],
+      [
+       -80.31,
+       25.7733
+      ],
+      [
+       -80.3667,
+       25.7733
+      ],
+      [
+       -80.3667,
+       25.7
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "cell_id": "C4-4",
+    "flood_zone": "AE",
+    "zone_desc": "1% annual chance",
+    "depth_ft_2040": 2.8,
+    "population": 4670,
+    "pct_impervious": 67
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -80.31,
+       25.7
+      ],
+      [
+       -80.2533,
+       25.7
+      ],
+      [
+       -80.2533,
+       25.7733
+      ],
+      [
+       -80.31,
+       25.7733
+      ],
+      [
+       -80.31,
+       25.7
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "cell_id": "C4-5",
+    "flood_zone": "AE",
+    "zone_desc": "1% annual chance",
+    "depth_ft_2040": 3.36,
+    "population": 8202,
+    "pct_impervious": 80
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -80.2533,
+       25.7
+      ],
+      [
+       -80.1967,
+       25.7
+      ],
+      [
+       -80.1967,
+       25.7733
+      ],
+      [
+       -80.2533,
+       25.7733
+      ],
+      [
+       -80.2533,
+       25.7
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "cell_id": "C4-6",
+    "flood_zone": "VE",
+    "zone_desc": "Coastal high hazard",
+    "depth_ft_2040": 4.19,
+    "population": 782,
+    "pct_impervious": 82
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -80.1967,
+       25.7
+      ],
+      [
+       -80.14,
+       25.7
+      ],
+      [
+       -80.14,
+       25.7733
+      ],
+      [
+       -80.1967,
+       25.7733
+      ],
+      [
+       -80.1967,
+       25.7
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "cell_id": "C5-1",
+    "flood_zone": "X",
+    "zone_desc": "Minimal hazard",
+    "depth_ft_2040": 0.27,
+    "population": 4113,
+    "pct_impervious": 24
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -80.48,
+       25.7733
+      ],
+      [
+       -80.4233,
+       25.7733
+      ],
+      [
+       -80.4233,
+       25.846700000000002
+      ],
+      [
+       -80.48,
+       25.846700000000002
+      ],
+      [
+       -80.48,
+       25.7733
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "cell_id": "C5-2",
+    "flood_zone": "AH",
+    "zone_desc": "Shallow ponding",
+    "depth_ft_2040": 1.01,
+    "population": 5451,
+    "pct_impervious": 34
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -80.4233,
+       25.7733
+      ],
+      [
+       -80.3667,
+       25.7733
+      ],
+      [
+       -80.3667,
+       25.846700000000002
+      ],
+      [
+       -80.4233,
+       25.846700000000002
+      ],
+      [
+       -80.4233,
+       25.7733
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "cell_id": "C5-3",
+    "flood_zone": "AE",
+    "zone_desc": "1% annual chance",
+    "depth_ft_2040": 2.97,
+    "population": 3812,
+    "pct_impervious": 56
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -80.3667,
+       25.7733
+      ],
+      [
+       -80.31,
+       25.7733
+      ],
+      [
+       -80.31,
+       25.846700000000002
+      ],
+      [
+       -80.3667,
+       25.846700000000002
+      ],
+      [
+       -80.3667,
+       25.7733
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "cell_id": "C5-4",
+    "flood_zone": "AE",
+    "zone_desc": "1% annual chance",
+    "depth_ft_2040": 2.53,
+    "population": 6831,
+    "pct_impervious": 70
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -80.31,
+       25.7733
+      ],
+      [
+       -80.2533,
+       25.7733
+      ],
+      [
+       -80.2533,
+       25.846700000000002
+      ],
+      [
+       -80.31,
+       25.846700000000002
+      ],
+      [
+       -80.31,
+       25.7733
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "cell_id": "C5-5",
+    "flood_zone": "AE",
+    "zone_desc": "1% annual chance",
+    "depth_ft_2040": 3.93,
+    "population": 4688,
+    "pct_impervious": 82
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -80.2533,
+       25.7733
+      ],
+      [
+       -80.1967,
+       25.7733
+      ],
+      [
+       -80.1967,
+       25.846700000000002
+      ],
+      [
+       -80.2533,
+       25.846700000000002
+      ],
+      [
+       -80.2533,
+       25.7733
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "cell_id": "C5-6",
+    "flood_zone": "VE",
+    "zone_desc": "Coastal high hazard",
+    "depth_ft_2040": 4.93,
+    "population": 9784,
+    "pct_impervious": 85
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -80.1967,
+       25.7733
+      ],
+      [
+       -80.14,
+       25.7733
+      ],
+      [
+       -80.14,
+       25.846700000000002
+      ],
+      [
+       -80.1967,
+       25.846700000000002
+      ],
+      [
+       -80.1967,
+       25.7733
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "cell_id": "C6-1",
+    "flood_zone": "X",
+    "zone_desc": "Minimal hazard",
+    "depth_ft_2040": 0.59,
+    "population": 8722,
+    "pct_impervious": 31
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -80.48,
+       25.846700000000002
+      ],
+      [
+       -80.4233,
+       25.846700000000002
+      ],
+      [
+       -80.4233,
+       25.92
+      ],
+      [
+       -80.48,
+       25.92
+      ],
+      [
+       -80.48,
+       25.846700000000002
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "cell_id": "C6-2",
+    "flood_zone": "AH",
+    "zone_desc": "Shallow ponding",
+    "depth_ft_2040": 1.11,
+    "population": 8354,
+    "pct_impervious": 40
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -80.4233,
+       25.846700000000002
+      ],
+      [
+       -80.3667,
+       25.846700000000002
+      ],
+      [
+       -80.3667,
+       25.92
+      ],
+      [
+       -80.4233,
+       25.92
+      ],
+      [
+       -80.4233,
+       25.846700000000002
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "cell_id": "C6-3",
+    "flood_zone": "AH",
+    "zone_desc": "Shallow ponding",
+    "depth_ft_2040": 1.61,
+    "population": 3763,
+    "pct_impervious": 49
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -80.3667,
+       25.846700000000002
+      ],
+      [
+       -80.31,
+       25.846700000000002
+      ],
+      [
+       -80.31,
+       25.92
+      ],
+      [
+       -80.3667,
+       25.92
+      ],
+      [
+       -80.3667,
+       25.846700000000002
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "cell_id": "C6-4",
+    "flood_zone": "AE",
+    "zone_desc": "1% annual chance",
+    "depth_ft_2040": 2.89,
+    "population": 5884,
+    "pct_impervious": 66
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -80.31,
+       25.846700000000002
+      ],
+      [
+       -80.2533,
+       25.846700000000002
+      ],
+      [
+       -80.2533,
+       25.92
+      ],
+      [
+       -80.31,
+       25.92
+      ],
+      [
+       -80.31,
+       25.846700000000002
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "cell_id": "C6-5",
+    "flood_zone": "AE",
+    "zone_desc": "1% annual chance",
+    "depth_ft_2040": 3.13,
+    "population": 5153,
+    "pct_impervious": 75
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -80.2533,
+       25.846700000000002
+      ],
+      [
+       -80.1967,
+       25.846700000000002
+      ],
+      [
+       -80.1967,
+       25.92
+      ],
+      [
+       -80.2533,
+       25.92
+      ],
+      [
+       -80.2533,
+       25.846700000000002
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "cell_id": "C6-6",
+    "flood_zone": "VE",
+    "zone_desc": "Coastal high hazard",
+    "depth_ft_2040": 4.02,
+    "population": 7160,
+    "pct_impervious": 86
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       -80.1967,
+       25.846700000000002
+      ],
+      [
+       -80.14,
+       25.846700000000002
+      ],
+      [
+       -80.14,
+       25.92
+      ],
+      [
+       -80.1967,
+       25.92
+      ],
+      [
+       -80.1967,
+       25.846700000000002
+      ]
+     ]
+    ]
+   }
+  }
+ ]
+}

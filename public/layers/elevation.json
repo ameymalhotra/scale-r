@@ -1,0 +1,24 @@
+{
+  "source": "https://coast.noaa.gov/slrdata/DEMs/FL/FL_SE_GCS_3m_NAVDm_v3.tif",
+  "format": "vector-tiles",
+  "source_layer": "surface",
+  "bounds": [
+    -80.9,
+    25,
+    -80.1,
+    26
+  ],
+  "minzoom": 6,
+  "maxzoom": 14,
+  "tiles": 2656,
+  "bytes": 51106765,
+  "max_tile_bytes": 222297,
+  "features_across_zooms": 1085899,
+  "resampling": "nearest",
+  "tile_pixels": 256,
+  "extent": 4096,
+  "units": "feet",
+  "datum": "NAVD88",
+  "display_resolution_m": 10,
+  "source_resolution_m": 3
+}

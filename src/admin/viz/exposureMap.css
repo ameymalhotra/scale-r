@@ -1,0 +1,55 @@
+/* Admin-only draft visualizations. Everything is nested under .viz-exposure so the
+   prototype's styles never reach the rest of the admin or the public site. */
+.viz-exposure {
+    * { box-sizing: border-box; }
+    & { position: fixed; inset: 0; z-index: 50; font-family: Inter, system-ui, sans-serif; background: #0e1116; color: #e6e8eb; }
+    #map { position: absolute; inset: 0; }
+    a { color: #8cc4d6; }
+    .panel {
+      position: absolute; top: 16px; left: 16px; width: 340px; max-height: calc(100% - 32px); overflow: hidden auto;
+      padding: 18px 20px; border-radius: 14px; background: rgba(14, 17, 22, 0.9); z-index: 2;
+      backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.08);
+      scrollbar-width: thin; scrollbar-color: #3a414c transparent;
+    }
+    .nav { display: flex; gap: 12px; margin-bottom: 10px; font-size: 12px; }
+    .nav a { color: #8b93a1; text-decoration: none; white-space: nowrap; }
+    .nav a.on { color: #fff; font-weight: 600; }
+    .draft {
+      display: inline-block; padding: 3px 8px; border-radius: 999px; font-size: 10px; font-weight: 600;
+      letter-spacing: 0.08em; text-transform: uppercase; color: #ffd27a; background: rgba(255, 196, 0, 0.12);
+      border: 1px solid rgba(255, 196, 0, 0.35);
+    }
+    h1 { margin: 8px 0 6px; font-size: 20px; font-weight: 650; }
+    h2 { margin: 18px 0 6px; font-size: 13px; font-weight: 650; color: #fff; }
+    h3 { margin: 0 0 4px; font-size: 13px; font-weight: 650; color: #fff; }
+    p { margin: 0 0 10px; font-size: 13px; line-height: 1.5; color: #b8bec8; }
+    b { color: #e6e8eb; }
+    .seg { display: flex; gap: 4px; margin-top: 10px; padding: 3px; border-radius: 9px; background: #161b22; border: 1px solid rgba(255, 255, 255, 0.1); }
+    .seg button { flex: 1; padding: 7px 0; border: 0; border-radius: 6px; background: transparent; color: #8b93a1; font: inherit; font-size: 13px; cursor: pointer; }
+    .seg button.on { background: #2b323d; color: #fff; }
+    .player { display: flex; align-items: center; gap: 10px; margin-top: 16px; }
+    .play {
+      flex: none; width: 40px; height: 40px; border-radius: 50%; border: 0; cursor: pointer;
+      background: #e6e8eb; color: #0e1116; font-size: 15px;
+    }
+    input[type=range] { flex: 1; accent-color: #8cc4d6; }
+    .readout { margin-top: 12px; }
+    .readout .big { font-size: 30px; font-weight: 700; line-height: 1.1; }
+    .readout .sub { font-size: 12px; color: #8b93a1; }
+    .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+    .stats div { padding: 10px 12px; border-radius: 10px; background: #141920; }
+    .stats .n { font-size: 18px; font-weight: 700; }
+    .stats .l { font-size: 11px; color: #8b93a1; line-height: 1.35; }
+    .ramp { height: 10px; border-radius: 5px; margin-top: 6px; }
+    .ramp-labels { display: flex; justify-content: space-between; font-size: 11px; color: #8b93a1; margin-top: 3px; }
+    .src {
+      margin-top: 10px; padding: 12px 14px; border-radius: 10px; background: #141920;
+      border: 1px solid rgba(140, 196, 214, 0.45); font-size: 12px; line-height: 1.5; color: #b8bec8;
+    }
+    .src .kicker { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: #8cc4d6; margin-bottom: 4px; }
+    .src dl { display: grid; grid-template-columns: 76px 1fr; gap: 3px 10px; margin: 8px 0 0; }
+    .src dt { color: #7d8592; }
+    .src dd { margin: 0; color: #d3d7dd; }
+    .caveat { margin-top: 8px; padding-left: 10px; border-left: 2px solid #b58a3c; color: #d8c8a8; font-size: 12px; line-height: 1.5; }
+    .toggle { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 13px; color: #b8bec8; cursor: pointer; }
+}

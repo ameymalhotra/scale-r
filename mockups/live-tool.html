@@ -1,0 +1,515 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mockup: Live tool | SCALE-R admin</title>
+<style>
+  :root {
+    --green: #01321e;
+    --green-soft: #e7f1ec;
+    --border: #d6ddd9;
+    --muted: #5b6b63;
+    --bg: #f6f8f7;
+    --warn-bg: #fff6d6;
+    --warn: #9a6700;
+    --info: #175cd3;
+    --info-bg: #eaf1fd;
+    --error: #b42318;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font: 14px/1.45 Inter, system-ui, -apple-system, sans-serif;
+    color: #17221d;
+    background: var(--bg);
+  }
+  .shell { display: flex; min-height: 100vh; }
+
+  /* Sidebar (same as the real admin) */
+  .sidebar {
+    width: 200px; flex: none; padding: 1rem 0.75rem;
+    background: var(--green); color: #fff; display: flex; flex-direction: column;
+  }
+  .brand { font-weight: 700; font-size: 1.05rem; padding: 0 0.5rem 1rem; }
+  .nav a {
+    display: block; padding: 0.5rem 0.6rem; border-radius: 6px;
+    color: #d8e6df; text-decoration: none; margin-bottom: 2px;
+  }
+  .nav a:hover { background: rgba(255,255,255,0.08); }
+  .nav a.active { background: rgba(255,255,255,0.16); color: #fff; font-weight: 600; }
+  .sidebar-foot { margin-top: auto; font-size: 12px; color: #a9c2b6; padding: 0 0.5rem; }
+
+  .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .topbar {
+    display: flex; gap: 0.5rem; align-items: center; padding: 0.6rem 1.25rem;
+    background: #fff; border-bottom: 1px solid var(--border);
+  }
+  .pill {
+    display: inline-block; padding: 0.15rem 0.6rem; border-radius: 999px;
+    background: var(--green-soft); color: var(--green); font-size: 12px; font-weight: 600;
+  }
+  .pill.warn { background: var(--warn-bg); color: var(--warn); }
+  .pill.info { background: var(--info-bg); color: var(--info); }
+  .content { padding: 1.25rem; display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 1.25rem; align-items: start; }
+  h1 { font-size: 1.35rem; margin: 0 0 0.25rem; color: var(--green); }
+  h2 { font-size: 1rem; margin: 0 0 0.75rem; color: var(--green); }
+  .muted { color: var(--muted); }
+  .small { font-size: 12px; }
+
+  .card { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 1rem; margin-bottom: 1rem; }
+
+  /* Live now */
+  .live-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+  .live-box { border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem; }
+  .live-box .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+  .live-box .value { font-size: 1.05rem; font-weight: 700; margin: 0.15rem 0; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #27ae60; margin-right: 6px; vertical-align: middle; }
+
+  /* Buttons */
+  .btn {
+    font: inherit; border: 1px solid var(--border); background: #fff; color: #17221d;
+    padding: 0.35rem 0.7rem; border-radius: 6px; cursor: pointer;
+  }
+  .btn:hover { background: var(--bg); }
+  .btn.primary { background: var(--green); color: #fff; border-color: var(--green); }
+  .btn.primary:hover { background: #024a2d; }
+  .btn.danger { color: var(--error); }
+  .btn.small { padding: 0.15rem 0.45rem; font-size: 12px; }
+  .btn:disabled { opacity: 0.4; cursor: default; }
+  .icon-btn { font: inherit; border: none; background: none; cursor: pointer; padding: 0.15rem 0.35rem; border-radius: 4px; color: var(--muted); }
+  .icon-btn:hover { background: var(--bg); color: #17221d; }
+  .icon-btn:disabled { opacity: 0.3; cursor: default; }
+
+  /* Filter list */
+  .filter { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 0.5rem; background: #fff; }
+  .filter.hidden-filter { background: #fafbfa; }
+  .filter.hidden-filter .filter-name { color: var(--muted); text-decoration: line-through; }
+  .filter-head { display: flex; align-items: center; gap: 0.5rem; padding: 0.55rem 0.75rem; }
+  .filter-name { font-weight: 600; }
+  .tag { font-size: 11px; padding: 0.05rem 0.45rem; border-radius: 4px; background: var(--bg); color: var(--muted); border: 1px solid var(--border); }
+  .tag.changed { background: var(--warn-bg); color: var(--warn); border-color: #f0d98a; }
+  .tag.new { background: var(--info-bg); color: var(--info); border-color: #b9cff6; }
+  .spacer { flex: 1; }
+  .switch { position: relative; width: 34px; height: 20px; flex: none; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .switch span { position: absolute; inset: 0; background: #c5cec9; border-radius: 999px; cursor: pointer; transition: 0.15s; }
+  .switch span::before { content: ''; position: absolute; width: 14px; height: 14px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: 0.15s; }
+  .switch input:checked + span { background: var(--green); }
+  .switch input:checked + span::before { transform: translateX(14px); }
+  .filter-body { border-top: 1px solid var(--border); padding: 0.6rem 0.75rem 0.75rem; }
+  .row-fields { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.6rem; }
+  label.field { display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: var(--muted); }
+  input[type=text], select, textarea {
+    font: inherit; font-size: 13px; padding: 0.3rem 0.45rem; border: 1px solid var(--border); border-radius: 6px; color: #17221d; background: #fff;
+  }
+  table.opts { width: 100%; border-collapse: collapse; }
+  table.opts th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); font-weight: 600; padding: 0.3rem 0.4rem; border-bottom: 1px solid var(--border); }
+  table.opts td { padding: 0.3rem 0.4rem; border-bottom: 1px solid #eef1ef; vertical-align: middle; }
+  table.opts tr.opt-hidden td { color: var(--muted); }
+  table.opts tr.opt-hidden input[type=text] { color: var(--muted); text-decoration: line-through; }
+  input[type=color] { width: 28px; height: 24px; padding: 0; border: 1px solid var(--border); border-radius: 4px; background: none; cursor: pointer; }
+
+  /* Unsaved bar */
+  .savebar {
+    position: sticky; bottom: 0; display: flex; align-items: center; gap: 0.5rem;
+    padding: 0.7rem 1rem; background: #fff; border: 1px solid var(--border); border-radius: 10px;
+    box-shadow: 0 -4px 16px rgba(0,0,0,0.06);
+  }
+
+  /* History */
+  table.hist { width: 100%; border-collapse: collapse; }
+  table.hist th, table.hist td { text-align: left; padding: 0.45rem 0.4rem; border-bottom: 1px solid #eef1ef; }
+  table.hist th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+  .actions { display: flex; gap: 0.3rem; flex-wrap: wrap; }
+
+  /* Preview of the public map's filter panel */
+  .preview { position: sticky; top: 1.25rem; }
+  .preview-panel { background: #fff; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .preview-head { background: var(--green); color: #fff; padding: 0.6rem 0.8rem; font-weight: 600; font-size: 13px; }
+  .preview-body { padding: 0.75rem 0.8rem; }
+  .pv-section { margin-bottom: 0.9rem; }
+  .pv-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #34495e; margin-bottom: 0.35rem; }
+  .pv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.3rem; }
+  .pv-chip { display: flex; align-items: center; gap: 0.35rem; font-size: 12px; padding: 0.3rem 0.4rem; border: 1px solid var(--border); border-radius: 6px; }
+  .pv-chip i { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+  .pv-select { width: 100%; font-size: 12px; padding: 0.35rem; border: 1px solid var(--border); border-radius: 6px; color: #17221d; background: #fff; }
+  .pv-empty { font-size: 12px; color: var(--muted); }
+  .banner { background: var(--warn-bg); color: var(--warn); border: 1px solid #f0d98a; padding: 0.5rem 0.75rem; border-radius: 8px; font-size: 12px; margin-bottom: 1rem; }
+
+  dialog { border: none; border-radius: 10px; padding: 1.25rem; width: 420px; box-shadow: 0 10px 40px rgba(0,0,0,0.25); }
+  dialog::backdrop { background: rgba(1,50,30,0.35); }
+  dialog h3 { margin: 0 0 0.75rem; color: var(--green); }
+  dialog .field { margin-bottom: 0.75rem; }
+  dialog input, dialog select, dialog textarea { width: 100%; }
+  .dialog-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.5rem; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand">SCALE-R admin</div>
+    <nav class="nav">
+      <a href="#">Project data</a>
+      <a href="#">Versions</a>
+      <a href="#" class="active">Live tool</a>
+      <a href="#">Open public map ↗</a>
+    </nav>
+    <div class="sidebar-foot">axm8832@miami.edu</div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <span class="pill" id="pill-saved">All filter changes saved</span>
+      <span class="pill" id="pill-pub">Filters match the live map (filter version 2)</span>
+    </header>
+
+    <div class="content">
+      <div>
+        <div class="banner">Mockup with sample data. Clicks work in this page only; nothing is saved or published.</div>
+        <h1>Live tool</h1>
+        <p class="muted" style="margin-top:0">What the public map is showing right now, and the only place to change which filters appear on it.</p>
+
+        <section class="card">
+          <h2>Live now</h2>
+          <div class="live-grid">
+            <div class="live-box">
+              <div class="label">Dataset</div>
+              <div class="value"><span class="dot"></span>Version 3 · "Fall 2026 update"</div>
+              <div class="muted small">1,672 projects · published Sep 30, 2026 by axm8832@miami.edu</div>
+              <div style="margin-top:0.5rem"><button class="btn small">Change on the Versions page →</button></div>
+            </div>
+            <div class="live-box">
+              <div class="label">Filters</div>
+              <div class="value"><span class="dot"></span>Filter version 2 · "Initial setup"</div>
+              <div class="muted small" id="live-filter-summary"></div>
+              <div style="margin-top:0.5rem"><button class="btn small" onclick="document.getElementById('history').scrollIntoView({behavior:'smooth'})">See filter history ↓</button></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div style="display:flex;align-items:center;margin-bottom:0.75rem">
+            <h2 style="margin:0">Filters on the map</h2>
+            <span class="spacer"></span>
+            <button class="btn" onclick="openAdd()">+ Add filter</button>
+          </div>
+          <p class="muted small" style="margin-top:0">Top to bottom is the order on the map. Turn a switch off to hide a filter or option without deleting it. Click a filter to edit its options.</p>
+          <div id="filters"></div>
+        </section>
+
+        <div class="savebar" id="savebar">
+          <span id="savebar-text" class="muted">No changes</span>
+          <span class="spacer"></span>
+          <button class="btn" id="btn-discard" onclick="discard()">Discard</button>
+          <button class="btn" id="btn-save" onclick="saveDraft()">Save draft</button>
+          <button class="btn primary" id="btn-publish" onclick="openPublish()">Publish filters…</button>
+        </div>
+
+        <section class="card" id="history" style="margin-top:1rem">
+          <h2>Filter history</h2>
+          <p class="muted small" style="margin-top:0">Every published set of filters is kept. Make any of them live again, or load one into the draft to edit.</p>
+          <table class="hist">
+            <thead><tr><th>Version</th><th>Published</th><th>Note</th><th></th></tr></thead>
+            <tbody id="hist-body"></tbody>
+          </table>
+        </section>
+      </div>
+
+      <aside class="preview">
+        <div class="muted small" style="margin-bottom:0.4rem;font-weight:600">PREVIEW: map filter panel with your draft</div>
+        <div class="preview-panel">
+          <div class="preview-head">Projects</div>
+          <div class="preview-body" id="preview"></div>
+        </div>
+        <p class="muted small">This updates as you edit. The public map only changes after <b>Publish filters</b>.</p>
+      </aside>
+    </div>
+  </div>
+</div>
+
+<dialog id="dlg-add">
+  <h3>Add a filter</h3>
+  <label class="field">Name shown on the map
+    <input type="text" id="add-label" placeholder="e.g. Status Category" />
+  </label>
+  <label class="field">Project column it filters on
+    <select id="add-col">
+      <option value="Status_Category">Status category (Status_Category)</option>
+      <option value="Project_St">Reported year (Project_St)</option>
+      <option value="Project_En">Project end (Project_En)</option>
+      <option value="Additional">Spatial resolution (Additional)</option>
+    </select>
+  </label>
+  <p class="muted small">Options are filled in from the values in the live dataset. You can hide or rename them afterwards.</p>
+  <div class="dialog-actions">
+    <button class="btn" onclick="this.closest('dialog').close()">Cancel</button>
+    <button class="btn primary" onclick="confirmAdd()">Add filter</button>
+  </div>
+</dialog>
+
+<dialog id="dlg-publish">
+  <h3>Publish filters to the map</h3>
+  <p class="muted small" id="publish-summary"></p>
+  <label class="field">Version name (optional)
+    <input type="text" id="pub-name" placeholder="e.g. Added Status Category" />
+  </label>
+  <label class="field">Note
+    <textarea id="pub-note" rows="3" placeholder="What changed and why"></textarea>
+  </label>
+  <div class="dialog-actions">
+    <button class="btn" onclick="this.closest('dialog').close()">Cancel</button>
+    <button class="btn primary" onclick="confirmPublish()">Publish</button>
+  </div>
+</dialog>
+
+<script>
+  const SAMPLE_VALUES = {
+    Status_Category: ['Active', 'Completed', 'Proposed'],
+    Project_St: ['2015', '2018', '2020', '2022', '2024'],
+    Project_En: ['2025', '2027', '2030', 'Ongoing'],
+    Additional: ['Point', 'Neighborhood', 'Citywide', 'Countywide'],
+  };
+
+  const LIVE = [
+    { id: 'city', kind: 'dropdown', builtIn: true, label: 'City', column: 'NAME', visible: true,
+      options: ['Miami', 'Miami Beach', 'Coral Gables', 'Homestead', 'Hialeah', 'North Miami'].map(v => ({ value: v, label: v, visible: true })) },
+    { id: 'status', kind: 'checkbox', builtIn: true, label: 'Project Status', column: 'Project__1', visible: true, colors: true,
+      options: [
+        { value: 'Completed', label: 'Completed', color: '#27ae60', visible: true },
+        { value: 'Ongoing', label: 'Ongoing', color: '#b45309', visible: true },
+        { value: 'Funded', label: 'Funded', color: '#0f766e', visible: true },
+        { value: 'Planned', label: 'Planned', color: '#2563eb', visible: true },
+      ] },
+    { id: 'infrastructure', kind: 'checkbox', builtIn: true, label: 'Infrastructure Type', column: 'Infrastruc', visible: true, colors: true, definitions: true,
+      options: [
+        { value: 'Blue', label: 'Blue', color: '#3498db', visible: true, definition: 'Natural and engineered water-based systems that mitigate flooding and support adaptation to sea-level rise.' },
+        { value: 'Green', label: 'Green', color: '#27ae60', visible: true, definition: 'Vegetation, soils and ecological processes that mitigate heat and manage stormwater.' },
+        { value: 'Gray', label: 'Gray', color: '#7f8c8d', visible: true, definition: 'Conventional engineered systems built with materials such as concrete and steel.' },
+        { value: 'Hybrid', label: 'Hybrid', color: '#9b59b6', visible: true, definition: 'Combines blue, green and gray elements in adaptive, multi-functional solutions.' },
+        { value: 'Living Shoreline', label: 'Living Shoreline', color: '#16a085', visible: true, newInData: true, definition: '' },
+      ] },
+    { id: 'disaster', kind: 'checkbox', builtIn: true, label: 'Disaster Focus', column: 'Disaster_F', visible: true,
+      options: ['Flooding', 'Storms & Hurricanes', 'Coastal Hazards', 'Extreme Heat', 'Multi-Hazard', 'Infrastructure Failure']
+        .map(v => ({ value: v, label: v, visible: true })) },
+  ];
+
+  const clone = (x) => JSON.parse(JSON.stringify(x));
+  let live = clone(LIVE);
+  let saved = clone(LIVE);
+  let draft = clone(LIVE);
+  let open = new Set(['infrastructure']);
+  let history = [
+    { no: 2, name: 'Initial setup', date: 'Sep 30, 2026', note: 'Matches the filters in the published paper', current: true, config: clone(LIVE) },
+    { no: 1, name: null, date: 'Sep 30, 2026', note: 'Created automatically from the built-in defaults', current: false, config: clone(LIVE) },
+  ];
+  let nextNo = 3;
+
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const esc = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  function countChanges(a, b) {
+    let n = 0;
+    const ids = new Set([...a.map(f => f.id), ...b.map(f => f.id)]);
+    ids.forEach(id => {
+      const fa = a.find(f => f.id === id), fb = b.find(f => f.id === id);
+      if (!fa || !fb || !same(fa, fb)) n++;
+    });
+    if (!same(a.map(f => f.id), b.map(f => f.id))) n = Math.max(n, 1);
+    return n;
+  }
+
+  function filterChanged(f) {
+    const l = live.find(x => x.id === f.id);
+    return !l ? 'new' : (!same(l, f) ? 'changed' : null);
+  }
+
+  function render() {
+    const host = document.getElementById('filters');
+    host.innerHTML = draft.map((f, i) => {
+      const state = filterChanged(f);
+      const visibleOpts = f.options.filter(o => o.visible).length;
+      const isOpen = open.has(f.id);
+      return `
+      <div class="filter ${f.visible ? '' : 'hidden-filter'}">
+        <div class="filter-head">
+          <button class="icon-btn" title="Move up" onclick="move(${i},-1)" ${i === 0 ? 'disabled' : ''}>▲</button>
+          <button class="icon-btn" title="Move down" onclick="move(${i},1)" ${i === draft.length - 1 ? 'disabled' : ''}>▼</button>
+          <button class="icon-btn" onclick="toggleOpen('${f.id}')" style="color:#17221d">${isOpen ? '▾' : '▸'} <span class="filter-name">${esc(f.label)}</span></button>
+          <span class="tag">${f.kind === 'dropdown' ? 'Dropdown' : 'Checkboxes'} · ${esc(f.column)}</span>
+          <span class="muted small">${visibleOpts} of ${f.options.length} options shown</span>
+          ${f.options.some(o => o.newInData) ? '<span class="tag new">New value in data</span>' : ''}
+          ${state ? `<span class="tag changed">${state === 'new' ? 'Added' : 'Edited'}</span>` : ''}
+          <span class="spacer"></span>
+          ${f.builtIn ? '' : `<button class="btn small danger" onclick="removeFilter('${f.id}')">Delete</button>`}
+          <label class="switch" title="${f.visible ? 'Shown on the map' : 'Hidden from the map'}">
+            <input type="checkbox" ${f.visible ? 'checked' : ''} onchange="setFilter('${f.id}','visible',this.checked)"><span></span>
+          </label>
+        </div>
+        ${isOpen ? renderBody(f) : ''}
+      </div>`;
+    }).join('');
+
+    renderPreview();
+    renderHistory();
+    renderStatus();
+  }
+
+  function renderBody(f) {
+    const rows = f.options.map((o, j) => `
+      <tr class="${o.visible ? '' : 'opt-hidden'}">
+        <td style="width:52px">
+          <button class="icon-btn" onclick="moveOpt('${f.id}',${j},-1)" ${j === 0 ? 'disabled' : ''}>▲</button><button class="icon-btn" onclick="moveOpt('${f.id}',${j},1)" ${j === f.options.length - 1 ? 'disabled' : ''}>▼</button>
+        </td>
+        <td class="muted small" style="width:130px">${esc(o.value)} ${o.newInData ? '<span class="tag new">New</span>' : ''}</td>
+        <td><input type="text" value="${esc(o.label)}" style="width:100%" oninput="setOpt('${f.id}',${j},'label',this.value)"></td>
+        ${f.colors ? `<td style="width:40px"><input type="color" value="${o.color || '#999999'}" oninput="setOpt('${f.id}',${j},'color',this.value)"></td>` : ''}
+        ${f.definitions ? `<td><input type="text" value="${esc(o.definition)}" placeholder="Shown in the info icon" style="width:100%" oninput="setOpt('${f.id}',${j},'definition',this.value)"></td>` : ''}
+        <td style="width:46px"><label class="switch"><input type="checkbox" ${o.visible ? 'checked' : ''} onchange="setOpt('${f.id}',${j},'visible',this.checked)"><span></span></label></td>
+      </tr>`).join('');
+    return `
+      <div class="filter-body">
+        <div class="row-fields">
+          <label class="field">Name shown on the map<input type="text" value="${esc(f.label)}" oninput="setFilter('${f.id}','label',this.value,true)"></label>
+          <label class="field">Filters on column<input type="text" value="${esc(f.column)}" disabled></label>
+        </div>
+        <table class="opts">
+          <thead><tr><th>Order</th><th>Value in data</th><th>Label on map</th>${f.colors ? '<th>Color</th>' : ''}${f.definitions ? '<th>Definition</th>' : ''}<th>Shown</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <div style="margin-top:0.5rem;display:flex;gap:0.5rem;align-items:center">
+          <input type="text" id="newopt-${f.id}" placeholder="New option value" />
+          <button class="btn small" onclick="addOpt('${f.id}')">+ Add option</button>
+          <span class="muted small">Add a value before any project uses it, so it appears in the dropdowns on the Project data page.</span>
+        </div>
+      </div>`;
+  }
+
+  function renderPreview() {
+    const host = document.getElementById('preview');
+    const shown = draft.filter(f => f.visible);
+    if (!shown.length) { host.innerHTML = '<div class="pv-empty">No filters shown.</div>'; return; }
+    host.innerHTML = shown.map(f => {
+      const opts = f.options.filter(o => o.visible);
+      if (f.kind === 'dropdown') {
+        return `<div class="pv-section"><div class="pv-title">${esc(f.label)}</div>
+          <select class="pv-select"><option>All ${esc(f.label === 'City' ? 'Cities' : f.label)}</option>${opts.map(o => `<option>${esc(o.label)}</option>`).join('')}</select></div>`;
+      }
+      return `<div class="pv-section"><div class="pv-title">${esc(f.label)}</div>
+        <div class="pv-grid">${opts.map(o => `<div class="pv-chip">${o.color ? `<i style="background:${o.color}"></i>` : '<input type="checkbox" style="margin:0">'}${esc(o.label)}</div>`).join('') || '<div class="pv-empty">No options shown</div>'}</div></div>`;
+    }).join('');
+  }
+
+  function renderHistory() {
+    document.getElementById('hist-body').innerHTML = history.map(h => `
+      <tr>
+        <td><b>Filter version ${h.no}</b>${h.name ? ` · "${esc(h.name)}"` : ''} ${h.current ? '<span class="pill" style="margin-left:4px">Live</span>' : ''}</td>
+        <td class="muted">${h.date}</td>
+        <td class="muted">${esc(h.note)}</td>
+        <td><div class="actions">
+          ${h.current ? '' : `<button class="btn small" onclick="makeLive(${h.no})">Make live</button>`}
+          <button class="btn small" onclick="restore(${h.no})">Restore to draft</button>
+          <button class="btn small" onclick="rename(${h.no})">Rename</button>
+          <button class="btn small danger" ${h.current ? 'disabled title="The live version cannot be deleted"' : ''} onclick="del(${h.no})">Delete</button>
+        </div></td>
+      </tr>`).join('');
+    const cur = history.find(h => h.current);
+    const shown = live.filter(f => f.visible).map(f => f.label);
+    document.getElementById('live-filter-summary').textContent = `Showing ${shown.length} filters: ${shown.join(', ')}`;
+    document.querySelector('.live-grid .live-box:nth-child(2) .value').innerHTML =
+      `<span class="dot"></span>Filter version ${cur.no}${cur.name ? ` · "${esc(cur.name)}"` : ''}`;
+  }
+
+  function renderStatus() {
+    const unsaved = countChanges(draft, saved);
+    const unpublished = countChanges(saved, live);
+    const cur = history.find(h => h.current);
+    const ps = document.getElementById('pill-saved');
+    ps.className = 'pill' + (unsaved ? ' warn' : '');
+    ps.textContent = unsaved ? `${unsaved} unsaved filter change${unsaved === 1 ? '' : 's'}` : 'All filter changes saved';
+    const pp = document.getElementById('pill-pub');
+    pp.className = 'pill' + (unpublished ? ' info' : '');
+    pp.textContent = unpublished ? `${unpublished} saved change${unpublished === 1 ? '' : 's'} not published` : `Filters match the live map (filter version ${cur.no})`;
+    const any = countChanges(draft, live);
+    document.getElementById('savebar-text').textContent = any
+      ? `${any} filter${any === 1 ? '' : 's'} differ from the live map`
+      : 'No changes: the draft matches the live map';
+    document.getElementById('btn-discard').disabled = !unsaved;
+    document.getElementById('btn-save').disabled = !unsaved;
+    document.getElementById('btn-publish').disabled = !any;
+  }
+
+  const byId = (id) => draft.find(f => f.id === id);
+  function setFilter(id, key, value, quiet) { byId(id)[key] = value; quiet ? (renderPreview(), renderStatus()) : render(); }
+  function setOpt(id, j, key, value) {
+    const o = byId(id).options[j]; o[key] = value; delete o.newInData;
+    key === 'visible' ? render() : (renderPreview(), renderStatus());
+  }
+  function move(i, d) { const [f] = draft.splice(i, 1); draft.splice(i + d, 0, f); render(); }
+  function moveOpt(id, j, d) { const opts = byId(id).options; const [o] = opts.splice(j, 1); opts.splice(j + d, 0, o); render(); }
+  function toggleOpen(id) { open.has(id) ? open.delete(id) : open.add(id); render(); }
+  function addOpt(id) {
+    const input = document.getElementById('newopt-' + id);
+    const v = input.value.trim(); if (!v) return;
+    const f = byId(id);
+    f.options.push({ value: v, label: v, visible: true, ...(f.colors ? { color: '#888888' } : {}), ...(f.definitions ? { definition: '' } : {}) });
+    render();
+  }
+  function removeFilter(id) {
+    if (!confirm('Delete this filter? You can still get it back from the filter history until you publish.')) return;
+    draft = draft.filter(f => f.id !== id); render();
+  }
+  function openAdd() { document.getElementById('add-label').value = ''; document.getElementById('dlg-add').showModal(); }
+  function confirmAdd() {
+    const col = document.getElementById('add-col').value;
+    const label = document.getElementById('add-label').value.trim() || document.getElementById('add-col').selectedOptions[0].text.split(' (')[0];
+    const id = 'custom-' + col.toLowerCase() + '-' + Date.now();
+    draft.push({ id, kind: 'checkbox', builtIn: false, label, column: col, visible: true,
+      options: SAMPLE_VALUES[col].map(v => ({ value: v, label: v, visible: true })) });
+    open.add(id);
+    document.getElementById('dlg-add').close();
+    render();
+  }
+  function discard() { draft = clone(saved); render(); }
+  function saveDraft() { saved = clone(draft); render(); }
+  function openPublish() {
+    const n = countChanges(draft, live);
+    document.getElementById('publish-summary').textContent =
+      `${n} filter${n === 1 ? '' : 's'} will change on the public map. The current filters stay in the history, so you can switch back at any time.`;
+    document.getElementById('pub-name').value = '';
+    document.getElementById('pub-note').value = '';
+    document.getElementById('dlg-publish').showModal();
+  }
+  function confirmPublish() {
+    const note = document.getElementById('pub-note').value.trim();
+    if (!note) { alert('Add a short note describing the change.'); return; }
+    history.forEach(h => h.current = false);
+    history.unshift({ no: nextNo++, name: document.getElementById('pub-name').value.trim() || null, date: 'Oct 3, 2026', note, current: true, config: clone(draft) });
+    live = clone(draft); saved = clone(draft);
+    draft.forEach(f => f.options.forEach(o => delete o.newInData));
+    document.getElementById('dlg-publish').close();
+    render();
+  }
+  function makeLive(no) {
+    if (!confirm(`Make filter version ${no} live? The public map switches to those filters right away.`)) return;
+    const h = history.find(x => x.no === no);
+    history.forEach(x => x.current = x.no === no);
+    live = clone(h.config); saved = clone(h.config); draft = clone(h.config);
+    render();
+  }
+  function restore(no) { draft = clone(history.find(x => x.no === no).config); render(); }
+  function rename(no) {
+    const h = history.find(x => x.no === no);
+    const name = prompt('Name for this filter version', h.name || '');
+    if (name === null) return;
+    h.name = name.trim() || null; render();
+  }
+  function del(no) {
+    if (!confirm(`Delete filter version ${no}? This cannot be undone.`)) return;
+    history = history.filter(x => x.no !== no); render();
+  }
+
+  render();
+</script>
+</body>
+</html>

@@ -65,9 +65,9 @@ const filterVersions = [
   },
 ];
 
-function renderLiveTool({ versions = filterVersions, draft = null } = {}) {
+function renderLiveTool({ versions = filterVersions, draft = null, draftRows = publishedRows } = {}) {
   const draftApi = {
-    fetchDraftRows: vi.fn().mockResolvedValue(publishedRows),
+    fetchDraftRows: vi.fn().mockResolvedValue(draftRows),
     fetchPublishedRows: vi.fn().mockResolvedValue(publishedRows),
     fetchVersions: vi.fn().mockResolvedValue(dataVersions),
   };
@@ -120,9 +120,37 @@ describe('Live tool page', () => {
     fireEvent.click(within(infra).getByRole('button', { name: 'Infrastructure Type' }));
     expect(within(infra).getByText('Living Shoreline')).toBeInTheDocument();
     expect(within(infra).getByText('New in data')).toBeInTheDocument();
-    expect(within(infra).getAllByText('No projects in the live data')).toHaveLength(3);
+    expect(within(infra).getAllByText('No projects in the draft data')).toHaveLength(3);
+    expect(within(infra).queryByText('Not live yet')).not.toBeInTheDocument();
+    expect(screen.queryByText(/unpublished change/)).not.toBeInTheDocument();
     expect(within(infra).getByText('2 projects')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Add option/ })).not.toBeInTheDocument();
+  });
+
+  it('takes values from the draft data so they can be set up before they go live', async () => {
+    renderLiveTool({
+      draftRows: [
+        row(1, { infrastruc: 'Gray Infrastructure' }),
+        row(3, { infrastruc: 'Hybrid Infrastructure' }),
+        row(5, { infrastruc: 'Hybrid Infrastructure' }),
+      ],
+    });
+    await screen.findByText('Filter version 2');
+    expect(await screen.findByText(/The draft project data has \d+ unpublished change/)).toBeInTheDocument();
+
+    const infra = filterCard('Infrastructure Type');
+    expect(within(infra).getByText('1 value not live yet')).toBeInTheDocument();
+    fireEvent.click(within(infra).getByRole('button', { name: 'Infrastructure Type' }));
+    const hybrid = within(infra).getByText('Hybrid Infrastructure').closest('tr');
+    expect(within(hybrid).getByText('Not live yet')).toBeInTheDocument();
+    expect(within(hybrid).getByText(/2 projects/)).toBeInTheDocument();
+    const gray = within(infra).getByText('Gray Infrastructure').closest('tr');
+    expect(within(gray).getByText('1 project (2 live)')).toBeInTheDocument();
+    expect(within(infra).getByText(/gone from the draft data.*Living Shoreline \(1 project\)/)).toBeInTheDocument();
+
+    const preview = screen.getByRole('complementary', { name: 'Preview of the map filters' });
+    expect(within(preview).getByText('Hybrid')).toBeInTheDocument();
+    expect(within(preview).queryByText('Living Shoreline')).not.toBeInTheDocument();
   });
 
   it('labels, hides and recolors values, updating the preview', async () => {

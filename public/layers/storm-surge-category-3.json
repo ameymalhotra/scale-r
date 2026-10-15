@@ -1,0 +1,24 @@
+{
+  "source": "Modelling Data from Web/tract-level/Physical Indicators/US_SLOSH_MOM_Inundation_v4_20260617/us_Category3_MOM_Inundation_HIGH.tif",
+  "format": "vector-tiles",
+  "source_layer": "surface",
+  "bounds": [
+    -80.9,
+    25,
+    -80.1,
+    26
+  ],
+  "minzoom": 6,
+  "maxzoom": 14,
+  "tiles": 2656,
+  "bytes": 69368240,
+  "max_tile_bytes": 325542,
+  "features_across_zooms": 1681779,
+  "resampling": "nearest",
+  "tile_pixels": 256,
+  "extent": 4096,
+  "category": 3,
+  "tide": "high",
+  "source_resolution_m": 10,
+  "units": "feet above ground"
+}

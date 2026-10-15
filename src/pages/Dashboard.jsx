@@ -21,6 +21,21 @@ import {
   resolveOptions,
 } from '../filters/filterConfig.js';
 import { LOCAL_FILTERS, LOCAL_FILTERS_KEY, readLocalLiveConfig } from '../filters/localFilters.js';
+import { LOCAL_LAYERS, LOCAL_LAYERS_KEY, getLocalLayerFile, readLocalLiveLayerConfig } from '../layers/localLayers.js';
+import {
+  LAYERS_CONFIG_FILE,
+  buildMapboxLayers,
+  layerFileUrl,
+  layerView,
+  mapLayerIds,
+  normalizeLayerConfig,
+  popupHtml,
+} from '../layers/layerConfig.js';
+import { registerLayerSymbols } from '../layers/layerSymbols.js';
+import LayerLegend, { LegendGlyph } from '../layers/LayerLegend.jsx';
+import { builtinDefinition, builtinForFile, modellingOptions, resilienceColorExpression } from '../layers/builtinRegistry.js';
+import { applyOverlayStyle, overlayConfig, builtinVectorSource } from '../layers/builtinMap.js';
+import { colorExpression } from '../layers/layerConfig.js';
 
 const InfrastructureTypeChart = lazy(
   () => import('../components/dashboard/InfrastructureTypeChart.jsx'),
@@ -208,18 +223,18 @@ const fitMapToMostProjects = (mapInstance, markers, { duration = 0, maxZoom = 11
 const formatCostCompact = (cost) => {
   try {
     if (!cost || cost === null || cost === undefined) return null;
-    
+
     // Convert to number if it's a string
     const numericCost = typeof cost === 'string' 
       ? parseFloat(cost.replace(/[$,]/g, '')) 
       : parseFloat(cost);
-    
+
     if (isNaN(numericCost) || !isFinite(numericCost)) return null;
-    
+
     // Format using Intl.NumberFormat with compact notation
     const options = { notation: "compact", compactDisplay: "short" };
     const formattedNumber = new Intl.NumberFormat("en-US", options).format(numericCost);
-    
+
     // Add dollar sign prefix
     return `$${formattedNumber}`;
   } catch (error) {
@@ -726,31 +741,6 @@ function queryProjectPinsAtPoint(mapInstance, point, pad = 20) {
   }
 }
 
-function censusTractPopupHTML(feature) {
-  const props = feature?.properties || {};
-  const tractName = props['L0Census_Tracts.NAME'] || 'Census Tract';
-  const tractId = props['L0Census_Tracts.GEOID'] || feature.id || 'N/A';
-  const riskRating = props['__riskRating'] || props['T_FEMA_National_Risk_Index_$_.FEMAIndexRating'] || 'Not Rated';
-  const pred3PE = props['__pred3PE'];
-  return `
-          <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; min-width: 220px;">
-            <div style="font-size: 1.05em; font-weight: 700; color: #1b3a4b; margin-bottom: 4px;">${tractName}</div>
-            <div style="font-size: 0.85em; color: #445461; margin-bottom: 10px;">Tract ID: ${tractId}</div>
-            <hr style="border: none; border-top: 1px solid #e0e6ed; margin: 8px 0;" />
-            <div style="font-size: 0.9em; color: #1b3a4b; margin-bottom: 4px;">
-              <span style="font-weight: 600;">FEMA Risk Rating:</span>
-              <span style="margin-left: 6px;">${riskRating}</span>
-            </div>
-            ${pred3PE !== null && pred3PE !== undefined ? `
-            <div style="font-size: 0.9em; color: #1b3a4b; margin-bottom: 12px;">
-              <span style="font-weight: 600;">Resilience Index:</span>
-              <span style="margin-left: 6px;">${Number(pred3PE).toFixed(2)}%</span>
-            </div>
-            ` : ''}
-          </div>
-        `;
-}
-
 function registerOverlaySymbolImages(mapInstance) {
   if (!mapInstance) return;
   const reg = (id, imageData) => {
@@ -816,17 +806,6 @@ const CRITICAL_INFRA_GROUP_LEGEND_REPRESENTATIVE_LAYER_ID = {
   [OVERLAY_GROUP_RISK_AND_RECOVERY.id]: 'overlay-risk-shelters',
 };
 
-function expandCriticalInfraSublayerKeys(keys) {
-  const out = [];
-  keys.forEach((k) => {
-    const group = CRITICAL_INFRASTRUCTURE_SUBLAYER_GROUPS.find((g) => g.id === k);
-    if (group) out.push(...group.memberIds);
-    else out.push(k);
-  });
-  return [...new Set(out)];
-}
-
-/** Matches filter sidebar frosted glass (map overlays). */
 const mapOverlayGlassStyle = {
   background: 'rgba(255, 255, 255, 0.5)',
   backdropFilter: 'blur(28px) saturate(200%)',
@@ -835,15 +814,15 @@ const mapOverlayGlassStyle = {
   boxShadow: '0 8px 32px rgba(0, 0, 0, 0.14), inset 0 0 0 1px rgba(255, 255, 255, 0.65)',
 };
 
-const MODELLING_LAYER_OPTIONS = [
-  { view: 'none', label: 'No Layer', ariaLabel: 'No modelling layer' },
-  { view: 'risk', label: 'FEMA Risk Rating', ariaLabel: 'FEMA Risk Rating layer' },
-  { view: 'pred3pe', label: 'Resilience Index', ariaLabel: 'Resilience Index layer' },
-  { view: 'critical-infrastructure', label: 'Critical Infrastructure', ariaLabel: 'Critical Infrastructure layer' },
-];
-
 /** Mobile map: legends sit above the combined Modelling + sublayers card */
-const MOBILE_CENSUS_OVERLAY_BOTTOM = 'calc(62px + min(62vh, 520px) + 20px)';
+const MOBILE_CENSUS_OVERLAY_BOTTOM = 'calc(16px + min(62vh, 520px) + 20px)';
+
+function renderMapStyleToggle(button, isSatelliteView) {
+  const label = isSatelliteView ? 'Switch map to standard view' : 'Switch map to satellite view';
+  button.textContent = isSatelliteView ? '\uD83D\uDDFA\uFE0F' : '\uD83D\uDEF0\uFE0F';
+  button.title = label;
+  button.setAttribute('aria-label', label);
+}
 
 /** Above modelling/legend map overlays (z-index 1000); below mobile filter drawer backdrop (1099). */
 const SEARCH_BAR_OVERLAY_Z_INDEX = 1050;
@@ -859,14 +838,12 @@ const Dashboard = () => {
   const mobileMapOverlaysRef = useRef(null);
   const map = useRef(null);
   const mapInitStartedRef = useRef(false);
-  const districtsRef = useRef({});
   const censusDataRef = useRef(null);
   const hoveredCensusIdRef = useRef(null);
   const censusStatsRef = useRef(null);
   const censusViewRef = useRef('none');
   const dataWorkerRef = useRef(null);
   const censusLoadPromiseRef = useRef(null);
-  const pred3PEDataRef = useRef({}); // Mapping of GEOID to PRED3_PE values
   const isHoveringMarkerRef = useRef(false);
   const projectPinsGeoJsonRef = useRef(null);
   const projectPinEventsBoundRef = useRef(false);
@@ -887,6 +864,8 @@ const Dashboard = () => {
   const censusVisibleRef = useRef(false);
   const censusPopupRef = useRef(null);
   const dashboardMapClickRef = useRef(null);
+  const toggleMapStyleRef = useRef(null);
+  const mapStyleToggleButtonRef = useRef(null);
   const [selectedTypes, setSelectedTypes] = useState([]);
   const [selectedDisasterFocus, setSelectedDisasterFocus] = useState([]);
   const [selectedProjectStatuses, setSelectedProjectStatuses] = useState([]);
@@ -895,7 +874,6 @@ const Dashboard = () => {
   const [customSelections, setCustomSelections] = useState({});
   const [filterConfig, setFilterConfig] = useState(DEFAULT_FILTER_CONFIG);
   const [cityDropdownOpen, setCityDropdownOpen] = useState(false);
-  const [projectsLayerVisible, setProjectsLayerVisible] = useState(true);
   const [showDisclaimer, setShowDisclaimer] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
@@ -904,11 +882,29 @@ const Dashboard = () => {
   const [selectedResultIndex, setSelectedResultIndex] = useState(-1);
   const [searchDropdownMaxHeightPx, setSearchDropdownMaxHeightPx] = useState(400);
 
-  const enabledOverlayLayerIds = useMemo(
-    () => (activeCensusView === 'critical-infrastructure' ? expandCriticalInfraSublayerKeys(CRITICAL_INFRASTRUCTURE_DEFAULT_GROUP_KEYS) : []),
-    [activeCensusView]
-  );
+  const [layerSettings, setLayerSettings] = useState(() => normalizeLayerConfig(null));
+  const layerSettingsRef = useRef(layerSettings);
+  useLayoutEffect(() => { layerSettingsRef.current = layerSettings; }, [layerSettings]);
+  const builtinById = useMemo(() => new Map(layerSettings.builtins.map((layer) => [layer.id, layer])), [layerSettings]);
+  const enabledOverlayLayerIds = useMemo(() => activeCensusView === 'critical-infrastructure' && builtinById.get('critical-infrastructure').visible
+    ? layerSettings.overlayOrder.filter((id) => builtinById.get(id)?.visible) : [], [activeCensusView, builtinById, layerSettings.overlayOrder]);
+  const overlayConfigs = useMemo(() => layerSettings.overlayOrder.map((id) => {
+    const base = OVERLAY_LAYERS_CONFIG.find((c) => c.id === id);
+    return overlayConfig(base, builtinById.get(id), builtinById.get('critical-infrastructure').style.opacity);
+  }), [layerSettings.overlayOrder, builtinById]);
+  const overlayConfigsRef = useRef(overlayConfigs);
+  useLayoutEffect(() => { overlayConfigsRef.current = overlayConfigs; }, [overlayConfigs]);
   const overlayDataCacheRef = useRef({});
+  // Layers uploaded on /admin/layers (only the ones shown on the map), in switch order.
+  const uploadedLayers = useMemo(() => [...layerSettings.builtins.filter((l) => builtinDefinition(l.id)?.surface), ...layerSettings.layers], [layerSettings]);
+  const [uploadedLayerLoading, setUploadedLayerLoading] = useState(null);
+  const [uploadedLayerError, setUploadedLayerError] = useState(null);
+  const uploadedLayerEventsRef = useRef(new Set());
+
+  const modellingLayerOptions = useMemo(() => modellingOptions(layerSettings), [layerSettings]);
+  const activeUploadedLayer = censusVisible
+    ? uploadedLayers.find((l) => layerView(l.id) === activeCensusView) ?? null
+    : null;
 
   // Debounce search input before running search (reduces work on mobile)
   useEffect(() => {
@@ -1056,10 +1052,10 @@ const Dashboard = () => {
 
     // Mark that we're switching features to prevent popupClosed from clearing it
     isSwitchingFeatureRef.current = true;
-    
+
     // Set active feature to open popup
     setActiveFeature(feature);
-    
+
     // Reset the flag after a short delay to allow the popup to update
     setTimeout(() => {
       isSwitchingFeatureRef.current = false;
@@ -1158,7 +1154,7 @@ const Dashboard = () => {
   const handleModellingLayerSwitch = (view) => {
     const on = isModellingLayerSwitchOn(view);
     if (view === 'none') {
-      if (on) handleCensusViewChange('risk');
+      if (on) handleCensusViewChange(modellingLayerOptions.find((option) => option.view !== 'none')?.view || 'none');
       else handleCensusViewChange('none');
     } else if (on) {
       handleCensusViewChange('none');
@@ -1168,7 +1164,7 @@ const Dashboard = () => {
   };
 
   // Define district boundaries
-  
+
 
   // Get marker color based on project type
   const addOverlaySourceAndLayer = useCallback((mapInstance, layerId, config, geojson) => {
@@ -1178,9 +1174,10 @@ const Dashboard = () => {
     mapInstance.addSource(layerId, { type: 'geojson', data: geojson });
     const styleCfg = config.style || {};
     const { type: layerType, paint } = styleCfg;
-    const baseLayer = { id: layerMapId, source: layerId, layout: { visibility: 'visible' }, paint: {} };
+    const baseLayer = { id: layerMapId, source: layerId, layout: { visibility: censusVisibleRef.current && censusViewRef.current === 'critical-infrastructure' && config.settings.visible ? 'visible' : 'none' }, paint: { ...config.style.paint } };
     if (layerType === 'symbol') {
       registerOverlaySymbolImages(mapInstance);
+      registerLayerSymbols(mapInstance);
       baseLayer.type = 'symbol';
       baseLayer.layout['icon-image'] = styleCfg.iconImage;
       baseLayer.layout['icon-size'] = styleCfg.iconSize ?? 0.4;
@@ -1205,34 +1202,21 @@ const Dashboard = () => {
       baseLayer.paint['fill-opacity'] = paint['fill-opacity'] ?? 0.25;
       if (paint['line-color']) baseLayer.paint['fill-outline-color'] = paint['line-color'];
     }
-    mapInstance.addLayer(baseLayer);
-    mapInstance.moveLayer(layerMapId);
+    mapInstance.addLayer(baseLayer, mapInstance.getLayer(PROJECT_PIN_LAYER_ID) ? PROJECT_PIN_LAYER_ID : undefined);
+    if (config.outlinePaint) mapInstance.addLayer({ id: `${layerId}-outline`, type: 'line', source: layerId, layout: { ...baseLayer.layout }, paint: config.outlinePaint }, mapInstance.getLayer(PROJECT_PIN_LAYER_ID) ? PROJECT_PIN_LAYER_ID : undefined);
+    layerSettingsRef.current.overlayOrder.forEach((id) => {
+      if (mapInstance.getLayer(`${id}-layer`)) mapInstance.moveLayer(`${id}-layer`, mapInstance.getLayer(PROJECT_PIN_LAYER_ID) ? PROJECT_PIN_LAYER_ID : undefined);
+      if (mapInstance.getLayer(`${id}-outline`)) mapInstance.moveLayer(`${id}-outline`, mapInstance.getLayer(PROJECT_PIN_LAYER_ID) ? PROJECT_PIN_LAYER_ID : undefined);
+    });
 
-    if (config.popupFields?.length || config.popupTitleField) {
-      mapInstance.on('click', layerMapId, (e) => {
-        if (!e.features?.length) return;
-        const props = e.features[0].properties;
-        const title = config.popupTitleField ? (props[config.popupTitleField] || config.label) : config.label;
-        const rows = (config.popupFields || [])
-          .map((f) => {
-            const key = typeof f === 'object' ? f.field : f;
-            const label = typeof f === 'object' ? f.label : f.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-            const val = props[key] ?? '—';
-            return `<tr><td style="color:#34495e;font-weight:600;width:90px;padding:3px 0">${label}</td><td style="color:#2c3e50;padding:3px 0">${val}</td></tr>`;
-          })
-          .join('');
-        const html = `<div style="max-width:340px">` +
-          `<div style="font-size:1.05em;font-weight:700;color:#2c3e50;margin-bottom:10px">${title}</div>` +
-          (rows ? `<table style="width:100%;border-collapse:separate;border-spacing:0 4px;font-size:0.9em"><tbody>${rows}</tbody></table>` : '') +
-          `</div>`;
-        new mapboxgl.Popup({ closeButton: true, closeOnClick: true, offset: 14, maxWidth: '360px' })
-          .setLngLat(e.lngLat)
-          .setHTML(html)
-          .addTo(mapInstance);
-      });
-      mapInstance.on('mouseenter', layerMapId, () => { mapInstance.getCanvas().style.cursor = 'pointer'; });
+    mapInstance.on('click', layerMapId, (e) => {
+      if (!e.features?.length || queryProjectPinsAtPoint(mapInstance, e.point).length) return;
+      const current = layerSettingsRef.current.builtins.find((l) => l.id === layerId);
+      const html = popupHtml(current, e.features[0].properties);
+      if (html) new mapboxgl.Popup({ closeButton: true, closeOnClick: true, offset: 14 }).setLngLat(e.lngLat).setHTML(html).addTo(mapInstance);
+    });
+    mapInstance.on('mouseenter', layerMapId, () => { mapInstance.getCanvas().style.cursor = 'pointer'; });
       mapInstance.on('mouseleave', layerMapId, () => { mapInstance.getCanvas().style.cursor = ''; });
-    }
   }, []);
 
   const ensureOverlayLayerLoaded = useCallback(async (layerId) => {
@@ -1240,7 +1224,7 @@ const Dashboard = () => {
     const layerMapId = layerId + '-layer';
     if (map.current.getSource(layerId)) {
       if (map.current.getLayer(layerMapId)) {
-        const config = OVERLAY_LAYERS_CONFIG.find((c) => c.id === layerId);
+        const config = overlayConfigsRef.current.find((c) => c.id === layerId);
         const styleCfg = config?.style || {};
         map.current.setLayoutProperty(layerMapId, 'visibility', 'visible');
         if (styleCfg.type === 'symbol') {
@@ -1251,7 +1235,7 @@ const Dashboard = () => {
       }
       return;
     }
-    const config = OVERLAY_LAYERS_CONFIG.find((c) => c.id === layerId);
+    const config = overlayConfigsRef.current.find((c) => c.id === layerId);
     if (!config) return;
     const cached = overlayDataCacheRef.current[layerId];
     if (cached) {
@@ -1272,6 +1256,80 @@ const Dashboard = () => {
       console.error('Error loading overlay layer:', layerId, err);
     }
   }, [addOverlaySourceAndLayer]);
+
+  /** Adds an uploaded layer's source and layers from cached data; hidden unless it is the active view. */
+  const addUploadedLayerToMap = useCallback((mapInstance, layer, geojson) => {
+    if (!mapInstance || mapInstance.getSource(layer.id)) return;
+    const definition = builtinDefinition(layer.id);
+    const vector = definition?.sourceType === 'vector';
+    if (vector) {
+      setUploadedLayerLoading(layer.id);
+      setUploadedLayerError(null);
+      mapInstance.on('sourcedata', (event) => {
+        if (event.sourceId === layer.id && event.isSourceLoaded) setUploadedLayerLoading((prev) => prev === layer.id ? null : prev);
+      });
+      mapInstance.on('error', (event) => {
+        if ((event.sourceId || event.error?.sourceId) === layer.id) {
+          setUploadedLayerError(layer.id);
+          setUploadedLayerLoading((prev) => prev === layer.id ? null : prev);
+        }
+      });
+    }
+    mapInstance.addSource(layer.id, vector ? builtinVectorSource(definition, window.location.origin) : { type: 'geojson', data: geojson });
+    if (layer.geometry === 'point') registerLayerSymbols(mapInstance);
+    const visible = censusVisibleRef.current && censusViewRef.current === layerView(layer.id);
+    const beforeId = mapInstance.getLayer(PROJECT_PIN_LAYER_ID) ? PROJECT_PIN_LAYER_ID : undefined;
+    buildMapboxLayers(layer, layer.id, visible ? 'visible' : 'none').forEach((spec) => mapInstance.addLayer(spec, beforeId));
+
+    const clickLayerId = mapLayerIds(layer)[0];
+    if (uploadedLayerEventsRef.current.has(clickLayerId) || !popupHtml(layer, {})) return;
+    uploadedLayerEventsRef.current.add(clickLayerId);
+    mapInstance.on('click', clickLayerId, (e) => {
+      if (!e.features?.length || queryProjectPinsAtPoint(mapInstance, e.point).length) return;
+      const html = popupHtml(layer, e.features[0].properties);
+      if (!html) return;
+      new mapboxgl.Popup({ closeButton: true, closeOnClick: true, offset: 10, maxWidth: '360px' })
+        .setLngLat(e.lngLat)
+        .setHTML(html)
+        .addTo(mapInstance);
+    });
+    mapInstance.on('mouseenter', clickLayerId, () => { mapInstance.getCanvas().style.cursor = 'pointer'; });
+    mapInstance.on('mouseleave', clickLayerId, () => { mapInstance.getCanvas().style.cursor = ''; });
+  }, []);
+
+  const ensureUploadedLayerLoaded = useCallback(async (layer) => {
+    if (!map.current || map.current.getSource(layer.id)) return;
+    if (builtinDefinition(layer.id)?.sourceType === 'vector') {
+      overlayDataCacheRef.current[`uploaded:${layer.file}`] = true;
+      addUploadedLayerToMap(map.current, layer, null);
+      return;
+    }
+    const cacheKey = `uploaded:${layer.file}`;
+    let geojson = overlayDataCacheRef.current[cacheKey];
+    if (!geojson) {
+      setUploadedLayerLoading(layer.id);
+      setUploadedLayerError(null);
+      try {
+        const local = LOCAL_LAYERS ? await getLocalLayerFile(layer.file) : null;
+        if (local) {
+          geojson = reprojectFeatureCollectionIfNeeded(local);
+        } else {
+          const base = import.meta.env.VITE_SUPABASE_URL || SUPABASE_STORAGE.split('/storage/')[0];
+          const response = await fetch(builtinForFile(layer.file)?.sourcePath || layerFileUrl(base, layer.file));
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          geojson = reprojectFeatureCollectionIfNeeded(await response.json());
+        }
+        overlayDataCacheRef.current[cacheKey] = geojson;
+      } catch (err) {
+        console.error('Error loading uploaded layer:', layer.id, err);
+        setUploadedLayerError(layer.id);
+        return;
+      } finally {
+        setUploadedLayerLoading((prev) => (prev === layer.id ? null : prev));
+      }
+    }
+    addUploadedLayerToMap(map.current, layer, geojson);
+  }, [addUploadedLayerToMap]);
 
   const handleDashboardMapClick = useCallback((e) => {
     const mapInstance = map.current;
@@ -1332,7 +1390,7 @@ const Dashboard = () => {
     if (censusPopupRef.current) censusPopupRef.current.remove();
     censusPopupRef.current = new mapboxgl.Popup({ closeButton: true, closeOnClick: true })
       .setLngLat(e.lngLat)
-      .setHTML(censusTractPopupHTML(tracts[0]))
+      .setHTML(popupHtml(layerSettingsRef.current.builtins.find((l) => l.id === censusViewRef.current), tracts[0].properties))
       .addTo(mapInstance);
   }, []);
   dashboardMapClickRef.current = handleDashboardMapClick;
@@ -1434,69 +1492,11 @@ const Dashboard = () => {
 
     if (!stats) return;
 
-    // Build color expression based on risk rating categories (categorical mapping)
-    const buildRiskRatingColorExpression = () => {
-      // Map each category directly to a color (light yellow to orange red)
-      return [
-        'case',
-        ['==', ['get', '__riskRating'], 'Very Low'],
-        '#FFF9C4',           // Light Yellow (Very Low)
-        ['==', ['get', '__riskRating'], 'Relatively Low'],
-        '#FFE082',           // Light Yellow-Orange (Relatively Low)
-        ['==', ['get', '__riskRating'], 'Relatively Moderate'],
-        '#FFB74D',           // Orange (Relatively Moderate)
-        ['==', ['get', '__riskRating'], 'Relatively High'],
-        '#FF8A65',           // Orange-Red (Relatively High)
-        ['==', ['get', '__riskRating'], 'Very High'],
-        '#E64A19',           // Dark Orange-Red (Very High)
-        '#9e9e9e'            // Gray for unknown/missing ratings
-      ];
-    };
+    const riskSettings = layerSettingsRef.current.builtins.find((l) => l.id === 'risk');
+    const resilienceSettings = layerSettingsRef.current.builtins.find((l) => l.id === 'pred3pe');
+    const riskColorExpression = colorExpression(riskSettings);
+    const pred3PEColorExpression = resilienceColorExpression(resilienceSettings, stats.pred3PE);
 
-    const riskColorExpression = buildRiskRatingColorExpression();
-    
-    // Build color expression for PRED3_PE (percentage values)
-    const buildPred3PEColorExpression = () => {
-      const pred3PEStats = stats.pred3PE;
-      if (!pred3PEStats || pred3PEStats.min === null || pred3PEStats.max === null) {
-        return [
-          'case',
-          ['==', ['typeof', ['get', '__pred3PE']], 'number'],
-          '#9e9e9e',
-          '#9e9e9e'
-        ];
-      }
-      if (pred3PEStats.min === pred3PEStats.max) {
-        return [
-          'case',
-          ['==', ['typeof', ['get', '__pred3PE']], 'number'],
-          '#49006A',
-          '#9e9e9e'
-        ];
-      }
-      // Continuous color scale from light purple (low) to dark purple (high)
-      // Multiple color stops for better differentiation
-      const range = pred3PEStats.max - pred3PEStats.min;
-      return [
-        'case',
-        ['==', ['typeof', ['get', '__pred3PE']], 'number'],
-        [
-          'interpolate',
-          ['linear'],
-          ['get', '__pred3PE'],
-          pred3PEStats.min, '#E8D4F5',        // Very light purple for minimum values
-          pred3PEStats.min + range * 0.1667, '#D4B3E8',  // Light purple
-          pred3PEStats.min + range * 0.3333, '#C298DB',  // Medium-light purple
-          pred3PEStats.min + range * 0.5, '#A866C7',     // Medium purple
-          pred3PEStats.min + range * 0.6667, '#7A3FA8',  // Medium-dark purple (darkened)
-          pred3PEStats.min + range * 0.8333, '#5A1D85',  // Dark purple (darkened)
-          pred3PEStats.max, '#2D0045'                     // Very dark purple for maximum values (darkened)
-        ],
-        '#9e9e9e'
-      ];
-    };
-
-    const pred3PEColorExpression = buildPred3PEColorExpression();
     const isVisible = censusVisibleRef.current;
     const riskVisibility = view === 'risk' && isVisible ? 'visible' : 'none';
     const pred3PEVisibility = view === 'pred3pe' && isVisible ? 'visible' : 'none';
@@ -1524,13 +1524,14 @@ const Dashboard = () => {
           'fill-opacity': [
             'case',
             ['boolean', ['feature-state', 'hover'], false],
-            0.7,
-            0.5
+            Math.min(1, riskSettings.style.opacity + 0.2),
+            riskSettings.style.opacity
           ]
         }
       });
     } else {
       map.current.setPaintProperty('census-tracts-risk', 'fill-color', riskColorExpression);
+      map.current.setPaintProperty('census-tracts-risk', 'fill-opacity', ['case', ['boolean', ['feature-state', 'hover'], false], Math.min(1, riskSettings.style.opacity + 0.2), riskSettings.style.opacity]);
       map.current.setLayoutProperty('census-tracts-risk', 'visibility', riskVisibility);
     }
 
@@ -1548,13 +1549,14 @@ const Dashboard = () => {
           'fill-opacity': [
             'case',
             ['boolean', ['feature-state', 'hover'], false],
-            0.8,
-            0.6
+            Math.min(1, resilienceSettings.style.opacity + 0.2),
+            resilienceSettings.style.opacity
           ]
         }
       });
     } else {
       map.current.setPaintProperty('census-tracts-pred3pe', 'fill-color', pred3PEColorExpression);
+      map.current.setPaintProperty('census-tracts-pred3pe', 'fill-opacity', ['case', ['boolean', ['feature-state', 'hover'], false], Math.min(1, resilienceSettings.style.opacity + 0.2), resilienceSettings.style.opacity]);
       map.current.setLayoutProperty('census-tracts-pred3pe', 'visibility', pred3PEVisibility);
     }
 
@@ -1591,13 +1593,16 @@ const Dashboard = () => {
           visibility: outlineVisibility
         },
         paint: {
-          'line-color': '#777777',
-          'line-width': 1,
+          'line-color': (view === 'pred3pe' ? resilienceSettings : riskSettings).style.outlineColor,
+          'line-width': (view === 'pred3pe' ? resilienceSettings : riskSettings).style.outlineWidth,
           'line-opacity': 0.6
         }
       });
     } else {
       map.current.setLayoutProperty('census-tracts-outline', 'visibility', outlineVisibility);
+      const outline = view === 'pred3pe' ? resilienceSettings : riskSettings;
+      map.current.setPaintProperty('census-tracts-outline', 'line-color', outline.style.outlineColor);
+      map.current.setPaintProperty('census-tracts-outline', 'line-width', outline.style.outlineWidth);
     }
 
     ensureMarkerBufferLayer();
@@ -1612,7 +1617,7 @@ const Dashboard = () => {
         if (!map.current) return;
         // Don't activate census hover if we're hovering over a marker
         if (isHoveringMarkerRef.current) return;
-        
+
         const feature = e.features && e.features[0];
         if (!feature || feature.id === undefined || feature.id === null) return;
 
@@ -1669,14 +1674,14 @@ const Dashboard = () => {
   // Toggle between satellite and standard map
   const toggleMapStyle = () => {
     if (!map.current) return;
-    
+
     const newStyle = isSatelliteView ? 'mapbox://styles/mapbox/light-v11' : 'mapbox://styles/mapbox/satellite-v9';
-    
-    map.current.once('styledata', () => {
+
+    map.current.once('style.load', () => {
       // Commented out: Re-add district polygons after style change (miami_cities.geojson)
       /* Object.keys(districtsRef.current).forEach(districtId => {
         const district = districtsRef.current[districtId];
-        
+
         if (!map.current.getSource(districtId)) {
           map.current.addSource(districtId, {
             type: 'geojson',
@@ -1738,14 +1743,26 @@ const Dashboard = () => {
       enabledOverlayLayerIds.forEach((layerId) => {
         const geojson = cache[layerId];
         if (!geojson) return;
-        const config = OVERLAY_LAYERS_CONFIG.find((c) => c.id === layerId);
+        const config = overlayConfigsRef.current.find((c) => c.id === layerId);
         if (config) addOverlaySourceAndLayer(map.current, layerId, config, geojson);
       });
+
+      uploadedLayers.forEach((layer) => {
+        const geojson = cache[`uploaded:${layer.file}`];
+        if (geojson) addUploadedLayerToMap(map.current, layer, geojson);
+      });
     });
-    
+
     map.current.setStyle(newStyle);
     setIsSatelliteView(!isSatelliteView);
   };
+  toggleMapStyleRef.current = toggleMapStyle;
+
+  useEffect(() => {
+    if (mapStyleToggleButtonRef.current) {
+      renderMapStyleToggle(mapStyleToggleButtonRef.current, isSatelliteView);
+    }
+  }, [isSatelliteView]);
 
   useEffect(() => {
     // Guarded with a ref rather than `map.current` because the map is now
@@ -1808,6 +1825,25 @@ const Dashboard = () => {
 
     map.current.addControl(new mapboxgl.NavigationControl(), 'top-left');
     map.current.addControl(new mapboxgl.FullscreenControl(), 'top-left');
+    map.current.addControl({
+      onAdd() {
+        const container = document.createElement('div');
+        container.className = 'mapboxgl-ctrl mapboxgl-ctrl-group';
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'map-style-toggle-ctrl';
+        button.addEventListener('click', () => toggleMapStyleRef.current?.());
+        renderMapStyleToggle(button, false);
+        container.appendChild(button);
+        mapStyleToggleButtonRef.current = button;
+        this.container = container;
+        return container;
+      },
+      onRemove() {
+        this.container?.remove();
+        mapStyleToggleButtonRef.current = null;
+      },
+    }, 'top-left');
     map.current.addControl(new mapboxgl.ScaleControl({
       maxWidth: 100,
       unit: 'imperial'
@@ -2069,14 +2105,41 @@ const Dashboard = () => {
         if (!map.current?.getSource(id)) ensureOverlayLayerLoaded(id);
       });
     }
-    OVERLAY_LAYERS_CONFIG.forEach((config) => {
+    overlayConfigs.forEach((config) => {
       const layerMapId = config.id + '-layer';
       if (map.current.getLayer(layerMapId)) {
-        const visible = isCriticalInfra && enabledOverlayLayerIds.includes(config.id);
+        registerLayerSymbols(map.current);
+        applyOverlayStyle(map.current, config);
+        const visible = censusVisible && isCriticalInfra && enabledOverlayLayerIds.includes(config.id);
         map.current.setLayoutProperty(layerMapId, 'visibility', visible ? 'visible' : 'none');
+        if (map.current.getLayer(`${config.id}-outline`)) map.current.setLayoutProperty(`${config.id}-outline`, 'visibility', visible ? 'visible' : 'none');
       }
     });
-  }, [activeCensusView, enabledOverlayLayerIds, ensureOverlayLayerLoaded]);
+  }, [loading, activeCensusView, censusVisible, enabledOverlayLayerIds, ensureOverlayLayerLoaded, overlayConfigs]);
+
+  useEffect(() => {
+    if (!map.current) return;
+    layerSettings.overlayOrder.forEach((id) => {
+      if (map.current.getLayer(`${id}-layer`)) map.current.moveLayer(`${id}-layer`, map.current.getLayer(PROJECT_PIN_LAYER_ID) ? PROJECT_PIN_LAYER_ID : undefined);
+      if (map.current.getLayer(`${id}-outline`)) map.current.moveLayer(`${id}-outline`, map.current.getLayer(PROJECT_PIN_LAYER_ID) ? PROJECT_PIN_LAYER_ID : undefined);
+    });
+  }, [layerSettings.overlayOrder, enabledOverlayLayerIds]);
+
+  useEffect(() => {
+    if (!map.current || loading) return;
+    uploadedLayers.forEach((layer) => {
+      const active = layer.visible && censusVisible && activeCensusView === layerView(layer.id);
+      if (active && !map.current.getSource(layer.id)) ensureUploadedLayerLoaded(layer);
+      mapLayerIds(layer).forEach((id) => {
+        if (map.current.getLayer(id)) map.current.setLayoutProperty(id, 'visibility', active ? 'visible' : 'none');
+      });
+    });
+  }, [loading, activeCensusView, censusVisible, uploadedLayers, ensureUploadedLayerLoaded]);
+
+  // A layer that is no longer published must not stay selected.
+  useEffect(() => {
+    if (!modellingLayerOptions.some((option) => option.view === activeCensusView)) setActiveCensusView('none');
+  }, [modellingLayerOptions, activeCensusView]);
 
   useEffect(() => {
     if (censusStats) {
@@ -2085,33 +2148,39 @@ const Dashboard = () => {
         addCensusSourceAndLayers();
       }
     }
-  }, [censusStats, censusLayersReady, addCensusSourceAndLayers]);
+  }, [censusStats, censusLayersReady, addCensusSourceAndLayers, layerSettings, activeCensusView]);
 
   // Legend for risk ratings - now using continuous yellow-to-red scale
-  const legendRatings = censusStats?.risk?.ratings || [];
-  const sortedRatings = ['Very Low', 'Relatively Low', 'Relatively Moderate', 'Relatively High', 'Very High']
-    .filter(rating => legendRatings.includes(rating));
-  const criticalInfraLegendItems = useMemo(
-    () =>
-      CRITICAL_INFRASTRUCTURE_DEFAULT_GROUP_KEYS
-        .map((key) => {
-          const group = CRITICAL_INFRASTRUCTURE_SUBLAYER_GROUPS.find((g) => g.id === key);
-          if (group) {
-            const representativeLayerId = CRITICAL_INFRA_GROUP_LEGEND_REPRESENTATIVE_LAYER_ID[group.id] || group.memberIds[0];
-            const config = OVERLAY_LAYERS_CONFIG.find((c) => c.id === representativeLayerId);
-            if (!config?.style) return null;
-            return { id: group.id, label: group.label, config };
-          }
-          const config = OVERLAY_LAYERS_CONFIG.find((c) => c.id === key);
-          if (!config?.style) return null;
-          return { id: key, label: config.label, config };
-        })
-        .filter(Boolean),
-    []
-  );
+  const criticalInfraLegendItems = useMemo(() => overlayConfigs.filter((config) => config.settings.visible).map((config) => ({ id: config.id, label: config.settings.symbology.label || config.label, config })), [overlayConfigs]);
+  const activeBuiltin = builtinById.get(activeCensusView);
+  const builtinLegend = activeBuiltin && !builtinDefinition(activeBuiltin.id)?.group ? <>
+    <div style={{ fontSize: '0.95em', fontWeight: 600, color: '#1b3a4b', marginBottom: 6 }}>{activeBuiltin.label}</div>
+    {censusLoading && <div role="status">Loading layer…</div>}
+    <LayerLegend layer={activeBuiltin} />
+    {activeBuiltin.id === 'pred3pe' && <div style={{ fontSize: '0.8em' }}>{censusStats?.pred3PE?.min?.toFixed(1)}% – {censusStats?.pred3PE?.max?.toFixed(1)}%</div>}
+  </> : null;
+
+  const uploadedLayerLegend = activeUploadedLayer ? (
+    <>
+      <div style={{ fontSize: '0.95em', fontWeight: 600, color: '#1b3a4b', marginBottom: '6px' }}>
+        {activeUploadedLayer.label}
+      </div>
+      {uploadedLayerLoading === activeUploadedLayer.id && (
+        <div style={{ fontSize: '0.8em', color: '#445461', marginBottom: '4px' }}>Loading layer</div>
+      )}
+      {uploadedLayerError === activeUploadedLayer.id && (
+        <div role="alert" style={{ fontSize: '0.8em', color: '#b42318', marginBottom: '4px' }}>
+          This layer could not be loaded.
+        </div>
+      )}
+      <LayerLegend layer={activeUploadedLayer} />
+    {activeUploadedLayer.description && <p style={{ fontSize: '0.8em', marginBottom: 0 }}>{activeUploadedLayer.description}</p>}
+    </>
+  ) : null;
 
   const renderOverlayLegendSymbol = (config) => {
     if (!config?.style) return null;
+    if (config.settings && !config.originalSymbol) return <LegendGlyph kind={config.settings.geometry} symbol={config.settings.style.symbol} color={config.settings.symbology.color} outlineColor={config.settings.style.outlineColor} size={18} />;
     const legendMarkerSize = 18;
     const { type, paint, iconImage } = config.style;
     if (type === 'line') {
@@ -2412,6 +2481,40 @@ const Dashboard = () => {
     };
   }, []);
 
+  useEffect(() => {
+    if (!LOCAL_LAYERS) return undefined;
+    // Local test mode: use what /admin/layers published in this browser. Layers
+    // already drawn keep their old style, so a new local publish reloads the map.
+    const local = readLocalLiveLayerConfig();
+    if (local) setLayerSettings(normalizeLayerConfig(local));
+    const shown = JSON.stringify(local);
+    const onStorage = (event) => {
+      if (event.key !== LOCAL_LAYERS_KEY && event.key !== null) return;
+      if (JSON.stringify(readLocalLiveLayerConfig()) !== shown) window.location.reload();
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
+  useEffect(() => {
+    if (LOCAL_LAYERS && readLocalLiveLayerConfig()) return undefined;
+    let cancelled = false;
+    const base = import.meta.env.VITE_SUPABASE_URL || SUPABASE_STORAGE.split('/storage/')[0];
+    try {
+      fetch(`${base}/storage/v1/object/public/project-data/${LAYERS_CONFIG_FILE}`, { cache: 'no-store' })
+        .then((response) => (response.ok ? response.json() : null))
+        .then((raw) => {
+          if (!cancelled && raw) setLayerSettings(normalizeLayerConfig(raw));
+        })
+        .catch(() => {});
+    } catch {
+      // No fetch (tests): only the built-in modelling layers.
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // A hidden filter must not keep restricting the map.
   useEffect(() => {
     if (!isFilterShown('city')) setSelectedCity((prev) => (prev ? '' : prev));
@@ -2463,7 +2566,7 @@ const Dashboard = () => {
           const typeMatch = selectedTypes.length === 0 || selectedTypes.includes(type);
           const disasterMatch = disasterFocusMatches(selectedDisasterFocus, disasterFocus);
           const statusMatch = selectedProjectStatuses.length === 0 || selectedProjectStatuses.includes(projectStatus);
-          return projectsLayerVisible && typeMatch && disasterMatch && statusMatch && customFilterMatches(props);
+          return typeMatch && disasterMatch && statusMatch && customFilterMatches(props);
         })
       : allMarkers.filter((pin) => {
           if (!pin.feature) return false;
@@ -2492,17 +2595,11 @@ const Dashboard = () => {
         });
       }
     }
-  }, [allMarkers, projectsLayerVisible, selectedTypes, selectedDisasterFocus, selectedProjectStatuses, customFilterMatches]);
+  }, [allMarkers, selectedTypes, selectedDisasterFocus, selectedProjectStatuses, customFilterMatches]);
 
   // Filter pins with a Mapbox expression instead of toggling 1,660 DOM nodes.
   useEffect(() => {
     if (!map.current?.getLayer?.(PROJECT_PIN_LAYER_ID)) return;
-
-    map.current.setLayoutProperty(
-      PROJECT_PIN_LAYER_ID,
-      'visibility',
-      projectsLayerVisible ? 'visible' : 'none'
-    );
 
     const parts = ['all'];
     if (selectedTypes.length) {
@@ -2536,11 +2633,10 @@ const Dashboard = () => {
     const disasterMatch = disasterFocusMatches(selectedDisasterFocus, disasterFocus);
     const statusMatch = selectedProjectStatuses.length === 0 || selectedProjectStatuses.includes(projectStatus);
     const cityMatch = !cityTrimmed || city.toLowerCase() === cityTrimmed.toLowerCase();
-    if (!(projectsLayerVisible && typeMatch && disasterMatch && statusMatch && cityMatch && customFilterMatches(props))) {
+    if (!(typeMatch && disasterMatch && statusMatch && cityMatch && customFilterMatches(props))) {
       setActiveFeature(null);
     }
   }, [
-    projectsLayerVisible,
     selectedTypes,
     selectedDisasterFocus,
     selectedProjectStatuses,
@@ -2602,14 +2698,14 @@ const Dashboard = () => {
     const totalInvestment = filteredFeatures.reduce((sum, feature) => {
       const cost = firstProp(feature.properties, COST_KEYS);
       if (!cost || cost === null || cost === undefined) return sum;
-      
+
       // Convert to number if it's a string
       const numericCost = typeof cost === 'string' 
         ? parseFloat(cost.replace(/[$,]/g, '')) 
         : parseFloat(cost);
-      
+
       if (isNaN(numericCost) || !isFinite(numericCost)) return sum;
-      
+
       return sum + numericCost;
     }, 0);
 
@@ -2625,7 +2721,7 @@ const Dashboard = () => {
     filteredFeatures.forEach(feature => {
       const props = feature.properties || {};
       const type = firstProp(props, INFRA_TYPE_KEYS) || 'Unknown';
-      
+
       // Normalize type names
       let normalizedType = type;
       if (type === 'Blue Infrastructure' || type === 'Blue') {
@@ -2643,7 +2739,7 @@ const Dashboard = () => {
       } else if (type === 'Hybrid') {
         normalizedType = 'Hybrid';
       }
-      
+
       typeCounts[normalizedType] = (typeCounts[normalizedType] || 0) + 1;
     });
 
@@ -2792,45 +2888,6 @@ const Dashboard = () => {
               </button>
             </div>
           )}
-          {/* Projects layer toggle */}
-          <div style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
-            <span style={{ fontSize: '0.95em', fontWeight: '500', color: '#2c3e50' }}>Projects</span>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={projectsLayerVisible}
-              aria-label={projectsLayerVisible ? 'Hide projects layer' : 'Show projects layer'}
-              onClick={() => setProjectsLayerVisible(v => !v)}
-              style={{
-                width: 32,
-                height: 18,
-                borderRadius: 9,
-                border: '1px solid rgba(0,0,0,0.2)',
-                boxSizing: 'border-box',
-                background: projectsLayerVisible ? '#3498db' : 'rgba(200,200,200,0.8)',
-                cursor: 'pointer',
-                padding: 0,
-                flexShrink: 0,
-                position: 'relative',
-                transition: 'background 0.2s ease'
-              }}
-            >
-              <span
-                style={{
-                  position: 'absolute',
-                  top: '50%',
-                  left: projectsLayerVisible ? 14 : 2,
-                  width: 14,
-                  height: 14,
-                  borderRadius: '50%',
-                  background: '#fff',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.25)',
-                  transform: 'translateY(-50%)',
-                  transition: 'left 0.2s ease'
-                }}
-              />
-            </button>
-          </div>
           {/* Filters, in the order and with the names published from /admin/live-tool */}
           {orderedFilters.map((filter) => {
             switch (filter.id) {
@@ -3189,7 +3246,7 @@ const Dashboard = () => {
                 Projects
               </div>
             </div>
-            
+
             {/* Total Investment Square */}
             <div style={{
               background: 'rgba(255, 255, 255, 0.8)',
@@ -3356,8 +3413,8 @@ const Dashboard = () => {
           </div>
         </aside>
 
-        
-        
+
+
 
 
         <div style={{ flex: 1, position: 'relative', height: '100%', width: '100%', minWidth: 0, overflow: 'hidden', boxSizing: 'border-box' }}>
@@ -3369,7 +3426,7 @@ const Dashboard = () => {
             aria-label="Interactive map of Miami-Dade climate resilience projects. Use the project filters in the sidebar and the search field for a non-map view."
             style={{ width: '100%', height: '100%', minWidth: 0, overflow: 'hidden', boxSizing: 'border-box' }}
           />
-          
+
           {/* Search Bar Overlay */}
           {!loading && (
           <div
@@ -3653,12 +3710,11 @@ const Dashboard = () => {
             <>
               {isMobile ? (
                 <>
-                  {/* Mobile: Modelling Layer switches above Satellite */}
                   <div
                     ref={mobileMapOverlaysRef}
                     style={{
                       position: 'absolute',
-                      bottom: '62px',
+                      bottom: 'max(16px, env(safe-area-inset-bottom))',
                       right: 'max(16px, env(safe-area-inset-right))',
                       zIndex: 1000,
                       minWidth: '260px',
@@ -3674,7 +3730,7 @@ const Dashboard = () => {
                       Modelling Layer
                     </div>
                     <div role="group" aria-label="Modelling layer">
-                      {MODELLING_LAYER_OPTIONS.map(({ view, label, ariaLabel }) => {
+                      {modellingLayerOptions.map(({ view, label, ariaLabel }) => {
                         const checked = isModellingLayerSwitchOn(view);
                         return (
                           <div
@@ -3709,33 +3765,15 @@ const Dashboard = () => {
                         })}
                       </div>
                     )}
+                    {uploadedLayerLegend && (
+                      <div style={{ borderTop: '1px solid rgba(0,0,0,0.08)', marginTop: '10px', paddingTop: '10px' }}>
+                        {uploadedLayerLegend}
+                      </div>
+                    )}
                   </div>
                   {/* Mobile: Legend always visible when layer is active (above Layers dropdown) */}
-                  {censusVisible && activeCensusView === 'risk' && sortedRatings.length > 0 && (
-                    <div style={{ position: 'absolute', right: 'max(16px, env(safe-area-inset-right))', bottom: MOBILE_CENSUS_OVERLAY_BOTTOM, zIndex: 1000, ...mapOverlayGlassStyle, padding: '12px 14px', borderRadius: '10px', minWidth: '180px' }}>
-                      <div style={{ fontSize: '0.9em', fontWeight: 600, color: '#1b3a4b', marginBottom: '8px' }}>FEMA Risk Rating</div>
-                      <div style={{ marginBottom: '4px' }}>
-                        <div style={{ width: '100%', height: '14px', borderRadius: '4px', overflow: 'hidden', marginBottom: '4px' }}>
-                          <div style={{ width: '100%', height: '100%', background: 'linear-gradient(to right, #FFF9C4 0%, #FFF9C4 20%, #FFE082 25%, #FFE082 40%, #FFB74D 45%, #FFB74D 60%, #FF8A65 65%, #FF8A65 80%, #E64A19 85%, #E64A19 100%)' }}></div>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7em', color: '#445461' }}><span>Very Low</span><span>Very High</span></div>
-                      </div>
-                    </div>
-                  )}
-                  {censusVisible && activeCensusView === 'pred3pe' && censusStats?.pred3PE && (
-                    <div style={{ position: 'absolute', right: 'max(16px, env(safe-area-inset-right))', bottom: MOBILE_CENSUS_OVERLAY_BOTTOM, zIndex: 1000, ...mapOverlayGlassStyle, padding: '12px 14px', borderRadius: '10px', minWidth: '180px' }}>
-                      <div style={{ fontSize: '0.9em', fontWeight: 600, color: '#1b3a4b', marginBottom: '8px' }}>Resilience Index (%)</div>
-                      <div style={{ marginBottom: '4px' }}>
-                        <div style={{ width: '100%', height: '14px', borderRadius: '4px', overflow: 'hidden', marginBottom: '4px' }}>
-                          <div style={{ width: '100%', height: '100%', background: 'linear-gradient(to right, #E8D4F5 0%, #E8D4F5 10%, #D4B3E8 20%, #C298DB 35%, #A866C7 50%, #7A3FA8 65%, #5A1D85 80%, #2D0045 90%, #2D0045 100%)' }}></div>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7em', color: '#445461' }}>
-                          <span>{censusStats.pred3PE.min?.toFixed(1) || '0'}%</span>
-                          <span>{censusStats.pred3PE.max?.toFixed(1) || '0'}%</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                  {censusVisible && builtinLegend && <div style={{ position: 'absolute', right: 'max(16px, env(safe-area-inset-right))', bottom: MOBILE_CENSUS_OVERLAY_BOTTOM, zIndex: 1000, ...mapOverlayGlassStyle, padding: '12px 14px', borderRadius: 10, minWidth: 180 }}>{builtinLegend}</div>}
+
                 </>
               ) : (
                 <div
@@ -3762,7 +3800,7 @@ const Dashboard = () => {
                       Modelling Layer
                     </div>
                     <div role="group" aria-label="Modelling layer">
-                      {MODELLING_LAYER_OPTIONS.map(({ view, label, ariaLabel }) => {
+                      {modellingLayerOptions.map(({ view, label, ariaLabel }) => {
                         const checked = isModellingLayerSwitchOn(view);
                         return (
                           <div
@@ -3792,9 +3830,11 @@ const Dashboard = () => {
                 padding: '10px 12px 4px',
                 borderRadius: '12px',
                 width: '320px',
-                ...(censusVisible && activeCensusView === 'critical-infrastructure' && criticalInfraLegendItems.length > 0
-                  ? { minHeight: '124px', height: 'auto', overflow: 'visible' }
-                  : { minHeight: '96px', height: '96px', overflow: 'hidden' }),
+                ...(activeUploadedLayer
+                  ? { minHeight: '96px', height: 'auto', maxHeight: '280px', overflowY: 'auto' }
+                  : censusVisible && activeCensusView === 'critical-infrastructure' && criticalInfraLegendItems.length > 0
+                    ? { minHeight: '124px', height: 'auto', overflow: 'visible' }
+                    : { minHeight: '96px', height: '96px', overflow: 'hidden' }),
                 boxSizing: 'border-box',
                 display: 'flex',
                 flexDirection: 'column',
@@ -3805,65 +3845,16 @@ const Dashboard = () => {
                   </div>
                 )}
                 {!censusLoading &&
-                 !(censusVisible && activeCensusView === 'risk' && sortedRatings.length > 0) &&
+                 !(censusVisible && builtinLegend) &&
                  !(censusVisible && activeCensusView === 'pred3pe' && censusStats?.pred3PE) &&
-                 !(censusVisible && activeCensusView === 'critical-infrastructure' && criticalInfraLegendItems.length > 0) && (
+                 !(censusVisible && activeCensusView === 'critical-infrastructure' && criticalInfraLegendItems.length > 0) &&
+                 !activeUploadedLayer && (
                   <div style={{ fontSize: '0.95em', fontWeight: 600, color: '#1b3a4b' }}>
                     Select a layer
                   </div>
                 )}
-                {censusVisible && activeCensusView === 'risk' && sortedRatings.length > 0 && (
-                  <>
-                    <div style={{ fontSize: '0.95em', fontWeight: 600, color: '#1b3a4b', marginBottom: '6px' }}>
-                      FEMA Risk Rating
-                    </div>
-                    <div style={{ marginBottom: '4px' }}>
-                      <div style={{
-                        width: '100%',
-                        height: '14px',
-                        borderRadius: '4px',
-                        overflow: 'hidden',
-                        marginBottom: '4px'
-                      }}>
-                        <div style={{
-                          width: '100%',
-                          height: '100%',
-                          background: 'linear-gradient(to right, #FFF9C4 0%, #FFF9C4 20%, #FFE082 25%, #FFE082 40%, #FFB74D 45%, #FFB74D 60%, #FF8A65 65%, #FF8A65 80%, #E64A19 85%, #E64A19 100%)'
-                        }}></div>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7em', color: '#445461' }}>
-                        <span>Very Low</span>
-                        <span>Very High</span>
-                      </div>
-                    </div>
-                  </>
-                )}
-                {censusVisible && activeCensusView === 'pred3pe' && censusStats?.pred3PE && (
-                  <>
-                    <div style={{ fontSize: '0.95em', fontWeight: 600, color: '#1b3a4b', marginBottom: '6px' }}>
-                      Resilience Index (%)
-                    </div>
-                    <div style={{ marginBottom: '4px' }}>
-                      <div style={{
-                        width: '100%',
-                        height: '14px',
-                        borderRadius: '4px',
-                        overflow: 'hidden',
-                        marginBottom: '4px'
-                      }}>
-                        <div style={{
-                          width: '100%',
-                          height: '100%',
-                          background: 'linear-gradient(to right, #E8D4F5 0%, #E8D4F5 10%, #D4B3E8 20%, #C298DB 35%, #A866C7 50%, #7A3FA8 65%, #5A1D85 80%, #2D0045 90%, #2D0045 100%)'
-                        }}></div>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7em', color: '#445461' }}>
-                        <span>{censusStats.pred3PE.min?.toFixed(1) || '0'}%</span>
-                        <span>{censusStats.pred3PE.max?.toFixed(1) || '0'}%</span>
-                      </div>
-                    </div>
-                  </>
-                )}
+                {censusVisible && builtinLegend && <div style={{  ...mapOverlayGlassStyle, padding: '12px 14px', borderRadius: 10, minWidth: 180 }}>{builtinLegend}</div>}
+
                 {censusVisible && activeCensusView === 'critical-infrastructure' && criticalInfraLegendItems.length > 0 && (
                   <div>
                     {criticalInfraLegendItems.map((item) => {
@@ -3877,27 +3868,8 @@ const Dashboard = () => {
                     })}
                   </div>
                 )}
+                {uploadedLayerLegend}
               </div>
-
-                  {/* Satellite toggle inside desktop flex column */}
-                  <div style={{
-                    ...mapOverlayGlassStyle,
-                    borderRadius: '25px',
-                    overflow: 'hidden'
-                  }}>
-                    <button
-                      type="button"
-                      onClick={toggleMapStyle}
-                      aria-label={isSatelliteView ? 'Switch map to standard view' : 'Switch map to satellite view'}
-                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 12px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '0.8em', color: '#2c3e50', transition: 'all 0.3s', width: '100%' }}
-                    >
-                      <div style={{ marginRight: '8px', fontSize: '16px', display: 'flex', alignItems: 'center' }} aria-hidden="true">
-                        {isSatelliteView ? '\uD83D\uDDFA\uFE0F' : '\uD83D\uDEF0\uFE0F'}
-                      </div>
-                      <span style={{ fontWeight: '500' }}>{isSatelliteView ? 'Standard' : 'Satellite'}</span>
-                    </button>
-                  </div>
-
                 </div>
               )}
             </>
@@ -3908,31 +3880,6 @@ const Dashboard = () => {
               <div style={{ width: '40px', height: '40px', border: '4px solid #f3f3f3', borderTop: '4px solid #3498db', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 10px' }}></div>
               <div>{error || 'Loading map and projects...'}</div>
             </div>
-          )}
-
-          {/* Mobile Map Style Toggle */}
-          {isMobile && (
-          <div style={{
-            position: 'absolute',
-            bottom: 'max(16px, env(safe-area-inset-bottom))',
-            right: 'max(16px, env(safe-area-inset-right))',
-            ...mapOverlayGlassStyle,
-            borderRadius: '20px',
-            zIndex: 1000,
-            overflow: 'hidden'
-          }}>
-            <button
-              type="button"
-              onClick={toggleMapStyle}
-              aria-label={isSatelliteView ? 'Switch map to standard view' : 'Switch map to satellite view'}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 12px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '0.8em', color: '#2c3e50', transition: 'all 0.3s', minWidth: '120px' }}
-            >
-              <div style={{ marginRight: '8px', fontSize: '16px', display: 'flex', alignItems: 'center' }} aria-hidden="true">
-                {isSatelliteView ? '🗺️' : '🛰️'}
-              </div>
-              <span style={{ fontWeight: '500' }}>{isSatelliteView ? 'Standard' : 'Satellite'}</span>
-            </button>
-          </div>
           )}
 
       </div>
@@ -4077,15 +4024,15 @@ const MapboxPopup = ({ map, activeFeature, statusColor }) => {
   useEffect(() => {
     if (!map) return;
     popupRef.current = new mapboxgl.Popup({ closeOnClick: false, offset: 20 });
-    
+
     // Add event listener for popup close event
     const handlePopupClose = () => {
       // Dispatch custom event to notify App component that popup was closed
       window.dispatchEvent(new CustomEvent('popupClosed'));
     };
-    
+
     popupRef.current.on('close', handlePopupClose);
-    
+
     return () => {
       if (popupRef.current) {
         popupRef.current.off('close', handlePopupClose);
@@ -4112,7 +4059,7 @@ const MapboxPopup = ({ map, activeFeature, statusColor }) => {
     // Use requestAnimationFrame to ensure DOM is ready and popup is fully removed
     requestAnimationFrame(() => {
       if (!map || !popupRef.current || !activeFeature) return;
-      
+
       const coords = activeFeature.geometry?.coordinates;
       if (!coords) return;
 
