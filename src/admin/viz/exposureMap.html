@@ -31,6 +31,19 @@
   </div>
 
   <h2>Projects (completed, ongoing, funded)</h2>
+  <div class="seg" role="group" aria-label="Which projects to show">
+    <button type="button" data-show="all" class="on">All projects</button>
+    <button type="button" data-show="matching" id="show-matching">Flood &amp; storm projects</button>
+  </div>
+  <label class="field">Infrastructure type
+    <select id="infra">
+      <option value="all">All types</option>
+      <option value="Green Infrastructure">Green</option>
+      <option value="Blue Infrastructure">Blue</option>
+      <option value="Hybrid">Hybrid</option>
+      <option value="Gray Infrastructure">Gray</option>
+    </select>
+  </label>
   <div class="legend" id="legend"></div>
   <div class="seg" role="group" aria-label="Project symbols">
     <button type="button" data-pins="columns" class="on">3D columns</button>

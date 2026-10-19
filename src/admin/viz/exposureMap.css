@@ -51,6 +51,11 @@
     .src dt { color: #7d8592; }
     .src dd { margin: 0; color: #d3d7dd; }
     .caveat { margin-top: 8px; padding-left: 10px; border-left: 2px solid #b58a3c; color: #d8c8a8; font-size: 12px; line-height: 1.5; }
+    .field { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 10px 0; font-size: 12px; color: #8b93a1; }
+    .field select {
+      flex: 1; max-width: 170px; padding: 6px 8px; border-radius: 7px; border: 1px solid rgba(255, 255, 255, 0.1);
+      background: #161b22; color: #e6e8eb; font: inherit; font-size: 13px;
+    }
     .legend { display: grid; gap: 5px; font-size: 12px; color: #b8bec8; }
     .legend div { display: flex; align-items: center; gap: 8px; }
     .legend .sw { flex: none; width: 10px; height: 16px; border-radius: 2px; box-shadow: 0 0 0 1.5px #0e1116; }

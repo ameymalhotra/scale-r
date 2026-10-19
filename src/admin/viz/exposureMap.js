@@ -82,6 +82,7 @@ const MODES = {
     start: 0,    intro: 'Watch ocean-connected water spread inland as sea level rises from today\'s high tide to 6 ft above it, over the county\'s land and the resilience projects built on it.',
     howto: 'Blue is land that would be under ocean-connected water at the level shown; darker blue floods first. The bright band is the land that has just flooded. Each column is a completed, ongoing or funded SCALE-R project. It stays short and gray while dry, then rises and flashes when the water reaches it, settling amber if the project addresses flooding, coastal hazards or storms, or pink if it was built for something else. The second counter tallies the projects inside the flooded area.',
     legend: { responds: 'Reached; addresses flooding, coastal hazards or storms', gap: 'Reached; built for another hazard', idle: 'Not yet reached' },
+    matching: { button: 'Flood & storm projects', noun: 'flood and storm', addresses: 'flood hazards' },
     caveat: 'These are water levels, not years. When Miami-Dade reaches each level depends on the emissions scenario (see NOAA\'s 2022 Sea Level Rise Technical Report); that timeline is not shown here. Low-lying areas not connected to the ocean are excluded. Shown on a 30 m grid; areas match the team\'s tract processing within 0.1%.',
     slider: { min: 0, max: SLR_MAX, step: 0.05 },
     duration: 14000,
@@ -99,6 +100,7 @@ const MODES = {
     intro: 'Watch hurricane storm surge spread inland as the storm strengthens from Category 1 to Category 5, over the county\'s land and the resilience projects built on it.',
     howto: 'Purple is land the surge would cover in a storm of the category shown; darker purple floods even in weaker storms. The bright band is the land that has just been added. Each column is a completed, ongoing or funded SCALE-R project. It stays short and gray while dry, then rises and flashes when the surge reaches it, settling amber if the project addresses flooding, coastal hazards or storms, or pink if it was built for something else. Hover a column for the surge depth there in a Category 5 storm.',
     legend: { responds: 'Reached; addresses flooding, coastal hazards or storms', gap: 'Reached; built for another hazard', idle: 'Not yet reached' },
+    matching: { button: 'Flood & storm projects', noun: 'flood and storm', addresses: 'flood or storm hazards' },
     caveat: 'This is NHC\'s worst case for each category (the Maximum of MOMs): at every spot, the highest surge from thousands of hypothetical storms of that strength arriving at high tide. No single hurricane floods all of it at once. Waves, rainfall and river flooding are not included, and NHC intends the maps for community-level, not parcel-level, use. A few cells (under 0.2% of the flooded land) fall inside one category\'s envelope but not the next; they are kept flooded here. Shown on a 30 m grid from the 10 m source; land shares match the team\'s tract processing.',
     slider: { min: 0, max: SURGE_MAX, step: 0.02 },
     duration: 12000,
@@ -116,6 +118,7 @@ const MODES = {
     intro: 'Watch the hottest ground surfaces in Miami-Dade light up first, then spread until the county is saturated red, using a summer land surface temperature composite.',
     howto: 'The threshold falls from 125 °F to 88 °F. Every surface at or above the threshold turns red, and the hotter it is above the threshold, the deeper the red. Surfaces below the threshold stay gray. Each column is a project; it rises when the threshold drops to the surface temperature at its location, settling cyan if it addresses extreme heat and violet if it does not. Read it as "where does extreme surface heat appear first", not as warming over time.',
     legend: { responds: 'Reached; addresses extreme heat', gap: 'Reached; built for another hazard', idle: 'Not yet reached' },
+    matching: { button: 'Heat projects', noun: 'heat', addresses: 'extreme heat' },
     caveat: 'Land surface temperature is how hot the ground and roofs get, not the air temperature people feel. Values are the median of clear-sky summer daytime Landsat passes (about 10:30–11:00 am local), so they describe a typical summer morning, not a heat wave. The processing script for this composite is not yet in the repository; source details come from the file\'s own metadata.',
     slider: { min: HEAT_TO, max: HEAT_FROM, step: 0.25 },
     duration: 12000,
@@ -154,7 +157,9 @@ export function mount() {
   let surgeStats = [];
   let heatMeta;
   let pinStyle = 'columns';
-  let projectCounts = null; // { reached, responds } for the current frame, from the sampled projects
+  let projectCounts = null; // { reached, responds, shown } for the current frame, from the sampled projects
+  let onlyMatching = false; // show only projects that address the hazard on screen
+  let infraFilter = 'all'; // or one Infrastruc value, e.g. 'Green Infrastructure'
   let projectFeatures = [];
   const stacks = new Map(); // location key -> properties of every project drawn at that point
 
@@ -194,10 +199,7 @@ export function mount() {
     if (s) {
       $('stat1').textContent = `${s.km2.toLocaleString()} km²`;
       $('stat1-l').textContent = `of county land under ocean-connected water (${s.pct_land}%) at +${s.ft.toFixed(1)} ft`;
-      $('stat2').textContent = fmtInt(projectCounts ? projectCounts.reached : s.projects);
-      $('stat2-l').textContent = projectCounts
-        ? `SCALE-R projects inside the flooded area; ${fmtInt(projectCounts.responds)} address flood hazards`
-        : 'SCALE-R projects inside the flooded area';
+      projectStat('inside the flooded area', s.projects);
     }
   }
 
@@ -233,10 +235,7 @@ export function mount() {
     $('stat1-l').textContent = s
       ? `of county land under storm surge (${s.pct_land}%) in Category ${cat}`
       : 'of county land under storm surge';
-    $('stat2').textContent = fmtInt(projectCounts ? projectCounts.reached : (s?.projects ?? 0));
-    $('stat2-l').textContent = projectCounts
-      ? `SCALE-R projects inside the surge zone; ${fmtInt(projectCounts.responds)} address flood or storm hazards`
-      : 'SCALE-R projects inside the surge zone';
+    projectStat('inside the surge zone', s?.projects ?? 0);
   }
 
   function depthLabel(depthClass) {
@@ -277,8 +276,7 @@ export function mount() {
     $('stat1').textContent = `${share}%`;
     $('stat1-l').textContent = 'of county land at or above this surface temperature';
     if (projectCounts) {
-      $('stat2').textContent = fmtInt(projectCounts.reached);
-      $('stat2-l').textContent = `SCALE-R projects on surfaces this hot; ${fmtInt(projectCounts.responds)} address extreme heat`;
+      projectStat('on surfaces this hot');
     } else {
       $('stat2').textContent = `${heatMeta.percentiles_f['50']} °F`;
       $('stat2-l').textContent = `county median (95th percentile ${heatMeta.percentiles_f['95']} °F)`;
@@ -286,6 +284,40 @@ export function mount() {
   }
 
   // ---- Projects -------------------------------------------------------------
+
+  function isShown(p) {
+    return (!onlyMatching || p[`responds_${mode}`]) && (infraFilter === 'all' || p.Infrastruc === infraFilter);
+  }
+
+  function shownFilter() {
+    return ['all',
+      onlyMatching ? ['get', `responds_${mode}`] : true,
+      infraFilter === 'all' ? true : ['==', ['get', 'Infrastruc'], infraFilter],
+    ];
+  }
+
+  /** e.g. "green infrastructure heat projects"; plain "SCALE-R projects" when nothing is filtered. */
+  function shownNoun() {
+    const infra = infraFilter === 'all' ? '' : `${infraFilter.toLowerCase()} `;
+    const kind = onlyMatching ? `${MODES[mode].matching.noun} ` : (infra ? '' : 'SCALE-R ');
+    return `${infra}${kind}projects`;
+  }
+
+  /** Second counter: projects the hazard has reached, out of those on the map. */
+  function projectStat(where, fallback) {
+    if (!projectCounts) {
+      $('stat2').textContent = fmtInt(fallback);
+      $('stat2-l').textContent = `SCALE-R projects ${where}`;
+      return;
+    }
+    const { reached, responds, shown } = projectCounts;
+    const filtered = onlyMatching || infraFilter !== 'all';
+    const lead = filtered ? `of ${fmtInt(shown)} ${shownNoun()} ${where}` : `SCALE-R projects ${where}`;
+    // Once only matching projects are shown, every reached one addresses the hazard.
+    const tail = onlyMatching ? '' : `; ${fmtInt(responds)} address ${MODES[mode].matching.addresses}`;
+    $('stat2').textContent = fmtInt(reached);
+    $('stat2-l').textContent = lead + tail;
+  }
 
   /** Negative before the hazard reaches a project, 0 the moment it does, 1 once its flash has settled. */
   function reachOf(p) {
@@ -323,12 +355,16 @@ export function mount() {
     if (!projectFeatures.length) return;
     let reached = 0;
     let responds = 0;
+    let shown = 0;
     for (const p of projectFeatures) {
+      if (!isShown(p)) continue;
+      shown += 1;
       if (reachOf(p) < 0) continue;
       reached += 1;
       if (p[`responds_${mode}`]) responds += 1;
     }
-    projectCounts = { reached, responds };
+    projectCounts = { reached, responds, shown };
+    for (const { id } of [...COLUMN_LAYERS, { id: 'projects' }]) map.setFilter(id, shownFilter());
     for (const { id } of COLUMN_LAYERS) {
       map.setPaintProperty(id, 'fill-extrusion-color', pinColor());
       map.setPaintProperty(id, 'fill-extrusion-height', columnHeight());
@@ -348,7 +384,8 @@ export function mount() {
   function legendHtml() {
     const c = PIN_COLORS[mode];
     const { legend } = MODES[mode];
-    return ['responds', 'gap', 'idle']
+    // With only matching projects on the map there is nothing to show in the "another hazard" color.
+    return (onlyMatching ? ['responds', 'idle'] : ['responds', 'gap', 'idle'])
       .map((k) => `<div><span class="sw${k === 'idle' ? ' idle' : ''}" style="background:${c[k]}"></span>${legend[k]}</div>`)
       .join('');
   }
@@ -363,7 +400,7 @@ export function mount() {
       heat: p.lst_f > 0 ? `Surface ${Math.round(p.lst_f)} °F` : 'No surface temperature',
     }[mode];
     const describe = (q) => `<b>${q.Project_Na || 'Unnamed project'}</b><br>${q.Disaster_F || 'Hazard not recorded'} · ${q.Project__1}`;
-    const group = stacks.get(p.loc) ?? [p];
+    const group = (stacks.get(p.loc) ?? [p]).filter(isShown);
     if (group.length === 1) return `${describe(p)}<br>${exposure}`;
     // Projects at one point share its exposure but can differ in whether they respond to it.
     const c = PIN_COLORS[mode];
@@ -401,6 +438,7 @@ export function mount() {
     slider.value = String(value);
     $('intro').textContent = m.intro;
     $('howto').textContent = m.howto;
+    $('show-matching').textContent = m.matching.button;
     $('legend').innerHTML = legendHtml();
     $('caveat').textContent = m.caveat;
     $('source').innerHTML = sourceHtml(m.source);
@@ -546,6 +584,16 @@ export function mount() {
     document.querySelectorAll('[data-pins]').forEach((x) => x.classList.toggle('on', x === b));
     showPins();
   }));
+  document.querySelectorAll('[data-show]').forEach((b) => b.addEventListener('click', () => {
+    onlyMatching = b.dataset.show === 'matching';
+    document.querySelectorAll('[data-show]').forEach((x) => x.classList.toggle('on', x === b));
+    $('legend').innerHTML = legendHtml();
+    render();
+  }));
+  $('infra').addEventListener('change', (e) => {
+    infraFilter = e.target.value;
+    render();
+  });
   $('play').addEventListener('click', () => setPlaying(!playing));
   slider.addEventListener('input', () => {
     setPlaying(false);
