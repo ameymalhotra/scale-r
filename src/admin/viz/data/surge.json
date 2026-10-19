@@ -1,0 +1,69 @@
+{
+  "source": "NHC National Storm Surge Hazard Map v4 (reprocessed 06/2026), Maximum of MOMs, high tide, Categories 1-5",
+  "encoding": {
+    "red": "40 * first category that floods the pixel; 0 = dry through Category 5",
+    "green": "depth class at Category 5: 1 = under 1 ft, n = n-1 to n ft, 21 = more than 20 ft; 0 = dry",
+    "code_step": 40
+  },
+  "resolution": "native ~10 m, shown on the slr.png grid (~30 m), nearest neighbour",
+  "land_mask": "Census tracts minus TIGER/Line 2024 area water",
+  "county_land_km2": 4910.6,
+  "projects_counted": 1405,
+  "pixels_dry_again": {
+    "1": 0,
+    "2": 1438,
+    "3": 2448,
+    "4": 4803,
+    "5": 58917
+  },
+  "coordinates": [
+    [
+      -80.874405,
+      25.979435
+    ],
+    [
+      -80.108891,
+      25.979435
+    ],
+    [
+      -80.108891,
+      25.135034
+    ],
+    [
+      -80.874405,
+      25.135034
+    ]
+  ],
+  "stats": [
+    {
+      "category": 1,
+      "km2": 575.3,
+      "pct_land": 11.7,
+      "projects": 151
+    },
+    {
+      "category": 2,
+      "km2": 942.7,
+      "pct_land": 19.2,
+      "projects": 300
+    },
+    {
+      "category": 3,
+      "km2": 1881.8,
+      "pct_land": 38.3,
+      "projects": 502
+    },
+    {
+      "category": 4,
+      "km2": 2835.0,
+      "pct_land": 57.7,
+      "projects": 744
+    },
+    {
+      "category": 5,
+      "km2": 3054.0,
+      "pct_land": 62.2,
+      "projects": 935
+    }
+  ]
+}

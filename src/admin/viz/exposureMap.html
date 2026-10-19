@@ -7,6 +7,7 @@
 
   <div class="seg" role="group" aria-label="Hazard">
     <button type="button" data-mode="slr" class="on">Sea level rise</button>
+    <button type="button" data-mode="surge">Storm surge</button>
     <button type="button" data-mode="heat">Surface heat</button>
   </div>
 
@@ -29,7 +30,13 @@
     <div class="ramp-labels" id="ramp-labels"></div>
   </div>
 
-  <label class="toggle"><input type="checkbox" id="pins" checked /> Show projects (completed, ongoing, funded)</label>
+  <h2>Projects (completed, ongoing, funded)</h2>
+  <div class="legend" id="legend"></div>
+  <div class="seg" role="group" aria-label="Project symbols">
+    <button type="button" data-pins="columns" class="on">3D columns</button>
+    <button type="button" data-pins="dots">Flat dots</button>
+  </div>
+  <label class="toggle"><input type="checkbox" id="pins" checked /> Show projects</label>
 
   <h2>How to read this</h2>
   <p id="howto"></p>
