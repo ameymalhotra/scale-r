@@ -76,6 +76,21 @@ function hexagon([lng, lat], radiusM) {
   return { type: 'Polygon', coordinates: [ring] };
 }
 
+// "Population exposure" view: census blocks colored by the residents a hazard reaches, per km² of
+// block land. The hazard itself is hidden, so the layer shows exposure only.
+const EXPOSURE_BREAKS = [250, 1000, 2500, 5000, 10000]; // residents per km², one fewer than the colors
+const EXPOSURE_COLORS = ['#3b0f70', '#8c2981', '#de4968', '#f66e5c', '#fe9f6d', '#fcfdbf'];
+
+/** Census block features from build_population_exposure.py's exposure_blocks.json. */
+function exposureFeatures({ columns, blocks }) {
+  const at = Object.fromEntries(columns.map((name, i) => [name, i]));
+  return blocks.map((row) => {
+    const properties = {};
+    columns.forEach((name, i) => { if (name !== 'type' && name !== 'coordinates') properties[name] = row[i]; });
+    return { type: 'Feature', geometry: { type: row[at.type], coordinates: row[at.coordinates] }, properties };
+  });
+}
+
 const MODES = {
   slr: {
     label: 'Sea level rise',
@@ -83,7 +98,7 @@ const MODES = {
     howto: 'Blue is land that would be under ocean-connected water at the level shown; darker blue floods first. The bright band is the land that has just flooded. Each column is a completed, ongoing or funded SCALE-R project. It stays short and gray while dry, then rises and flashes when the water reaches it, settling amber if the project addresses flooding, coastal hazards or storms, or pink if it was built for something else. The second counter tallies the projects inside the flooded area.',
     legend: { responds: 'Reached; addresses flooding, coastal hazards or storms', gap: 'Reached; built for another hazard', idle: 'Not yet reached' },
     matching: { button: 'Flood & storm projects', noun: 'flood and storm', addresses: 'flood hazards' },
-    caveat: 'These are water levels, not years. When Miami-Dade reaches each level depends on the emissions scenario (see NOAA\'s 2022 Sea Level Rise Technical Report); that timeline is not shown here. Low-lying areas not connected to the ocean are excluded. Shown on a 30 m grid; areas match the team\'s tract processing within 0.1%.',
+    caveat: 'These are water levels, not years. When Miami-Dade reaches each level depends on the emissions scenario (see NOAA\'s 2022 Sea Level Rise Technical Report); that timeline is not shown here. Low-lying areas not connected to the ocean are excluded. Shown on a 30 m grid; areas match the team\'s tract processing within 0.1%. Residents are ACS 2020–2024 counts placed with 2020 census blocks and spread evenly over each block\'s land, so they show where people live, not where they are during an event.',
     slider: { min: 0, max: SLR_MAX, step: 0.05 },
     duration: 14000,
     source: {
@@ -101,7 +116,7 @@ const MODES = {
     howto: 'Purple is land the surge would cover in a storm of the category shown; darker purple floods even in weaker storms. The bright band is the land that has just been added. Each column is a completed, ongoing or funded SCALE-R project. It stays short and gray while dry, then rises and flashes when the surge reaches it, settling amber if the project addresses flooding, coastal hazards or storms, or pink if it was built for something else. Hover a column for the surge depth there in a Category 5 storm.',
     legend: { responds: 'Reached; addresses flooding, coastal hazards or storms', gap: 'Reached; built for another hazard', idle: 'Not yet reached' },
     matching: { button: 'Flood & storm projects', noun: 'flood and storm', addresses: 'flood or storm hazards' },
-    caveat: 'This is NHC\'s worst case for each category (the Maximum of MOMs): at every spot, the highest surge from thousands of hypothetical storms of that strength arriving at high tide. No single hurricane floods all of it at once. Waves, rainfall and river flooding are not included, and NHC intends the maps for community-level, not parcel-level, use. A few cells (under 0.2% of the flooded land) fall inside one category\'s envelope but not the next; they are kept flooded here. Shown on a 30 m grid from the 10 m source; land shares match the team\'s tract processing.',
+    caveat: 'This is NHC\'s worst case for each category (the Maximum of MOMs): at every spot, the highest surge from thousands of hypothetical storms of that strength arriving at high tide. No single hurricane floods all of it at once. Waves, rainfall and river flooding are not included, and NHC intends the maps for community-level, not parcel-level, use. A few cells (under 0.2% of the flooded land) fall inside one category\'s envelope but not the next; they are kept flooded here. Shown on a 30 m grid from the 10 m source; land shares match the team\'s tract processing. Residents are ACS 2020–2024 counts placed with 2020 census blocks and spread evenly over each block\'s land, so they show where people live, not where they are during an event.',
     slider: { min: 0, max: SURGE_MAX, step: 0.02 },
     duration: 12000,
     source: {
@@ -119,7 +134,7 @@ const MODES = {
     howto: 'The threshold falls from 125 °F to 88 °F. Every surface at or above the threshold turns red, and the hotter it is above the threshold, the deeper the red. Surfaces below the threshold stay gray. Each column is a project; it rises when the threshold drops to the surface temperature at its location, settling cyan if it addresses extreme heat and violet if it does not. Read it as "where does extreme surface heat appear first", not as warming over time.',
     legend: { responds: 'Reached; addresses extreme heat', gap: 'Reached; built for another hazard', idle: 'Not yet reached' },
     matching: { button: 'Heat projects', noun: 'heat', addresses: 'extreme heat' },
-    caveat: 'Land surface temperature is how hot the ground and roofs get, not the air temperature people feel. Values are the median of clear-sky summer daytime Landsat passes (about 10:30–11:00 am local), so they describe a typical summer morning, not a heat wave. The processing script for this composite is not yet in the repository; source details come from the file\'s own metadata.',
+    caveat: 'Land surface temperature is how hot the ground and roofs get, not the air temperature people feel. Values are the median of clear-sky summer daytime Landsat passes (about 10:30–11:00 am local), so they describe a typical summer morning, not a heat wave. The processing script for this composite is not yet in the repository; source details come from the file\'s own metadata. Residents are ACS 2020–2024 counts placed with 2020 census blocks and spread evenly over each block\'s land, so they show where people live, not where they are during an event.',
     slider: { min: HEAT_TO, max: HEAT_FROM, step: 0.25 },
     duration: 12000,
     source: {
@@ -157,6 +172,7 @@ export function mount() {
   let surgeStats = [];
   let heatMeta;
   let pinStyle = 'columns';
+  let view = 'hazard'; // or 'people': census blocks colored by residents exposed, hazard hidden
   let projectCounts = null; // { reached, responds, shown } for the current frame, from the sampled projects
   let onlyMatching = false; // show only projects that address the hazard on screen
   let infraFilter = 'all'; // or one Infrastruc value, e.g. 'Green Infrastructure'
@@ -164,6 +180,13 @@ export function mount() {
   const stacks = new Map(); // location key -> properties of every project drawn at that point
 
   function fmtInt(n) { return Math.round(n).toLocaleString(); }
+
+  /** First counter: residents reached, with the share of county residents and land area as context. */
+  function peopleStat(people, pct, where, land) {
+    // Three significant figures: the block-based placement is an estimate, not a head count.
+    $('stat1').textContent = people >= 1000 ? Number(people.toPrecision(3)).toLocaleString() : fmtInt(people);
+    $('stat1-l').textContent = `residents (${pct}% of county) ${where}${land ? ` · ${land}` : ''}`;
+  }
 
   // ---- Sea level rise -------------------------------------------------------
 
@@ -197,8 +220,8 @@ export function mount() {
     $('big').textContent = `+${level.toFixed(1)} ft`;
     $('sub').textContent = 'above today\'s mean higher high water (MHHW)';
     if (s) {
-      $('stat1').textContent = `${s.km2.toLocaleString()} km²`;
-      $('stat1-l').textContent = `of county land under ocean-connected water (${s.pct_land}%) at +${s.ft.toFixed(1)} ft`;
+      peopleStat(s.people, s.pct_people, `live on land under ocean-connected water at +${s.ft.toFixed(1)} ft`,
+        `${s.km2.toLocaleString()} km² of land (${s.pct_land}%)`);
       projectStat('inside the flooded area', s.projects);
     }
   }
@@ -231,10 +254,12 @@ export function mount() {
     const s = surgeStats[cat - 1];
     $('big').textContent = cat ? `Category ${cat}` : 'No storm';
     $('sub').textContent = 'hurricane, worst-case surge arriving at high tide';
-    $('stat1').textContent = s ? `${s.km2.toLocaleString()} km²` : '0 km²';
-    $('stat1-l').textContent = s
-      ? `of county land under storm surge (${s.pct_land}%) in Category ${cat}`
-      : 'of county land under storm surge';
+    if (s) {
+      peopleStat(s.people, s.pct_people, `live inside the Category ${cat} surge zone`,
+        `${s.km2.toLocaleString()} km² of land (${s.pct_land}%)`);
+    } else {
+      peopleStat(0, 0, 'live inside the surge zone');
+    }
     projectStat('inside the surge zone', s?.projects ?? 0);
   }
 
@@ -273,8 +298,9 @@ export function mount() {
     const share = heatMeta.share_at_or_above[String(Math.round(threshold))] ?? 0;
     $('big').textContent = `≥ ${threshold.toFixed(0)} °F`;
     $('sub').textContent = `surfaces at or above this temperature are red · county median ${heatMeta.percentiles_f['50']} °F`;
-    $('stat1').textContent = `${share}%`;
-    $('stat1-l').textContent = 'of county land at or above this surface temperature';
+    const people = heatMeta.people_at_or_above[String(Math.round(threshold))] ?? 0;
+    peopleStat(people, Math.round((1000 * people) / heatMeta.population_total) / 10,
+      'live where the ground is at or above this temperature', `${share}% of land`);
     if (projectCounts) {
       projectStat('on surfaces this hot');
     } else {
@@ -411,10 +437,75 @@ export function mount() {
     return `<div class="stack-head">${group.length} projects at this location · ${exposure}</div><ul>${items.join('')}</ul>`;
   }
 
+  // ---- People exposed -------------------------------------------------------
+
+  /** exposure_blocks.json column holding residents reached at the current slider position; null before any. */
+  function exposureKey() {
+    if (mode === 'slr') return `slr_${(Math.max(0, Math.min(12, Math.floor(value * 2 + 1e-6))) / 2).toFixed(1)}`;
+    if (mode === 'surge') {
+      const cat = surgeCategory(value);
+      return cat ? `surge_${cat}` : null;
+    }
+    return `heat_${Math.max(88, Math.min(125, Math.round(value)))}`;
+  }
+
+  function renderExposure() {
+    if (!map.getLayer('exposure')) return;
+    const key = exposureKey();
+    const density = key ? ['/', ['get', key], ['get', 'land_km2']] : 0;
+    const steps = EXPOSURE_BREAKS.flatMap((b, i) => [b, EXPOSURE_COLORS[i + 1]]);
+    map.setPaintProperty('exposure', 'fill-color', ['step', density, EXPOSURE_COLORS[0], ...steps]);
+    map.setPaintProperty('exposure', 'fill-opacity', ['case', ['>', density, 0], 0.85, 0]);
+  }
+
+  function exposureTooltip(p) {
+    const key = exposureKey();
+    const reached = key ? p[key] : 0;
+    const share = p.people ? Math.round((100 * reached) / p.people) : 0;
+    const level = MODES[mode].label.toLowerCase();
+    const area = p.land_km2 < 0.01 ? `${Math.round(p.land_km2 * 1e6).toLocaleString()} m²` : `${p.land_km2.toFixed(2)} km²`;
+    return `<b>${fmtInt(reached)} of ${fmtInt(p.people)} residents exposed</b> (${share}%)<br>` +
+      `${fmtInt(reached / p.land_km2)} exposed per km² · ${level} at ${$('big').textContent}<br>` +
+      `<span class="muted">Census block ${p.geoid} · ${area} of land</span>`;
+  }
+
+  function setView(next) {
+    view = next;
+    document.querySelectorAll('[data-view]').forEach((b) => b.classList.toggle('on', b.dataset.view === view));
+    if (map.getLayer('exposure')) map.setLayoutProperty('exposure', 'visibility', view === 'people' ? 'visible' : 'none');
+    // Exposure only: the hazard layer is hidden while blocks are shown.
+    for (const id of Object.keys(MODES)) {
+      if (map.getLayer(id)) map.setPaintProperty(id, 'raster-opacity', view === 'people' ? 0 : 1);
+    }
+    showRamp();
+    render();
+  }
+
+  function showRamp() {
+    if (view === 'people') {
+      $('ramp').style.background = `linear-gradient(90deg, ${EXPOSURE_COLORS.join(', ')})`;
+      $('ramp-labels').innerHTML = '<span>&lt;250</span><span>2,500</span><span>10,000+ residents exposed / km²</span>';
+      $('ramp-note').textContent = 'Use the slider to choose how far the hazard extends; the map then shows the population exposed at that level. Each census block is colored by how many of its residents the hazard reaches, per km² of the block\'s land. Blocks with nobody exposed yet are not drawn.';
+      return;
+    }
+    $('ramp').style.background = {
+      slr: 'linear-gradient(90deg, #0b3d6e, #1f78c1, #4fb3e8, #9be3ff)',
+      surge: `linear-gradient(90deg, ${SURGE_COLORS.join(', ')})`,
+      heat: 'linear-gradient(90deg, rgba(120,128,140,0.5), #ffc478, #ff6e3c, #dc1e1e, #960014)',
+    }[mode];
+    $('ramp-labels').innerHTML = {
+      slr: '<span>Floods first (0 ft)</span><span>Floods last (6 ft)</span>',
+      surge: '<span>Floods in Category 1</span><span>Only in Category 5</span>',
+      heat: '<span>Below threshold</span><span>Just above</span><span>14 °F+ above</span>',
+    }[mode];
+    $('ramp-note').textContent = '';
+  }
+
   // ---- Shared controls ------------------------------------------------------
 
   function render() {
     renderProjects();
+    renderExposure();
     if (mode === 'slr') renderSlr(value);
     else if (mode === 'surge') renderSurge(value);
     else renderHeat(value);
@@ -442,16 +533,7 @@ export function mount() {
     $('legend').innerHTML = legendHtml();
     $('caveat').textContent = m.caveat;
     $('source').innerHTML = sourceHtml(m.source);
-    $('ramp').style.background = {
-      slr: 'linear-gradient(90deg, #0b3d6e, #1f78c1, #4fb3e8, #9be3ff)',
-      surge: `linear-gradient(90deg, ${SURGE_COLORS.join(', ')})`,
-      heat: 'linear-gradient(90deg, rgba(120,128,140,0.5), #ffc478, #ff6e3c, #dc1e1e, #960014)',
-    }[mode];
-    $('ramp-labels').innerHTML = {
-      slr: '<span>Floods first (0 ft)</span><span>Floods last (6 ft)</span>',
-      surge: '<span>Floods in Category 1</span><span>Only in Category 5</span>',
-      heat: '<span>Below threshold</span><span>Just above</span><span>14 °F+ above</span>',
-    }[mode];
+    showRamp();
     render();
   }
 
@@ -515,8 +597,9 @@ export function mount() {
       paint: { 'raster-color': slrColor(0), 'raster-color-range': [0, 1], 'raster-resampling': 'nearest', 'raster-fade-duration': 0 },
     }, firstLabel);
 
-    const [projects, slrAt, surgeAt, heatAt] = await Promise.all([
+    const [projects, blocks, slrAt, surgeAt, heatAt] = await Promise.all([
       fetch(PROJECTS_URL).then((r) => r.json()),
+      fetch(new URL('./data/exposure_blocks.json', import.meta.url)).then((r) => r.json()),
       rasterSampler(new URL('./data/slr.png', import.meta.url).href, slr.coordinates),
       rasterSampler(new URL('./data/surge.png', import.meta.url).href, surge.coordinates),
       rasterSampler(new URL('./data/heat.png', import.meta.url).href, heat.coordinates),
@@ -541,6 +624,13 @@ export function mount() {
       stacks.get(p.loc).push(p);
     }
     projectFeatures = projects.features.map((f) => f.properties);
+
+    // Under the projects, so the columns stay on top of the people layer.
+    map.addSource('exposure', { type: 'geojson', data: { type: 'FeatureCollection', features: exposureFeatures(blocks) } });
+    map.addLayer({
+      id: 'exposure', type: 'fill', source: 'exposure', layout: { visibility: 'none' },
+      paint: { 'fill-outline-color': 'rgba(14, 17, 22, 0.5)' },
+    }, firstLabel);
     map.addSource('projects', { type: 'geojson', data: projects });
     // Flat alternative: a dark outline keeps each dot separate from the water or heat under it.
     map.addLayer({
@@ -562,7 +652,14 @@ export function mount() {
     }
 
     const popup = new mapboxgl.Popup({ closeButton: false, closeOnClick: false, className: 'pin-tip' });
-    for (const layer of ['projects', ...COLUMN_LAYERS.map((l) => l.id)]) {
+    const projectLayers = ['projects', ...COLUMN_LAYERS.map((l) => l.id)];
+    map.on('mousemove', 'exposure', (e) => {
+      // Projects drawn over a hexagon take the tooltip.
+      if (map.queryRenderedFeatures(e.point, { layers: projectLayers.filter((id) => map.getLayer(id)) }).length) return;
+      popup.setLngLat(e.lngLat).setHTML(exposureTooltip(e.features[0].properties)).addTo(map);
+    });
+    map.on('mouseleave', 'exposure', () => popup.remove());
+    for (const layer of projectLayers) {
       map.on('mousemove', layer, (e) => {
         map.getCanvas().style.cursor = 'pointer';
         popup.setLngLat(e.lngLat).setHTML(projectTooltip(e.features[0].properties)).addTo(map);
@@ -579,6 +676,7 @@ export function mount() {
   });
 
   document.querySelectorAll('[data-mode]').forEach((b) => b.addEventListener('click', () => setMode(b.dataset.mode)));
+  document.querySelectorAll('[data-view]').forEach((b) => b.addEventListener('click', () => setView(b.dataset.view)));
   document.querySelectorAll('[data-pins]').forEach((b) => b.addEventListener('click', () => {
     pinStyle = b.dataset.pins;
     document.querySelectorAll('[data-pins]').forEach((x) => x.classList.toggle('on', x === b));

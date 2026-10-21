@@ -41,6 +41,9 @@
     .stats .n { font-size: 18px; font-weight: 700; }
     .stats .l { font-size: 11px; color: #8b93a1; line-height: 1.35; }
     .ramp { height: 10px; border-radius: 5px; margin-top: 6px; }
+    .ramp-note { margin: 6px 0 0; font-size: 11px; line-height: 1.4; color: #8b93a1; }
+    .ramp-note:empty { display: none; }
+    .pin-tip .muted { color: #8b93a1; }
     .ramp-labels { display: flex; justify-content: space-between; font-size: 11px; color: #8b93a1; margin-top: 3px; }
     .src {
       margin-top: 10px; padding: 12px 14px; border-radius: 10px; background: #141920;

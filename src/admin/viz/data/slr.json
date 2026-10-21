@@ -44,79 +44,108 @@
       "ft": 0.0,
       "km2": 266.0,
       "pct_land": 5.4,
-      "projects": 6
+      "projects": 6,
+      "people": 3584,
+      "pct_people": 0.1
     },
     {
       "ft": 0.5,
       "km2": 531.4,
       "pct_land": 10.8,
-      "projects": 7
+      "projects": 7,
+      "people": 5162,
+      "pct_people": 0.2
     },
     {
       "ft": 1.0,
       "km2": 739.3,
       "pct_land": 15.0,
-      "projects": 9
+      "projects": 9,
+      "people": 6764,
+      "pct_people": 0.2
     },
     {
       "ft": 1.5,
       "km2": 911.0,
       "pct_land": 18.5,
-      "projects": 19
+      "projects": 19,
+      "people": 9118,
+      "pct_people": 0.3
     },
     {
       "ft": 2.0,
       "km2": 1089.4,
       "pct_land": 22.2,
-      "projects": 39
+      "projects": 39,
+      "people": 15853,
+      "pct_people": 0.6
     },
     {
       "ft": 2.5,
       "km2": 1265.1,
       "pct_land": 25.7,
-      "projects": 71
+      "projects": 71,
+      "people": 41225,
+      "pct_people": 1.5
     },
     {
       "ft": 3.0,
       "km2": 1450.6,
       "pct_land": 29.5,
-      "projects": 131
+      "projects": 131,
+      "people": 76503,
+      "pct_people": 2.8
     },
     {
       "ft": 3.5,
       "km2": 1569.4,
       "pct_land": 31.9,
-      "projects": 182
+      "projects": 182,
+      "people": 120324,
+      "pct_people": 4.4
     },
     {
       "ft": 4.0,
       "km2": 1732.0,
       "pct_land": 35.2,
-      "projects": 245
+      "projects": 245,
+      "people": 177731,
+      "pct_people": 6.5
     },
     {
       "ft": 4.5,
       "km2": 2009.9,
       "pct_land": 40.9,
-      "projects": 312
+      "projects": 312,
+      "people": 252377,
+      "pct_people": 9.2
     },
     {
       "ft": 5.0,
       "km2": 2362.1,
       "pct_land": 48.0,
-      "projects": 392
+      "projects": 392,
+      "people": 361736,
+      "pct_people": 13.2
     },
     {
       "ft": 5.5,
       "km2": 2763.5,
       "pct_land": 56.2,
-      "projects": 495
+      "projects": 495,
+      "people": 570437,
+      "pct_people": 20.8
     },
     {
       "ft": 6.0,
       "km2": 2974.9,
       "pct_land": 60.5,
-      "projects": 654
+      "projects": 654,
+      "people": 870976,
+      "pct_people": 31.8
     }
-  ]
+  ],
+  "population_total": 2738356,
+  "population_source": "ACS 2020-2024 5-year total population by block group (B01003), placed with Census 2020 block counts (P1, TIGER/Line tabblock20)",
+  "population_method": "Each block group's ACS population is split across its 2020 blocks in proportion to their 2020 counts and spread evenly over each block's land (block minus TIGER 2024 area water); summed over the animation image's pixels at each step."
 }

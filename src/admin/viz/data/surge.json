@@ -39,31 +39,44 @@
       "category": 1,
       "km2": 575.3,
       "pct_land": 11.7,
-      "projects": 151
+      "projects": 151,
+      "people": 124521,
+      "pct_people": 4.5
     },
     {
       "category": 2,
       "km2": 942.7,
       "pct_land": 19.2,
-      "projects": 300
+      "projects": 300,
+      "people": 325017,
+      "pct_people": 11.9
     },
     {
       "category": 3,
       "km2": 1881.8,
       "pct_land": 38.3,
-      "projects": 502
+      "projects": 502,
+      "people": 629975,
+      "pct_people": 23.0
     },
     {
       "category": 4,
       "km2": 2835.0,
       "pct_land": 57.7,
-      "projects": 744
+      "projects": 744,
+      "people": 1159065,
+      "pct_people": 42.3
     },
     {
       "category": 5,
       "km2": 3054.0,
       "pct_land": 62.2,
-      "projects": 935
+      "projects": 935,
+      "people": 1692956,
+      "pct_people": 61.8
     }
-  ]
+  ],
+  "population_total": 2738356,
+  "population_source": "ACS 2020-2024 5-year total population by block group (B01003), placed with Census 2020 block counts (P1, TIGER/Line tabblock20)",
+  "population_method": "Each block group's ACS population is split across its 2020 blocks in proportion to their 2020 counts and spread evenly over each block's land (block minus TIGER 2024 area water); summed over the animation image's pixels at each step."
 }
