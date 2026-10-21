@@ -7,6 +7,7 @@
 
   <div class="seg" role="group" aria-label="Hazard">
     <button type="button" data-mode="slr" class="on">Sea level rise</button>
+    <button type="button" data-mode="surge">Storm surge</button>
     <button type="button" data-mode="heat">Surface heat</button>
   </div>
 
@@ -24,12 +25,36 @@
     <div><div class="n" id="stat2">–</div><div class="l" id="stat2-l"></div></div>
   </div>
 
+  <div class="seg" role="group" aria-label="What the map colors">
+    <button type="button" data-view="hazard" class="on">Hazard extent</button>
+    <button type="button" data-view="people">Population exposure</button>
+  </div>
   <div id="ramp-wrap">
     <div class="ramp" id="ramp"></div>
     <div class="ramp-labels" id="ramp-labels"></div>
+    <p class="ramp-note" id="ramp-note"></p>
   </div>
 
-  <label class="toggle"><input type="checkbox" id="pins" checked /> Show projects (completed, ongoing, funded)</label>
+  <h2>Projects (completed, ongoing, funded)</h2>
+  <div class="seg" role="group" aria-label="Which projects to show">
+    <button type="button" data-show="all" class="on">All projects</button>
+    <button type="button" data-show="matching" id="show-matching">Flood &amp; storm projects</button>
+  </div>
+  <label class="field">Infrastructure type
+    <select id="infra">
+      <option value="all">All types</option>
+      <option value="Green Infrastructure">Green</option>
+      <option value="Blue Infrastructure">Blue</option>
+      <option value="Hybrid">Hybrid</option>
+      <option value="Gray Infrastructure">Gray</option>
+    </select>
+  </label>
+  <div class="legend" id="legend"></div>
+  <div class="seg" role="group" aria-label="Project symbols">
+    <button type="button" data-pins="columns" class="on">3D columns</button>
+    <button type="button" data-pins="dots">Flat dots</button>
+  </div>
+  <label class="toggle"><input type="checkbox" id="pins" checked /> Show projects</label>
 
   <h2>How to read this</h2>
   <p id="howto"></p>
