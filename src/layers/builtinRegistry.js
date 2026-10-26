@@ -49,7 +49,8 @@ export const BUILTIN_LAYER_REGISTRY = [
   }),
   point('overlay-risk-shelters', 'Risk Shelters', 'Risk Shelter I_FeaturesToJSO.geojson', 'house'),
   entry('sea-level-rise-4ft', 'Sea Level Rise — 4 ft', 'polygon', ['scenario', 'connection'], {
-    sourcePath: '/layers/sea-level-rise-4ft.geojson', surface: true,
+    sourcePath: '/layers/sea-level-rise-4ft.json', surface: true,
+    sourceType: 'vector', tiles: '/layers/sea-level-rise-4ft/{z}/{x}/{y}.pbf', sourceLayer: 'surface', minzoom: 6, maxzoom: 14,
     description: 'NOAA ocean-connected inundation at 4 ft above Mean Higher High Water (MHHW). Unconnected low-lying areas are excluded.',
     style: { opacity: 0.65, outlineWidth: 0 }, symbology: { mode: 'single', color: '#2171b5' },
   }),
@@ -63,7 +64,7 @@ export const BUILTIN_LAYER_REGISTRY = [
   entry('elevation', 'Elevation', 'polygon', ['elevation_band', 'vertical_datum', 'units'], {
     sourcePath: '/layers/elevation.json', surface: true,
     sourceType: 'vector', tiles: '/layers/elevation/{z}/{x}/{y}.pbf', sourceLayer: 'surface', minzoom: 6, maxzoom: 14,
-    description: 'NOAA Southeast Florida 3 m DEM sampled on a ~10 m grid and displayed as elevation bands in feet above NAVD88. NoData areas remain transparent. Zoom in for finer surface detail.',
+    description: 'NOAA Southeast Florida 3 m DEM sampled on a ~6 m grid and displayed as smooth elevation bands in feet above NAVD88. NoData areas remain transparent. Zoom in for finer surface detail.',
     style: { opacity: 0.65, outlineWidth: 0 },
     symbology: categorized('elevation_band', ELEVATION_BANDS, ['#4575b4', '#91bfdb', '#e0f3f8', '#ffffbf', '#fee090', '#fc8d59', '#d73027']),
   }),

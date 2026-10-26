@@ -1,5 +1,10 @@
 {
   "source": "https://coast.noaa.gov/slrdata/DEMs/FL/FL_SE_GCS_3m_NAVDm_v3.tif",
+  "display": "contour bands traced on the bilinear-interpolated source",
+  "units": "feet",
+  "datum": "NAVD88",
+  "display_resolution_m": 6,
+  "source_resolution_m": 3,
   "format": "vector-tiles",
   "source_layer": "surface",
   "bounds": [
@@ -11,14 +16,10 @@
   "minzoom": 6,
   "maxzoom": 14,
   "tiles": 2656,
-  "bytes": 51106765,
-  "max_tile_bytes": 222297,
-  "features_across_zooms": 1085899,
-  "resampling": "nearest",
-  "tile_pixels": 256,
+  "bytes": 81197607,
+  "max_tile_bytes": 318714,
+  "features_across_zooms": 7794,
   "extent": 4096,
-  "units": "feet",
-  "datum": "NAVD88",
-  "display_resolution_m": 10,
-  "source_resolution_m": 3
+  "grid_samples_per_tile": 512,
+  "tile_buffer_samples": 16
 }
