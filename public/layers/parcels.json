@@ -1,0 +1,22 @@
+{
+  "source": "Miami-Dade County parcel polygons (Parcel.geojson)",
+  "format": "vector-tiles",
+  "source_layer": "parcels",
+  "bounds": [
+    -80.8739,
+    25.1375,
+    -80.1183,
+    25.9795
+  ],
+  "minzoom": 14,
+  "maxzoom": 14,
+  "features": 596655,
+  "tiles": 1210,
+  "bytes": 33434390,
+  "max_tile_bytes": 260363,
+  "extent": 8192,
+  "properties": [
+    "folio",
+    "water"
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "source": "Miami-Dade County 2D building footprints (BuildingFootprint2D)",
+  "format": "vector-tiles",
+  "source_layer": "buildings",
+  "bounds": [
+    -80.8813,
+    25.2324,
+    -80.1184,
+    25.9786
+  ],
+  "minzoom": 14,
+  "maxzoom": 14,
+  "features": 863196,
+  "tiles": 441,
+  "bytes": 27749932,
+  "max_tile_bytes": 241757,
+  "extent": 8192,
+  "properties": [
+    "size",
+    "height_ft"
+  ]
+}
