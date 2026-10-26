@@ -1,0 +1,23 @@
+{
+  "source": "NOAA OCM FL_SE_slr_4_0ft",
+  "scenario_ft": 4,
+  "datum": "MHHW",
+  "simplification": "half a grid sample per zoom (about 2 m at zoom 14)",
+  "format": "vector-tiles",
+  "source_layer": "surface",
+  "bounds": [
+    -80.9,
+    25,
+    -80.1,
+    26
+  ],
+  "minzoom": 6,
+  "maxzoom": 14,
+  "tiles": 2656,
+  "bytes": 12898042,
+  "max_tile_bytes": 261953,
+  "features_across_zooms": 1153,
+  "extent": 4096,
+  "grid_samples_per_tile": 512,
+  "tile_buffer_samples": 16
+}

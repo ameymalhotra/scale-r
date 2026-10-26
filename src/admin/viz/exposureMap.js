@@ -22,16 +22,16 @@ const RESPONDS = {
 };
 // Warm colors read against the blue water and purple surge, cool ones against the red heat.
 const PIN_COLORS = {
-  slr: { idle: '#7d8592', responds: '#ffb627', gap: '#ff3d81' },
-  surge: { idle: '#7d8592', responds: '#ffb627', gap: '#ff3d81' },
-  heat: { idle: '#7d8592', responds: '#3fd8ff', gap: '#b98cff' },
+  slr: { idle: '#dfe3e8', responds: '#ffb627', gap: '#ff3d81' },
+  surge: { idle: '#dfe3e8', responds: '#ffb627', gap: '#ff3d81' },
+  heat: { idle: '#dfe3e8', responds: '#3fd8ff', gap: '#b98cff' },
 };
 // Hexagon footprints are fixed in meters, so a narrower set takes over when zoomed in.
 const COLUMN_LAYERS = [
   { id: 'project-columns', radiusM: 200, maxzoom: 11.5 },
   { id: 'project-columns-near', radiusM: 60, minzoom: 11.5 },
 ];
-const COLUMN_IDLE_M = 250; // height before the hazard arrives
+const COLUMN_IDLE_M = 400; // height before the hazard arrives
 const COLUMN_FULL_M = 1600; // height once reached (at zoom 9; scaled down when zoomed in)
 // How far past a project's own level the "just reached" flash lasts: 0.6 ft of water,
 // matching the bright band on the water, 0.6 of a category, or 4 °F of threshold.
@@ -181,11 +181,19 @@ export function mount() {
 
   function fmtInt(n) { return Math.round(n).toLocaleString(); }
 
+  function money(v) {
+    if (v >= 1e9) return `$${(v / 1e9).toFixed(1)}B`;
+    if (v >= 1e6) return `$${(v / 1e6).toFixed(1)}M`;
+    if (v >= 1e4) return `$${(v / 1e3).toFixed(0)}K`;
+    return `$${Math.round(v).toLocaleString()}`;
+  }
+
   /** First counter: residents reached, with the share of county residents and land area as context. */
   function peopleStat(people, pct, where, land) {
     // Three significant figures: the block-based placement is an estimate, not a head count.
-    $('stat1').textContent = people >= 1000 ? Number(people.toPrecision(3)).toLocaleString() : fmtInt(people);
-    $('stat1-l').textContent = `residents (${pct}% of county) ${where}${land ? ` · ${land}` : ''}`;
+    const count = people >= 1000 ? Number(people.toPrecision(3)).toLocaleString() : fmtInt(people);
+    $('stat1').innerHTML = `${count} <span class="nw">(${pct}%)</span>`;
+    $('stat1-l').textContent = `residents (% of county) ${where}${land ? ` · ${land}` : ''}`;
   }
 
   // ---- Sea level rise -------------------------------------------------------
@@ -252,7 +260,7 @@ export function mount() {
     map.setPaintProperty('surge', 'raster-color', surgeColor(level));
     const cat = surgeCategory(level);
     const s = surgeStats[cat - 1];
-    $('big').textContent = cat ? `Category ${cat}` : 'No storm';
+    $('big').textContent = cat ? `Category ${cat}` : 'No storm surge';
     $('sub').textContent = 'hurricane, worst-case surge arriving at high tide';
     if (s) {
       peopleStat(s.people, s.pct_people, `live inside the Category ${cat} surge zone`,
@@ -336,13 +344,13 @@ export function mount() {
       $('stat2-l').textContent = `SCALE-R projects ${where}`;
       return;
     }
-    const { reached, responds, shown } = projectCounts;
+    const { reached, responds, shown, cost } = projectCounts;
     const filtered = onlyMatching || infraFilter !== 'all';
     const lead = filtered ? `of ${fmtInt(shown)} ${shownNoun()} ${where}` : `SCALE-R projects ${where}`;
     // Once only matching projects are shown, every reached one addresses the hazard.
     const tail = onlyMatching ? '' : `; ${fmtInt(responds)} address ${MODES[mode].matching.addresses}`;
-    $('stat2').textContent = fmtInt(reached);
-    $('stat2-l').textContent = lead + tail;
+    $('stat2').innerHTML = `${fmtInt(reached)} <span class="nw">· ${money(cost)}</span>`;
+    $('stat2-l').textContent = `${lead} (reported cost)${tail}`;
   }
 
   /** Negative before the hazard reaches a project, 0 the moment it does, 1 once its flash has settled. */
@@ -373,7 +381,7 @@ export function mount() {
   }
 
   function dotRadius() {
-    const r = ['interpolate', ['linear'], reachExpr(), 0, 2, 0.4, 5.5, 1, 3.5];
+    const r = ['interpolate', ['linear'], reachExpr(), 0, 3, 0.4, 5.5, 1, 3.5];
     return ['interpolate', ['linear'], ['zoom'], 9, r, 14, ['*', r, 2.2]];
   }
 
@@ -382,14 +390,16 @@ export function mount() {
     let reached = 0;
     let responds = 0;
     let shown = 0;
+    let cost = 0;
     for (const p of projectFeatures) {
       if (!isShown(p)) continue;
       shown += 1;
       if (reachOf(p) < 0) continue;
       reached += 1;
+      cost += Number(p.Estimated_) || 0;
       if (p[`responds_${mode}`]) responds += 1;
     }
-    projectCounts = { reached, responds, shown };
+    projectCounts = { reached, responds, shown, cost };
     for (const { id } of [...COLUMN_LAYERS, { id: 'projects' }]) map.setFilter(id, shownFilter());
     for (const { id } of COLUMN_LAYERS) {
       map.setPaintProperty(id, 'fill-extrusion-color', pinColor());
@@ -402,9 +412,8 @@ export function mount() {
 
   function showPins() {
     if (!map.getLayer('projects')) return;
-    const on = $('pins').checked;
-    for (const { id } of COLUMN_LAYERS) map.setLayoutProperty(id, 'visibility', on && pinStyle === 'columns' ? 'visible' : 'none');
-    map.setLayoutProperty('projects', 'visibility', on && pinStyle === 'dots' ? 'visible' : 'none');
+    for (const { id } of COLUMN_LAYERS) map.setLayoutProperty(id, 'visibility', pinStyle === 'columns' ? 'visible' : 'none');
+    map.setLayoutProperty('projects', 'visibility', pinStyle === 'dots' ? 'visible' : 'none');
   }
 
   function legendHtml() {
@@ -698,7 +707,6 @@ export function mount() {
     value = Number(slider.value);
     render();
   });
-  $('pins').addEventListener('change', showPins);
 
   return () => {
     removed = true;

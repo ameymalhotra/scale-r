@@ -625,6 +625,58 @@ function getRiskLegendIconDataUrl() {
   return riskLegendIconDataUrl;
 }
 
+/** Zoom-14 vector tiles of county parcels and building footprints; Mapbox overzooms them and requests nothing when zoomed out. */
+const FOOTPRINT_MIN_ZOOM = 14;
+const FOOTPRINT_LAYERS = [
+  {
+    id: 'parcels', noun: 'parcel boundaries', hint: 'Zoom in to see parcels', bounds: [-80.88, 25.13, -80.11, 25.98],
+    icon: '<path d="M3 3h14v14H3zM3 9.5h8M11 3v14M11 12h6"/>',
+    layers: (satellite) => [
+      { id: 'parcels-line', type: 'line', paint: { 'line-color': satellite ? '#ffffff' : '#4b5563', 'line-opacity': satellite ? 0.75 : 0.6, 'line-width': ['interpolate', ['linear'], ['zoom'], 14, 0.4, 18, 1.4] } },
+    ],
+  },
+  {
+    id: 'buildings', noun: 'building footprints', hint: 'Zoom in to see buildings', bounds: [-80.89, 25.23, -80.11, 25.98],
+    icon: '<path d="M4 17V7l6-4 6 4v10M4 17h12M8 17v-4h4v4"/>',
+    layers: (satellite) => [
+      { id: 'buildings-fill', type: 'fill', paint: { 'fill-color': satellite ? '#fbbf24' : '#94a3b8', 'fill-opacity': satellite ? 0.25 : 0.45 } },
+      { id: 'buildings-line', type: 'line', paint: { 'line-color': satellite ? '#fbbf24' : '#64748b', 'line-opacity': 0.9, 'line-width': ['interpolate', ['linear'], ['zoom'], 14, 0.3, 18, 1] } },
+    ],
+  },
+];
+
+/** Adds a footprint layer's source and layers (below project pins), styled for the current base map, and sets visibility. */
+function showFootprintLayer(mapInstance, layer, visible, isSatelliteView) {
+  if (!mapInstance.getSource(layer.id)) {
+    if (!visible) return;
+    mapInstance.addSource(layer.id, {
+      type: 'vector',
+      tiles: [`${window.location.origin}/layers/${layer.id}/{z}/{x}/{y}.pbf`],
+      minzoom: FOOTPRINT_MIN_ZOOM,
+      maxzoom: FOOTPRINT_MIN_ZOOM,
+      bounds: layer.bounds,
+    });
+  }
+  for (const spec of layer.layers(isSatelliteView)) {
+    if (!mapInstance.getLayer(spec.id)) {
+      mapInstance.addLayer({ ...spec, source: layer.id, 'source-layer': layer.id, minzoom: FOOTPRINT_MIN_ZOOM },
+        mapInstance.getLayer(PROJECT_PIN_LAYER_ID) ? PROJECT_PIN_LAYER_ID : undefined);
+    } else {
+      Object.entries(spec.paint).forEach(([key, value]) => mapInstance.setPaintProperty(spec.id, key, value));
+    }
+    mapInstance.setLayoutProperty(spec.id, 'visibility', visible ? 'visible' : 'none');
+  }
+}
+
+function renderFootprintToggle(button, hint, layer, on, zoom) {
+  const label = `${on ? 'Hide' : 'Show'} ${layer.noun}`;
+  button.title = on && zoom < FOOTPRINT_MIN_ZOOM ? `Zoom in to see ${layer.noun}` : label;
+  button.setAttribute('aria-label', label);
+  button.setAttribute('aria-pressed', String(on));
+  button.classList.toggle('is-active', on);
+  hint.hidden = !(on && zoom < FOOTPRINT_MIN_ZOOM);
+}
+
 const PROJECT_PIN_SOURCE_ID = 'project-pins';
 const PROJECT_PIN_LAYER_ID = 'project-pins';
 /** Mapbox `icon-size` relative to the 27×41 pin sprite (20% smaller than prior 0.35 / 0.49). */
@@ -865,6 +917,8 @@ const Dashboard = () => {
   const censusPopupRef = useRef(null);
   const dashboardMapClickRef = useRef(null);
   const toggleMapStyleRef = useRef(null);
+  const footprintsOnRef = useRef({});
+  const isSatelliteViewRef = useRef(false);
   const mapStyleToggleButtonRef = useRef(null);
   const [selectedTypes, setSelectedTypes] = useState([]);
   const [selectedDisasterFocus, setSelectedDisasterFocus] = useState([]);
@@ -1736,6 +1790,9 @@ const Dashboard = () => {
 
       registerProjectPinImages(map.current);
       ensureProjectPinLayer(map.current);
+      FOOTPRINT_LAYERS.forEach((layer) => {
+        if (footprintsOnRef.current[layer.id]) showFootprintLayer(map.current, layer, true, !isSatelliteView);
+      });
 
       addCensusSourceAndLayers();
 
@@ -1759,6 +1816,7 @@ const Dashboard = () => {
   toggleMapStyleRef.current = toggleMapStyle;
 
   useEffect(() => {
+    isSatelliteViewRef.current = isSatelliteView;
     if (mapStyleToggleButtonRef.current) {
       renderMapStyleToggle(mapStyleToggleButtonRef.current, isSatelliteView);
     }
@@ -1844,6 +1902,33 @@ const Dashboard = () => {
         mapStyleToggleButtonRef.current = null;
       },
     }, 'top-left');
+    FOOTPRINT_LAYERS.forEach((layer) => map.current.addControl({
+      onAdd(mapInstance) {
+        const container = document.createElement('div');
+        container.className = 'mapboxgl-ctrl mapboxgl-ctrl-group footprint-toggle-ctrl';
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.innerHTML = `<svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round">${layer.icon}</svg>`;
+        const hint = document.createElement('span');
+        hint.className = 'footprint-toggle-hint';
+        hint.textContent = layer.hint;
+        hint.hidden = true;
+        const refresh = () => renderFootprintToggle(button, hint, layer, Boolean(footprintsOnRef.current[layer.id]), mapInstance.getZoom());
+        button.addEventListener('click', () => {
+          footprintsOnRef.current[layer.id] = !footprintsOnRef.current[layer.id];
+          showFootprintLayer(mapInstance, layer, footprintsOnRef.current[layer.id], isSatelliteViewRef.current);
+          refresh();
+        });
+        mapInstance.on('zoomend', refresh);
+        refresh();
+        container.append(button, hint);
+        this.container = container;
+        return container;
+      },
+      onRemove() {
+        this.container?.remove();
+      },
+    }, 'top-left'));
     map.current.addControl(new mapboxgl.ScaleControl({
       maxWidth: 100,
       unit: 'imperial'

@@ -213,6 +213,38 @@ html:not(.route-dashboard) .site-navbar {
   line-height: 1;
 }
 
+.footprint-toggle-ctrl {
+  position: relative;
+  overflow: visible;
+}
+.footprint-toggle-ctrl button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #374151;
+}
+.mapboxgl-ctrl-group.footprint-toggle-ctrl button.is-active,
+.mapboxgl-ctrl-group.footprint-toggle-ctrl button.is-active:hover {
+  background: #1f2937;
+  color: #ffffff;
+}
+.footprint-toggle-hint {
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  white-space: nowrap;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: rgba(17, 24, 39, 0.85);
+  color: #ffffff;
+  font-size: 12px;
+  pointer-events: none;
+}
+.footprint-toggle-hint[hidden] {
+  display: none;
+}
+
 /* Dashboard: sit controls just to the right of the frosted filter sidebar (desktop) */
 @media (min-width: 769px) {
   .dashboard-map-area .mapboxgl-ctrl-top-left {

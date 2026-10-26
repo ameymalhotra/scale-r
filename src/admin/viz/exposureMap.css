@@ -21,6 +21,8 @@
     }
     h1 { margin: 8px 0 6px; font-size: 20px; font-weight: 650; }
     h2 { margin: 18px 0 6px; font-size: 13px; font-weight: 650; color: #fff; }
+    .more { margin-top: 18px; }
+    .more summary { font-size: 13px; font-weight: 650; color: #fff; cursor: pointer; margin-bottom: 6px; }
     h3 { margin: 0 0 4px; font-size: 13px; font-weight: 650; color: #fff; }
     p { margin: 0 0 10px; font-size: 13px; line-height: 1.5; color: #b8bec8; }
     b { color: #e6e8eb; }
@@ -36,9 +38,10 @@
     .readout { margin-top: 12px; }
     .readout .big { font-size: 30px; font-weight: 700; line-height: 1.1; }
     .readout .sub { font-size: 12px; color: #8b93a1; }
-    .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+    .stats { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 12px; }
     .stats div { padding: 10px 12px; border-radius: 10px; background: #141920; }
     .stats .n { font-size: 18px; font-weight: 700; }
+    .stats .nw { white-space: nowrap; }
     .stats .l { font-size: 11px; color: #8b93a1; line-height: 1.35; }
     .ramp { height: 10px; border-radius: 5px; margin-top: 6px; }
     .ramp-note { margin: 6px 0 0; font-size: 11px; line-height: 1.4; color: #8b93a1; }
@@ -69,5 +72,4 @@
     .pin-tip li { display: flex; gap: 8px; }
     .pin-tip li .sw { flex: none; width: 8px; height: 8px; margin-top: 5px; border-radius: 2px; }
     .pin-tip .mapboxgl-popup-tip { border-top-color: #141920; border-bottom-color: #141920; }
-    .toggle { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 13px; color: #b8bec8; cursor: pointer; }
 }

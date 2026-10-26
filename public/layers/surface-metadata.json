@@ -1,39 +1,35 @@
 {
   "sea-level-rise-4ft": {
-    "features": 267,
-    "bytes": 25598705,
     "source": "NOAA OCM FL_SE_slr_4_0ft",
     "scenario_ft": 4,
     "datum": "MHHW",
-    "simplification_m": 3,
-    "coordinate_precision_degrees": 1e-06
+    "simplification": "half a grid sample per zoom (about 2 m at zoom 14)",
+    "format": "vector-tiles",
+    "source_layer": "surface",
+    "bounds": [
+      -80.9,
+      25,
+      -80.1,
+      26
+    ],
+    "minzoom": 6,
+    "maxzoom": 14,
+    "tiles": 2656,
+    "bytes": 12898042,
+    "max_tile_bytes": 261953,
+    "features_across_zooms": 1153,
+    "extent": 4096,
+    "grid_samples_per_tile": 512,
+    "tile_buffer_samples": 16
   },
   "storm-surge-category-3": {
     "source": "Modelling Data from Web/tract-level/Physical Indicators/US_SLOSH_MOM_Inundation_v4_20260617/us_Category3_MOM_Inundation_HIGH.tif",
-    "format": "vector-tiles",
-    "source_layer": "surface",
-    "bounds": [
-      -80.9,
-      25,
-      -80.1,
-      26
-    ],
-    "minzoom": 6,
-    "maxzoom": 14,
-    "tiles": 2656,
-    "bytes": 69368240,
-    "max_tile_bytes": 325542,
-    "features_across_zooms": 1681779,
-    "resampling": "nearest",
-    "tile_pixels": 256,
-    "extent": 4096,
+    "display": "contour bands traced on a smoothed copy of the source",
+    "smoothing_sigma_source_pixels": 0.6,
     "category": 3,
     "tide": "high",
     "source_resolution_m": 10,
-    "units": "feet above ground"
-  },
-  "elevation": {
-    "source": "https://coast.noaa.gov/slrdata/DEMs/FL/FL_SE_GCS_3m_NAVDm_v3.tif",
+    "units": "feet above ground",
     "format": "vector-tiles",
     "source_layer": "surface",
     "bounds": [
@@ -45,15 +41,36 @@
     "minzoom": 6,
     "maxzoom": 14,
     "tiles": 2656,
-    "bytes": 51106765,
-    "max_tile_bytes": 222297,
-    "features_across_zooms": 1085899,
-    "resampling": "nearest",
-    "tile_pixels": 256,
+    "bytes": 50179123,
+    "max_tile_bytes": 349268,
+    "features_across_zooms": 7404,
     "extent": 4096,
+    "grid_samples_per_tile": 512,
+    "tile_buffer_samples": 16
+  },
+  "elevation": {
+    "source": "https://coast.noaa.gov/slrdata/DEMs/FL/FL_SE_GCS_3m_NAVDm_v3.tif",
+    "display": "contour bands traced on the bilinear-interpolated source",
     "units": "feet",
     "datum": "NAVD88",
-    "display_resolution_m": 10,
-    "source_resolution_m": 3
+    "display_resolution_m": 6,
+    "source_resolution_m": 3,
+    "format": "vector-tiles",
+    "source_layer": "surface",
+    "bounds": [
+      -80.9,
+      25,
+      -80.1,
+      26
+    ],
+    "minzoom": 6,
+    "maxzoom": 14,
+    "tiles": 2656,
+    "bytes": 81197607,
+    "max_tile_bytes": 318714,
+    "features_across_zooms": 7794,
+    "extent": 4096,
+    "grid_samples_per_tile": 512,
+    "tile_buffer_samples": 16
   }
 }

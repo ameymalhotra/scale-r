@@ -30,6 +30,7 @@ scripts/python/*
 !scripts/python/validate_map_surfaces.py
 !scripts/python/build_viz_tracts.py
 !scripts/python/build_viz_exposure.py
+!scripts/python/prepare_footprint_tiles.py
 !scripts/js/
 scripts/js/*
 !scripts/js/audit-performance.mjs
