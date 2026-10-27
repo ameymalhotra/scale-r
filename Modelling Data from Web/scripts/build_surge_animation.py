@@ -1,11 +1,11 @@
-"""Build the storm surge layer for the admin exposure animation (/admin/viz/exposure).
+"""Build the storm surge layer for the Exposure page (/exposure).
 
 Source (see surge_inspection.md): NHC National Storm Surge Hazard Map v4,
 reprocessed 06/2026, Maximum of MOMs, high tide, one uint8 GeoTIFF per
 hurricane category 1 to 5. Classes 1-21 are depth above ground in 1 ft bins,
 255 is nodata (on Miami-Dade land: not inundated), 99 is leveed area.
 
-Output, written next to slr.png / heat.png in src/admin/viz/data/:
+Output, written next to slr.png / heat.png in src/exposure/data/:
   surge.png   RGBA on the same extent and size as slr.png, rows in Web Mercator
               (Mapbox stretches image sources linearly in Mercator):
                 R = 40 * first category that floods the pixel (0 = dry through Cat 5)
@@ -42,7 +42,7 @@ BASE = Path(__file__).resolve().parent.parent
 REPO = BASE.parent
 SURGE_DIR = (BASE / "tract-level" / "Physical Indicators"
              / "US_SLOSH_MOM_Inundation_v4_20260617")
-VIZ_DATA = REPO / "src" / "admin" / "viz" / "data"
+VIZ_DATA = REPO / "src" / "exposure" / "data"
 PROJECTS_URL = ("https://mmlqltdcpsuxirbqhugw.supabase.co/storage/v1/object/public/"
                 "project-data/projects_merged_conf1.geojson")
 

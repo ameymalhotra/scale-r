@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, useLayoutEffect } from 'react';
-import { Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import { AdminAuthProvider, RequireAdmin } from './auth.jsx';
 import { DraftProvider } from './draftStore.jsx';
 import AdminLayout from './AdminLayout.jsx';
@@ -32,7 +32,7 @@ export default function AdminApp() {
               <Suspense fallback={<div className="admin-center" role="status">Loading map…</div>}>
                 <Routes>
                   <Route index element={<VizPage view="gap" />} />
-                  <Route path="exposure" element={<VizPage view="exposure" />} />
+                  <Route path="exposure" element={<Navigate to="/exposure" replace />} />
                 </Routes>
               </Suspense>
             </RequireAdmin>

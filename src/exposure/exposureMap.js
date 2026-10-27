@@ -20,12 +20,14 @@ const RESPONDS = {
   surge: ['Flooding', 'Coastal Hazards', 'Storms & Hurricanes', 'Multi-Hazard'],
   heat: ['Extreme Heat', 'Multi-Hazard'],
 };
-// Warm colors read against the blue water and purple surge, cool ones against the red heat.
+// Warm colors read against the blue water and purple surge, cool ones against the red heat;
+// slate for projects not yet reached stands out on the light base map.
 const PIN_COLORS = {
-  slr: { idle: '#dfe3e8', responds: '#ffb627', gap: '#ff3d81' },
-  surge: { idle: '#dfe3e8', responds: '#ffb627', gap: '#ff3d81' },
-  heat: { idle: '#dfe3e8', responds: '#3fd8ff', gap: '#b98cff' },
+  slr: { idle: '#64748b', responds: '#f59e0b', gap: '#e11d74' },
+  surge: { idle: '#64748b', responds: '#f59e0b', gap: '#e11d74' },
+  heat: { idle: '#64748b', responds: '#0891b2', gap: '#7c3aed' },
 };
+const FLASH_COLOR = '#fde047'; // a project the hazard has just reached
 // Hexagon footprints are fixed in meters, so a narrower set takes over when zoomed in.
 const COLUMN_LAYERS = [
   { id: 'project-columns', radiusM: 200, maxzoom: 11.5 },
@@ -97,7 +99,7 @@ const MODES = {
     start: 0,    intro: 'Watch ocean-connected water spread inland as sea level rises from today\'s high tide to 6 ft above it, over the county\'s land and the resilience projects built on it.',
     howto: 'Blue is land that would be under ocean-connected water at the level shown; darker blue floods first. The bright band is the land that has just flooded. Each column is a completed, ongoing or funded SCALE-R project. It stays short and gray while dry, then rises and flashes when the water reaches it, settling amber if the project addresses flooding, coastal hazards or storms, or pink if it was built for something else. The second counter tallies the projects inside the flooded area.',
     legend: { responds: 'Reached; addresses flooding, coastal hazards or storms', gap: 'Reached; built for another hazard', idle: 'Not yet reached' },
-    matching: { button: 'Flood & storm projects', noun: 'flood and storm', addresses: 'flood hazards' },
+    matching: { button: 'Flood & storm', noun: 'flood and storm', addresses: 'flood hazards' },
     caveat: 'These are water levels, not years. When Miami-Dade reaches each level depends on the emissions scenario (see NOAA\'s 2022 Sea Level Rise Technical Report); that timeline is not shown here. Low-lying areas not connected to the ocean are excluded. Shown on a 30 m grid; areas match the team\'s tract processing within 0.1%. Residents are ACS 2020–2024 counts placed with 2020 census blocks and spread evenly over each block\'s land, so they show where people live, not where they are during an event.',
     slider: { min: 0, max: SLR_MAX, step: 0.05 },
     duration: 14000,
@@ -115,7 +117,7 @@ const MODES = {
     intro: 'Watch hurricane storm surge spread inland as the storm strengthens from Category 1 to Category 5, over the county\'s land and the resilience projects built on it.',
     howto: 'Purple is land the surge would cover in a storm of the category shown; darker purple floods even in weaker storms. The bright band is the land that has just been added. Each column is a completed, ongoing or funded SCALE-R project. It stays short and gray while dry, then rises and flashes when the surge reaches it, settling amber if the project addresses flooding, coastal hazards or storms, or pink if it was built for something else. Hover a column for the surge depth there in a Category 5 storm.',
     legend: { responds: 'Reached; addresses flooding, coastal hazards or storms', gap: 'Reached; built for another hazard', idle: 'Not yet reached' },
-    matching: { button: 'Flood & storm projects', noun: 'flood and storm', addresses: 'flood or storm hazards' },
+    matching: { button: 'Flood & storm', noun: 'flood and storm', addresses: 'flood or storm hazards' },
     caveat: 'This is NHC\'s worst case for each category (the Maximum of MOMs): at every spot, the highest surge from thousands of hypothetical storms of that strength arriving at high tide. No single hurricane floods all of it at once. Waves, rainfall and river flooding are not included, and NHC intends the maps for community-level, not parcel-level, use. A few cells (under 0.2% of the flooded land) fall inside one category\'s envelope but not the next; they are kept flooded here. Shown on a 30 m grid from the 10 m source; land shares match the team\'s tract processing. Residents are ACS 2020–2024 counts placed with 2020 census blocks and spread evenly over each block\'s land, so they show where people live, not where they are during an event.',
     slider: { min: 0, max: SURGE_MAX, step: 0.02 },
     duration: 12000,
@@ -152,12 +154,13 @@ export function mount() {
   let removed = false;
   const map = new mapboxgl.Map({
     container: 'map',
-    style: 'mapbox://styles/mapbox/dark-v11',
+    style: 'mapbox://styles/mapbox/light-v11',
     center: [-80.3, 25.68],
     zoom: 9.7,
     pitch: 40,
     bearing: -12,
-    padding: { left: 360 },
+    // The control panel covers the left side on wide screens and the bottom on phones.
+    padding: window.innerWidth > 768 ? { left: 360 } : { bottom: window.innerHeight * 0.5 },
     antialias: true,
   });
   map.addControl(new mapboxgl.NavigationControl(), 'top-right');
@@ -211,7 +214,7 @@ export function mount() {
       const reveal = Math.max(0, Math.min(1, 1 + (level - ft) / 0.5)); // fades in over the half foot before its level
       // The newest water is drawn bright, then settles to its depth color.
       const fresh = level - ft < 0.6;
-      const color = fresh ? '#bdf1ff' : SLR_COLORS[Math.min(3, Math.floor(ft / 1.5))];
+      const color = fresh ? '#06b6d4' : SLR_COLORS[Math.min(3, Math.floor(ft / 1.5))];
       expr.push(v - 0.5, hexA(color, reveal * (fresh ? 0.95 : 0.8)));
     }
     return expr;
@@ -246,7 +249,7 @@ export function mount() {
       const at = cat - SURGE_LEAD;
       const reveal = Math.max(0, Math.min(1, 1 + (level - at) / 0.3));
       const fresh = level - at < 0.6;
-      const color = fresh ? '#efe6ff' : SURGE_COLORS[cat - 1];
+      const color = fresh ? '#d946ef' : SURGE_COLORS[cat - 1];
       expr.push(cat - 0.5, hexA(color, reveal * (fresh ? 0.95 : 0.8)));
     }
     return expr;
@@ -369,7 +372,7 @@ export function mount() {
   function pinColor() {
     const c = PIN_COLORS[mode];
     const reach = reachExpr();
-    const settle = (to) => ['interpolate', ['linear'], reach, 0, '#ffffff', 1, to];
+    const settle = (to) => ['interpolate', ['linear'], reach, 0, FLASH_COLOR, 1, to];
     return ['case', ['<', reach, 0], c.idle, ['get', `responds_${mode}`], settle(c.responds), settle(c.gap)];
   }
 
@@ -419,9 +422,14 @@ export function mount() {
   function legendHtml() {
     const c = PIN_COLORS[mode];
     const { legend } = MODES[mode];
-    // With only matching projects on the map there is nothing to show in the "another hazard" color.
-    return (onlyMatching ? ['responds', 'idle'] : ['responds', 'gap', 'idle'])
-      .map((k) => `<div><span class="sw${k === 'idle' ? ' idle' : ''}" style="background:${c[k]}"></span>${legend[k]}</div>`)
+    // With only matching projects on the map the "another hazard" row is dimmed, not removed,
+    // so the panel keeps its height when the filter changes.
+    return ['responds', 'gap', 'idle']
+      .map((k) => {
+        const cls = k === 'idle' ? 'sw idle' : 'sw';
+        const off = onlyMatching && k === 'gap' ? ' class="off"' : '';
+        return `<div${off}><span class="${cls}" style="background:${c[k]}"></span>${legend[k]}</div>`;
+      })
       .join('');
   }
 
@@ -638,13 +646,13 @@ export function mount() {
     map.addSource('exposure', { type: 'geojson', data: { type: 'FeatureCollection', features: exposureFeatures(blocks) } });
     map.addLayer({
       id: 'exposure', type: 'fill', source: 'exposure', layout: { visibility: 'none' },
-      paint: { 'fill-outline-color': 'rgba(14, 17, 22, 0.5)' },
+      paint: { 'fill-outline-color': 'rgba(255, 255, 255, 0.45)' },
     }, firstLabel);
     map.addSource('projects', { type: 'geojson', data: projects });
     // Flat alternative: a dark outline keeps each dot separate from the water or heat under it.
     map.addLayer({
       id: 'projects', type: 'circle', source: 'projects', layout: { visibility: 'none' },
-      paint: { 'circle-stroke-color': '#0e1116', 'circle-stroke-width': 1.2 },
+      paint: { 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 1.2 },
     });
     for (const { id, radiusM, ...zooms } of COLUMN_LAYERS) {
       map.addSource(id, {
@@ -684,32 +692,36 @@ export function mount() {
     setTimeout(() => { if (!removed) setPlaying(true); }, 800);
   });
 
-  document.querySelectorAll('[data-mode]').forEach((b) => b.addEventListener('click', () => setMode(b.dataset.mode)));
-  document.querySelectorAll('[data-view]').forEach((b) => b.addEventListener('click', () => setView(b.dataset.view)));
+  // Removed on cleanup: the page can be mounted again on the same markup (and React mounts twice in development).
+  const controller = new AbortController();
+  const listening = { signal: controller.signal };
+  document.querySelectorAll('[data-mode]').forEach((b) => b.addEventListener('click', () => setMode(b.dataset.mode), listening));
+  document.querySelectorAll('[data-view]').forEach((b) => b.addEventListener('click', () => setView(b.dataset.view), listening));
   document.querySelectorAll('[data-pins]').forEach((b) => b.addEventListener('click', () => {
     pinStyle = b.dataset.pins;
     document.querySelectorAll('[data-pins]').forEach((x) => x.classList.toggle('on', x === b));
     showPins();
-  }));
+  }, listening));
   document.querySelectorAll('[data-show]').forEach((b) => b.addEventListener('click', () => {
     onlyMatching = b.dataset.show === 'matching';
     document.querySelectorAll('[data-show]').forEach((x) => x.classList.toggle('on', x === b));
     $('legend').innerHTML = legendHtml();
     render();
-  }));
+  }, listening));
   $('infra').addEventListener('change', (e) => {
     infraFilter = e.target.value;
     render();
-  });
-  $('play').addEventListener('click', () => setPlaying(!playing));
+  }, listening);
+  $('play').addEventListener('click', () => setPlaying(!playing), listening);
   slider.addEventListener('input', () => {
     setPlaying(false);
     value = Number(slider.value);
     render();
-  });
+  }, listening);
 
   return () => {
     removed = true;
+    controller.abort();
     map.remove();
   };
 }
