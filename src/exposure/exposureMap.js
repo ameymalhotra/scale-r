@@ -1,5 +1,9 @@
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
+// Small per-level statistics, bundled so the panel can fill in before the map has loaded.
+import slr from './data/slr.json';
+import surge from './data/surge.json';
+import heat from './data/heat.json';
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
 
@@ -171,9 +175,9 @@ export function mount() {
   let mode = 'slr';
   let value = 0;
   let playing = false;
-  let slrStats = [];
-  let surgeStats = [];
-  let heatMeta;
+  const slrStats = slr.stats;
+  const surgeStats = surge.stats;
+  const heatMeta = heat;
   let pinStyle = 'columns';
   let view = 'hazard'; // or 'people': census blocks colored by residents exposed, hazard hidden
   let projectCounts = null; // { reached, responds, shown } for the current frame, from the sampled projects
@@ -226,14 +230,14 @@ export function mount() {
   }
 
   function renderSlr(level) {
-    map.setPaintProperty('slr', 'raster-color', slrColor(level));
+    if (map.getLayer('slr')) map.setPaintProperty('slr', 'raster-color', slrColor(level));
     const s = slrStats[Math.max(0, Math.min(slrStats.length - 1, Math.floor(level * 2 + 1e-6)))];
     $('big').textContent = `+${level.toFixed(1)} ft`;
     $('sub').textContent = 'above today\'s mean higher high water (MHHW)';
     if (s) {
       peopleStat(s.people, s.pct_people, `live on land under ocean-connected water at +${s.ft.toFixed(1)} ft`,
         `${s.km2.toLocaleString()} km² of land (${s.pct_land}%)`);
-      projectStat('inside the flooded area', s.projects);
+      projectStat('inside the flooded area');
     }
   }
 
@@ -260,7 +264,7 @@ export function mount() {
   }
 
   function renderSurge(level) {
-    map.setPaintProperty('surge', 'raster-color', surgeColor(level));
+    if (map.getLayer('surge')) map.setPaintProperty('surge', 'raster-color', surgeColor(level));
     const cat = surgeCategory(level);
     const s = surgeStats[cat - 1];
     $('big').textContent = cat ? `Category ${cat}` : 'No storm surge';
@@ -271,7 +275,7 @@ export function mount() {
     } else {
       peopleStat(0, 0, 'live inside the surge zone');
     }
-    projectStat('inside the surge zone', s?.projects ?? 0);
+    projectStat('inside the surge zone');
   }
 
   function depthLabel(depthClass) {
@@ -305,19 +309,14 @@ export function mount() {
   }
 
   function renderHeat(threshold) {
-    map.setPaintProperty('heat', 'raster-color', heatColor(threshold));
+    if (map.getLayer('heat')) map.setPaintProperty('heat', 'raster-color', heatColor(threshold));
     const share = heatMeta.share_at_or_above[String(Math.round(threshold))] ?? 0;
     $('big').textContent = `≥ ${threshold.toFixed(0)} °F`;
     $('sub').textContent = `surfaces at or above this temperature are red · county median ${heatMeta.percentiles_f['50']} °F`;
     const people = heatMeta.people_at_or_above[String(Math.round(threshold))] ?? 0;
     peopleStat(people, Math.round((1000 * people) / heatMeta.population_total) / 10,
       'live where the ground is at or above this temperature', `${share}% of land`);
-    if (projectCounts) {
-      projectStat('on surfaces this hot');
-    } else {
-      $('stat2').textContent = `${heatMeta.percentiles_f['50']} °F`;
-      $('stat2-l').textContent = `county median (95th percentile ${heatMeta.percentiles_f['95']} °F)`;
-    }
+    projectStat('on surfaces this hot');
   }
 
   // ---- Projects -------------------------------------------------------------
@@ -341,10 +340,11 @@ export function mount() {
   }
 
   /** Second counter: projects the hazard has reached, out of those on the map. */
-  function projectStat(where, fallback) {
+  function projectStat(where) {
     if (!projectCounts) {
-      $('stat2').textContent = fmtInt(fallback);
-      $('stat2-l').textContent = `SCALE-R projects ${where}`;
+      // Same two-line shape as the loaded counter, so the card does not change size.
+      $('stat2').innerHTML = '<span class="skel" style="width: 7.5em"></span>';
+      $('stat2-l').innerHTML = '<span class="skel"></span><span class="skel" style="width: 60%"></span>';
       return;
     }
     const { reached, responds, shown, cost } = projectCounts;
@@ -539,7 +539,7 @@ export function mount() {
     setPlaying(false);
     const m = MODES[mode];
     document.querySelectorAll('[data-mode]').forEach((b) => b.classList.toggle('on', b.dataset.mode === mode));
-    for (const id of Object.keys(MODES)) map.setLayoutProperty(id, 'visibility', id === mode ? 'visible' : 'none');
+    showHazard();
     Object.assign(slider, m.slider);
     // Sea level and surge start dry; heat starts at the hottest threshold.
     value = m.start;
@@ -552,6 +552,12 @@ export function mount() {
     $('source').innerHTML = sourceHtml(m.source);
     showRamp();
     render();
+  }
+
+  function showHazard() {
+    for (const id of Object.keys(MODES)) {
+      if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', id === mode ? 'visible' : 'none');
+    }
   }
 
   function setPlaying(on) {
@@ -580,16 +586,28 @@ export function mount() {
     requestAnimationFrame(step);
   }
 
+  // Downloads start right away, in parallel with the base map. Population blocks are large and
+  // only needed for the people view, so the projects never wait for them.
+  const projectsReady = Promise.all([
+    fetch(PROJECTS_URL).then((r) => r.json()),
+    rasterSampler(new URL('./data/slr.png', import.meta.url).href, slr.coordinates),
+    rasterSampler(new URL('./data/surge.png', import.meta.url).href, surge.coordinates),
+    rasterSampler(new URL('./data/heat.png', import.meta.url).href, heat.coordinates),
+  ]);
+  const blocksReady = fetch(new URL('./data/exposure_blocks.json', import.meta.url)).then((r) => r.json());
+  const popup = new mapboxgl.Popup({ closeButton: false, closeOnClick: false, className: 'pin-tip' });
+  const projectLayers = ['projects', ...COLUMN_LAYERS.map((l) => l.id)];
+
+  // Text, counters and legend are filled in now; the map catches up as its data arrives.
+  setMode('slr');
+  setControlsEnabled(false);
+
+  function setControlsEnabled(on) {
+    $('play').disabled = !on;
+    slider.disabled = !on;
+  }
+
   map.on('load', async () => {
-    const [slr, surge, heat] = await Promise.all([
-      fetch(new URL('./data/slr.json', import.meta.url)).then((r) => r.json()),
-      fetch(new URL('./data/surge.json', import.meta.url)).then((r) => r.json()),
-      fetch(new URL('./data/heat.json', import.meta.url)).then((r) => r.json()),
-    ]);
-    if (removed) return;
-    slrStats = slr.stats;
-    surgeStats = surge.stats;
-    heatMeta = heat;
     const firstLabel = map.getStyle().layers.find((l) => l.type === 'symbol')?.id;
 
     map.addSource('heat', { type: 'image', url: new URL('./data/heat.png', import.meta.url).href, coordinates: heat.coordinates });
@@ -610,17 +628,31 @@ export function mount() {
 
     map.addSource('slr', { type: 'image', url: new URL('./data/slr.png', import.meta.url).href, coordinates: slr.coordinates });
     map.addLayer({
-      id: 'slr', type: 'raster', source: 'slr',
+      id: 'slr', type: 'raster', source: 'slr', layout: { visibility: 'none' },
       paint: { 'raster-color': slrColor(0), 'raster-color-range': [0, 1], 'raster-resampling': 'nearest', 'raster-fade-duration': 0 },
     }, firstLabel);
+    showHazard();
+    setView(view);
+    setControlsEnabled(true);
 
-    const [projects, blocks, slrAt, surgeAt, heatAt] = await Promise.all([
-      fetch(PROJECTS_URL).then((r) => r.json()),
-      fetch(new URL('./data/exposure_blocks.json', import.meta.url)).then((r) => r.json()),
-      rasterSampler(new URL('./data/slr.png', import.meta.url).href, slr.coordinates),
-      rasterSampler(new URL('./data/surge.png', import.meta.url).href, surge.coordinates),
-      rasterSampler(new URL('./data/heat.png', import.meta.url).href, heat.coordinates),
-    ]);
+    blocksReady.then((blocks) => {
+      if (removed) return;
+      // Under the labels and the projects, so the columns stay on top of the people layer.
+      map.addSource('exposure', { type: 'geojson', data: { type: 'FeatureCollection', features: exposureFeatures(blocks) } });
+      map.addLayer({
+        id: 'exposure', type: 'fill', source: 'exposure', layout: { visibility: view === 'people' ? 'visible' : 'none' },
+        paint: { 'fill-outline-color': 'rgba(255, 255, 255, 0.45)' },
+      }, firstLabel);
+      map.on('mousemove', 'exposure', (e) => {
+        // Projects drawn over a hexagon take the tooltip.
+        if (map.queryRenderedFeatures(e.point, { layers: projectLayers.filter((id) => map.getLayer(id)) }).length) return;
+        popup.setLngLat(e.lngLat).setHTML(exposureTooltip(e.features[0].properties)).addTo(map);
+      });
+      map.on('mouseleave', 'exposure', () => popup.remove());
+      renderExposure();
+    });
+
+    const [projects, slrAt, surgeAt, heatAt] = await projectsReady;
     if (removed) return;
     const { min_f: lo, max_f: hi } = heat.encoding;
     projects.features = projects.features.filter((f) => f.properties.Project__1 !== 'Planned');
@@ -642,12 +674,6 @@ export function mount() {
     }
     projectFeatures = projects.features.map((f) => f.properties);
 
-    // Under the projects, so the columns stay on top of the people layer.
-    map.addSource('exposure', { type: 'geojson', data: { type: 'FeatureCollection', features: exposureFeatures(blocks) } });
-    map.addLayer({
-      id: 'exposure', type: 'fill', source: 'exposure', layout: { visibility: 'none' },
-      paint: { 'fill-outline-color': 'rgba(255, 255, 255, 0.45)' },
-    }, firstLabel);
     map.addSource('projects', { type: 'geojson', data: projects });
     // Flat alternative: a dark outline keeps each dot separate from the water or heat under it.
     map.addLayer({
@@ -668,14 +694,6 @@ export function mount() {
       });
     }
 
-    const popup = new mapboxgl.Popup({ closeButton: false, closeOnClick: false, className: 'pin-tip' });
-    const projectLayers = ['projects', ...COLUMN_LAYERS.map((l) => l.id)];
-    map.on('mousemove', 'exposure', (e) => {
-      // Projects drawn over a hexagon take the tooltip.
-      if (map.queryRenderedFeatures(e.point, { layers: projectLayers.filter((id) => map.getLayer(id)) }).length) return;
-      popup.setLngLat(e.lngLat).setHTML(exposureTooltip(e.features[0].properties)).addTo(map);
-    });
-    map.on('mouseleave', 'exposure', () => popup.remove());
     for (const layer of projectLayers) {
       map.on('mousemove', layer, (e) => {
         map.getCanvas().style.cursor = 'pointer';
@@ -688,8 +706,8 @@ export function mount() {
     }
 
     showPins();
-    setMode('slr');
-    setTimeout(() => { if (!removed) setPlaying(true); }, 800);
+    render();
+    if (!playing) setTimeout(() => { if (!removed && !playing) setPlaying(true); }, 800);
   });
 
   // Removed on cleanup: the page can be mounted again on the same markup (and React mounts twice in development).
