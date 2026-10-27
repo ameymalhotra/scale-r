@@ -11,6 +11,7 @@ import Dashboard from './pages/Dashboard.jsx';
 // which a Suspense fallback cannot reproduce without changing what the user
 // sees while it loads. The secondary pages below are never the first paint of
 // a measured route, so splitting them is free.
+const Exposure = lazy(() => import('./pages/Exposure.jsx'));
 const Team = lazy(() => import('./pages/Team.jsx'));
 const Partners = lazy(() => import('./pages/Partners.jsx'));
 const TechnicalDocs = lazy(() => import('./pages/TechnicalDocs.jsx'));
@@ -27,6 +28,11 @@ const ROUTE_META = {
     title: 'Dashboard',
     description:
       'Explore SCALE-R’s interactive map of climate resilience projects, infrastructure types, and disaster-risk layers across Miami-Dade County.',
+  },
+  '/exposure': {
+    title: 'Exposure',
+    description:
+      'Watch sea level rise, storm surge and surface heat spread across Miami-Dade, and see the residents and resilience projects each level reaches.',
   },
   '/team': {
     title: 'Team',
@@ -73,7 +79,8 @@ export default function App() {
   useLayoutEffect(() => {
     document.documentElement.classList.toggle(
       'route-dashboard',
-      location.pathname.startsWith('/dashboard'),
+      // Full-window map pages: no document scroll.
+      location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/exposure'),
     );
   }, [location.pathname]);
 
@@ -99,6 +106,7 @@ export default function App() {
             <Route path="/" element={<Navigate to="/about" replace />} />
             <Route path="/about" element={<About />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/exposure" element={<Exposure />} />
             <Route path="/team" element={<Team />} />
             <Route path="/partners" element={<Partners />} />
             <Route path="/docs" element={<TechnicalDocs />} />

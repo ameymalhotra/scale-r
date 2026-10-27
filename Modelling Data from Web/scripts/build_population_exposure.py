@@ -1,4 +1,4 @@
-"""Add residents exposed to the admin exposure animation stats (/admin/viz/exposure).
+"""Add residents exposed to the Exposure page stats (/exposure).
 
 Counts are read off the animation images themselves (slr.png, surge.png,
 heat.png), so they match what the map draws at every step.
@@ -21,7 +21,7 @@ Inputs (git-ignored, in boundaries/):
     https://www2.census.gov/geo/tiger/TIGER2020/TABBLOCK20/tl_2020_12_tabblock20.zip
   tl_2024_12086_areawater.zip
 
-Writes, in src/admin/viz/data/:
+Writes, in src/exposure/data/:
   slr.json    people, pct_people on each stats entry
   surge.json  people, pct_people on each stats entry
   heat.json   people_at_or_above {"80": n, ...}
@@ -50,7 +50,7 @@ from scaler_projects import BOUNDARY_DIR  # noqa: E402
 from allocation import load_population  # noqa: E402
 
 BASE = Path(__file__).resolve().parent.parent
-VIZ_DATA = BASE.parent / "src" / "admin" / "viz" / "data"
+VIZ_DATA = BASE.parent / "src" / "exposure" / "data"
 BLOCKS_ZIP = BOUNDARY_DIR / "tl_2020_12_tabblock20.zip"
 MERC = "EPSG:3857"
 

@@ -1,0 +1,105 @@
+/* Exposure page. Everything is nested under .viz-exposure so these styles never reach the rest
+   of the site. Colors, glass panels and type follow the dashboard: dark slate text on frosted
+   white, with the site's green and orange as accents. */
+.viz-exposure {
+    --ink: #2c3e50;
+    --ink-strong: #1b3a4b;
+    --body: #445461;
+    --muted: #6b7783;
+    --green: #01321e;
+    --orange: #e8a060;
+    --um-orange: #f47321; /* the About page's highlight orange, for the timeline */
+    --card: rgba(255, 255, 255, 0.9);
+    --line: rgba(27, 58, 75, 0.12);
+
+    * { box-sizing: border-box; }
+    & {
+      position: relative; flex: 1; min-height: 0; width: 100%; height: 100%; overflow: hidden;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: var(--ink); background: #eef1f3;
+    }
+    #map { position: absolute; inset: 0; }
+    a { color: #3498db; }
+    .panel {
+      position: absolute; top: 16px; left: 16px; width: 340px; max-height: calc(100% - 32px); overflow: hidden auto;
+      padding: 18px 20px; border-radius: 16px; z-index: 2;
+      /* More opaque than the dashboard's glass: the hazard colors behind it are much brighter. */
+      background: rgba(255, 255, 255, 0.86); backdrop-filter: blur(28px) saturate(180%); -webkit-backdrop-filter: blur(28px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.55);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.14), inset 0 0 0 1px rgba(255, 255, 255, 0.65);
+      scrollbar-width: thin; scrollbar-color: rgba(27, 58, 75, 0.25) transparent;
+    }
+    h1 { margin: 0 0 6px; font-size: 21px; font-weight: 700; color: var(--ink-strong); }
+    h2 { margin: 22px 0 0; font-size: 15px; font-weight: 600; color: var(--ink); }
+    .more { margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--line); }
+    .more + .more { margin-top: 12px; }
+    .more summary { font-size: 14px; font-weight: 600; color: var(--ink); cursor: pointer; }
+    .more[open] summary { margin-bottom: 8px; }
+    h3 { margin: 0 0 4px; font-size: 13px; font-weight: 650; color: var(--ink); }
+    p { margin: 0 0 10px; font-size: 13px; line-height: 1.55; color: var(--body); }
+    b { color: var(--ink-strong); }
+    /* Segmented controls: equal-width buttons, one weight for every state so labels never shift. */
+    .seg {
+      display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 4px;
+      margin-top: 12px; padding: 3px; border-radius: 11px;
+      background: rgba(27, 58, 75, 0.05); border: 1px solid var(--line);
+    }
+    .seg button {
+      padding: 8px 4px; border: 0; border-radius: 8px; background: transparent; color: var(--body);
+      font: inherit; font-size: 12.5px; font-weight: 500; line-height: 1.2; white-space: nowrap; cursor: pointer;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+    .seg button:hover { background: rgba(1, 50, 30, 0.07); color: var(--ink-strong); }
+    .seg button.on { background: var(--green); color: #fff; box-shadow: 0 1px 3px rgba(1, 50, 30, 0.25); }
+    .player { display: flex; align-items: center; gap: 12px; margin-top: 16px; }
+    .play {
+      flex: none; width: 40px; height: 40px; border-radius: 50%; border: 0; cursor: pointer;
+      background: var(--um-orange); color: #fff; font-size: 15px; box-shadow: 0 2px 8px rgba(244, 115, 33, 0.3);
+    }
+    .play:hover { background: #d9611a; }
+    input[type=range] { flex: 1; accent-color: var(--um-orange); }
+    .readout { margin-top: 12px; }
+    .readout .big { font-size: 30px; font-weight: 700; line-height: 1.1; color: var(--ink-strong); }
+    .readout .sub { font-size: 12px; color: var(--muted); }
+    .stats { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 12px; }
+    .stats > div { padding: 10px 12px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); }
+    .stats .n { font-size: 19px; font-weight: 700; color: var(--ink-strong); }
+    .stats .nw { white-space: nowrap; }
+    .stats .l { font-size: 11.5px; color: var(--body); line-height: 1.4; }
+    .ramp { height: 10px; border-radius: 5px; margin-top: 12px; }
+    .ramp-note { margin: 8px 0 0; font-size: 11.5px; line-height: 1.45; color: var(--body); }
+    .ramp-note:empty { display: none; }
+    .ramp-labels { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 3px; }
+    .src {
+      margin-top: 10px; padding: 12px 14px; border-radius: 12px; background: var(--card);
+      border: 1px solid var(--line); font-size: 12px; line-height: 1.5; color: var(--body);
+    }
+    .src .kicker { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--green); font-weight: 700; margin-bottom: 4px; }
+    .src dl { display: grid; grid-template-columns: 76px 1fr; gap: 3px 10px; margin: 8px 0 0; }
+    .src dt { color: var(--muted); }
+    .src dd { margin: 0; color: var(--ink); }
+    .caveat { margin-top: 8px; padding-left: 10px; border-left: 3px solid var(--orange); color: var(--body); font-size: 12px; line-height: 1.5; }
+    .field { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 12px 0; font-size: 13px; color: var(--body); }
+    .field select {
+      flex: 1; max-width: 170px; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.85); color: var(--ink); font: inherit; font-size: 13px;
+    }
+    .legend { display: grid; gap: 6px; margin-bottom: 4px; font-size: 12px; color: var(--body); }
+    .legend div { display: flex; align-items: flex-start; gap: 8px; line-height: 16px; }
+    .legend .sw { flex: none; width: 10px; height: 16px; border-radius: 2px; box-shadow: 0 0 0 1.5px #ffffff; }
+    .legend .sw.idle { height: 6px; margin-top: 5px; }
+    .legend .off { opacity: 0.35; }
+    .pin-tip .mapboxgl-popup-content {
+      padding: 8px 10px; border-radius: 10px; background: rgba(255, 255, 255, 0.96); color: var(--ink);
+      font: 12px/1.45 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    }
+    .pin-tip .muted { color: var(--muted); }
+    .pin-tip .stack-head { margin-bottom: 6px; color: var(--muted); }
+    .pin-tip ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; max-width: 280px; }
+    .pin-tip li { display: flex; gap: 8px; }
+    .pin-tip li .sw { flex: none; width: 8px; height: 8px; margin-top: 5px; border-radius: 2px; }
+    .pin-tip .mapboxgl-popup-tip { border-top-color: rgba(255, 255, 255, 0.96); border-bottom-color: rgba(255, 255, 255, 0.96); }
+
+    @media (max-width: 768px) {
+      .panel { top: auto; bottom: 12px; left: 12px; right: 12px; width: auto; max-height: 55%; padding: 14px 16px; }
+    }
+}

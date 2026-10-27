@@ -1,5 +1,5 @@
 """
-Build the exposure-animation layers for the admin draft exposure animations (src/admin/viz).
+Build the exposure-animation layers for the Exposure page (src/exposure).
 
   slr   NOAA OCM ocean-connected inundation, 0-6 ft above MHHW in half-foot
         steps, rasterised at 30 m over Miami-Dade land. Each pixel stores the
@@ -24,7 +24,7 @@ import numpy as np
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
-OUT = ROOT / "src" / "admin" / "viz" / "data"
+OUT = ROOT / "src" / "exposure" / "data"
 TRACTS = ROOT / "public" / "femaindex-4326.geojson"
 SLR_GPKG = ROOT / "Modelling Data from Web/tract-level/Physical Indicators/FL_SE_slr_data_dist/FL_SE_slr_final_dist.gpkg"
 LST_TIF = ROOT / "output/lst/lst_composite_f.tif"
