@@ -25,7 +25,7 @@ const ROUTE_META = {
       'SCALE-R is an NSF-funded University of Miami initiative that maps coastal adaptation interventions and models disaster risk reduction across Miami-Dade County.',
   },
   '/dashboard': {
-    title: 'Dashboard',
+    title: 'Investment',
     description:
       'Explore SCALE-R’s interactive map of climate resilience projects, infrastructure types, and disaster-risk layers across Miami-Dade County.',
   },
