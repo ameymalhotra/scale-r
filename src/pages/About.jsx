@@ -828,7 +828,7 @@ export default function About() {
           <div className="about-footer-col">
             <h3 className="about-footer-heading">Navigation</h3>
             <Link to="/about">About the project</Link>
-            <Link to="/dashboard">Dashboard</Link>
+            <Link to="/dashboard">Investment</Link>
             <Link to="/team">Team</Link>
           </div>
           <div className="about-footer-col">
