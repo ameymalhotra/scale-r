@@ -42,14 +42,14 @@ def _num(value: str | None) -> float | None:
 
 
 def main() -> None:
-    invest = read_csv(MODEL / "tract_investment.csv", [
+    invest = read_csv(MODEL / "data/processed/investment/tract_investment.csv", [
         "population", "investment_total", "investment_per_capita", "project_count",
         "investment_type_gray", "investment_type_green", "investment_type_blue", "investment_type_hybrid",
     ])
-    slr = read_csv(MODEL / "slr_tract.csv", ["slr_3ft_area_share"])
-    surge = read_csv(MODEL / "surge_tract.csv", ["surge_cat3_area_share"])
+    slr = read_csv(MODEL / "data/processed/hazards/slr_tract.csv", ["slr_3ft_area_share"])
+    surge = read_csv(MODEL / "data/processed/hazards/surge_tract.csv", ["surge_cat3_area_share"])
     nri = read_csv(ROOT / "ols_tract_data_enriched.csv", ["RISK_SCORE", "EAL_SCORE", "SOVI_SCORE"])
-    svi = read_csv(MODEL / "tract_analysis.csv", ["EP_POV150"])
+    svi = read_csv(MODEL / "data/processed/analysis/tract_analysis.csv", ["EP_POV150"])
 
     features = []
     for feat in json.load(open(TRACTS))["features"]:

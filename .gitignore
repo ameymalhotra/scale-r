@@ -79,7 +79,17 @@ __pycache__/
 .claude/
 .serena/
 
-# Raw downloaded datasets (9 GB, files over GitHub's 100 MB limit); see DATA_PROCESSING.md for sources
+# Raw downloaded datasets (9 GB, files over GitHub's 100 MB limit); see reports/data/DATA_PROCESSING.md for sources
+Modelling Data from Web/data/raw/boundaries/
+Modelling Data from Web/data/raw/social/
+Modelling Data from Web/data/raw/physical/
+# Analysis outputs, and the processed files that used to live in output/ (kept ignored, as before)
+Modelling Data from Web/outputs/
+Modelling Data from Web/archive/output_part1_tables/
+Modelling Data from Web/data/processed/investment/allocation_audit_*.csv
+Modelling Data from Web/data/processed/investment/project_join_keys.csv
+Modelling Data from Web/data/processed/analysis/variable_dictionary.csv
+# Pre-reorganization paths (5 Nov 2026), kept so nothing surfaces if an old copy reappears
 Modelling Data from Web/tract-level/
 Modelling Data from Web/block-group-level/
 Modelling Data from Web/boundaries/

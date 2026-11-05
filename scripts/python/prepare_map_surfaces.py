@@ -38,8 +38,8 @@ OUT = ROOT / 'public/layers'
 CACHE = Path('/private/tmp/scale-r-map-surfaces')
 METRIC = 'EPSG:6346'
 DEM_URL = 'https://coast.noaa.gov/slrdata/DEMs/FL/FL_SE_GCS_3m_NAVDm_v3.tif'
-SLR_PATH = BASE / 'tract-level/Physical Indicators/FL_SE_slr_data_dist/FL_SE_slr_final_dist.gpkg'
-SURGE_PATH = BASE / 'tract-level/Physical Indicators/US_SLOSH_MOM_Inundation_v4_20260617/us_Category3_MOM_Inundation_HIGH.tif'
+SLR_PATH = BASE / 'data/raw/physical/sea_level_rise/FL_SE_slr_data_dist/FL_SE_slr_final_dist.gpkg'
+SURGE_PATH = BASE / 'data/raw/physical/storm_surge/US_SLOSH_MOM_Inundation_v4_20260617/us_Category3_MOM_Inundation_HIGH.tif'
 ELEVATION_LABELS = ['Below 0 ft', '0–2 ft', '2–4 ft', '4–6 ft', '6–10 ft', '10–20 ft', '20+ ft']
 ELEVATION_BREAKS_FT = [0, 2, 4, 6, 10, 20]
 DEM_FACTOR = 2  # read the DEM's 2x overview (~6 m) rather than all 3 m pixels
@@ -304,7 +304,7 @@ def write_tiles(name, features, county, metadata, clipped=False):
 
 
 def county_and_bounds():
-    tracts = gpd.read_file(f"zip://{BASE / 'boundaries/tl_2024_12_tract.zip'}")
+    tracts = gpd.read_file(f"zip://{BASE / 'data/raw/boundaries/tl_2024_12_tract.zip'}")
     tracts = tracts[tracts.COUNTYFP == '086']
     county = tracts.to_crs(METRIC).geometry.union_all()
     prepare(county)
