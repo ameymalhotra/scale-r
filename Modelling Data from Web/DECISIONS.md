@@ -1,0 +1,1345 @@
+# Decision log
+
+**Rule: every new decision gets an entry here at the time it is made.** Add it
+under its topic with the next free number. Never renumber or delete an entry.
+If a decision is reversed, add a new entry that says which one it replaces,
+and change the old entry's status to "Replaced by D-xxx".
+
+This log exists so the methods section of a paper can be written from it.
+Each entry has the same ten fields. Dates are when the decision was made. Where
+only the report date is known, the date reads "before <date>".
+
+Who decided:
+- **Professor Paharaj**: the files say the professor set, approved or chose
+  it.
+- **Amey, confirmed by professor**: proposed by Amey and approved.
+- **Amey**: made in the analysis.
+
+Where a file records a decision without naming who made it, the entry says
+"(not recorded)" and gives the most likely owner.
+
+Backfilled on 5 November 2026 from:
+- `DATA_PROCESSING.md`;
+- every report in this folder;
+- the prompts in `prompts/`;
+- the scripts.
+
+## Contents
+
+| Topic | Entries |
+|---|---|
+| Project data | D-001 to D-006 |
+| Geography | D-007 to D-014 |
+| Social indicators | D-015 to D-026 |
+| Physical indicators | D-027 to D-033 |
+| Population exposure | D-034 to D-044, D-069 |
+| Investment measures | D-045 to D-050 |
+| Analysis methods | D-051 to D-060, D-067 |
+| Project organization | D-061 to D-066, D-068, D-070 |
+| Machine learning | to be added, from D-071 |
+
+---
+
+## Project data
+
+### D-001. One project file
+
+- Date: before 11 Sep 2026. Status: Final. Decided by: Amey.
+- What happened: The project inventory looked for every file that could hold
+  project records.
+- What is wrong: Nothing, once confirmed. Without the check, an old export
+  could have been mixed in.
+- How we are fixing it: Use `SCALE-R_Database.csv` as the only source of
+  projects. It is the only non-census file in the folder.
+- Decision: `SCALE-R_Database.csv` (1,664 projects) is the single project
+  source.
+- Reason: One file means one set of costs, statuses and scale tags.
+- Evidence: `project_data_profile.md`, Step 1.
+- Affects: Every investment table.
+
+### D-002. Status filter
+
+- Date: before 12 Sep 2026. Status: Final. Decided by: Amey (not recorded;
+  the same filter is restated in prompt 22 as the rule for the project).
+- What happened: Projects carry a status: Completed, Funded, Ongoing or
+  Planned.
+- What is wrong: Planned projects have no committed money. Counting them
+  would treat intentions as investment.
+- How we are fixing it: Keep only Completed, Funded and Ongoing projects.
+- Decision: 1,405 of 1,664 projects ($8,553,271,609.50) are in scope. The 259
+  Planned projects are excluded from every investment measure.
+- Reason: Only committed or spent money is investment. Planned projects are
+  kept apart as the "future" set for the machine learning work (prompt 22).
+- Evidence: `INVESTMENT_TABLES.md` (Scope); `scripts/01_projects/build_investment_tables.py`;
+  `prompts/claude_code_prompt_22_ml_scenario_module.md` (Rules).
+- Affects: `tract_investment.csv`, `blockgroup_investment.csv`,
+  `tract_analysis.csv`, `blockgroup_analysis.csv`, the ML training set.
+
+### D-003. Allocation rules
+
+- Date: before 12 Sep 2026. Status: Final. Decided by: Professor Paharaj.
+- What happened: Each project has a scale tag (parcel, neighborhood,
+  corridor, municipality, county) and a point location.
+- What is wrong: A point misstates where county-wide or city-wide money goes.
+  Putting a county project's full cost on the tract under its pin would be
+  wrong.
+- How we are fixing it:
+  - Parcel, neighborhood and corridor projects go whole to the unit
+    containing the point.
+  - Municipality projects are spread by population across that
+    municipality's units.
+  - County projects are spread by population across all 707 tracts or 1,843
+    block groups.
+- Decision: The professor's scale classification is used exactly as given;
+  no scale tag is reclassified.
+- Reason: The scale tag is the professor's call. Population weighting is the
+  simplest neutral rule for money with no single location.
+- Evidence: `INVESTMENT_TABLES.md` (Allocation rules); audit ledgers
+  `data/processed/investment/allocation_audit_tract.csv` and `_bg.csv`, which reconcile to the
+  dollar.
+- Affects: Every investment outcome. It is also why jurisdiction effects are
+  partly built in (D-048).
+
+### D-004. County-tagged projects with a municipal jurisdiction
+
+- Date: before 12 Sep 2026. Status: Final. Decided by: Amey.
+- What happened: Some county-tagged projects name a municipality as their
+  jurisdiction: Cutler Bay, Miami Beach, Sunny Isles Beach, and 2 SFWMD
+  projects.
+- What is wrong: The two fields disagree.
+- How we are fixing it: The scale tag drives allocation, so these are spread
+  county-wide.
+- Decision: Used as given, not corrected.
+- Reason: Correcting them would mean reclassifying the professor's scale
+  tags (D-003).
+- Evidence: `INVESTMENT_TABLES.md`; `project_data_profile.md` (SFWMD is not a
+  municipality).
+- Affects: County-path dollars.
+
+### D-005. Jurisdiction name normalization
+
+- Date: before 12 Sep 2026. Status: Final. Decided by: Amey.
+- What happened: The project file runs some names together (`MiamiBeach`) and
+  spells two differently from TIGER (`Opa-Locka`, `Indian Creek Village`).
+- What is wrong: The names would not match the TIGER places, and those
+  projects would fail to allocate.
+- How we are fixing it: Normalize names to TIGER spelling. Nothing is
+  reclassified.
+- Decision: All 34 municipality names resolve after spelling normalization.
+- Reason: It is a spelling fix, not a judgement.
+- Evidence: `INVESTMENT_TABLES.md`; `scripts/common/allocation.py`
+  (`normalize_municipality`).
+- Affects: The municipality path.
+
+### D-006. Large footprint projects flagged, not removed
+
+- Date: before 12 Sep 2026. Status: Final. Decided by: Amey.
+- What happened: 5 SMART Program transit corridors and 19 SFWMD basin
+  projects cover far more ground than their points suggest. One corridor is
+  $4.2 billion.
+- What is wrong: Their footprint is misrepresented by a point.
+- How we are fixing it: Model them normally and flag every receiving unit
+  (`flag_large_project`) so results can be rerun without them.
+- Decision: Kept and flagged.
+- Reason: Dropping them would remove real money. Flagging allows a
+  robustness check.
+- Evidence: `INVESTMENT_TABLES.md` (columns); `project_data_profile.md`.
+- Affects: All outcomes; robustness checks in `RESULTS_FOR_REVIEW.md` section 6.
+
+---
+
+## Geography
+
+### D-007. 698-tract analysis frame
+
+- Date: before 16 Sep 2026. Status: Final. Decided by: Amey (not recorded;
+  the files say "the decision already made").
+- What happened: Miami-Dade has 707 tracts. 9 have no residents (PortMiami,
+  the airports, the Everglades and similar), and one has 28 residents
+  (12086981100, Thompson Park / Pennsuco).
+- What is wrong: Zero-population tracts have undefined per-person outcomes
+  and no SVI or ACS values. The 28-person tract has $862,995 per person.
+- How we are fixing it: Exclude only true zeros. Floors of 50, 100, 250 and
+  500 were tested; at tract level they all remove the same one extra tract.
+- Decision: The tract frame is 698 tracts. The 9 zero-population tracts are
+  excluded and the 28-person Pennsuco tract is kept. No block group is
+  excluded.
+- Reason: Exclusion on population = 0 is a rule, not a judgement about an
+  outlier. It removes $301,575,705 (3.53%). The Pennsuco tract is a real
+  place with real residents. Since prompt 21 it is kept out of every top-10
+  and top-20 list (D-043).
+- Evidence: `zero_population_investigation.md` (Decision needed, Option 1);
+  `correlation_analysis.md` Part 1; `scripts/common/analysis_variables.py`
+  (`load_tract` asserts 698).
+- Affects: All tract analyses, the ML frame, Stage B.
+
+### D-008. Block groups as the second grain, composition only
+
+- Date: before 16 Sep 2026; put to the professor 19 Sep 2026. Status: Pending
+  professor. Decided by: Amey.
+- What happened: Block groups (1,843) give finer detail. Their per-person
+  investment is unstable: the maximum is $1.7M per person, and a 6-resident
+  block group holds $6.6M.
+- What is wrong: No population floor fixes the instability, and no hazard
+  layer existed at block group then.
+- How we are fixing it: Report block groups for binaries and type shares
+  only, with no per-person or total outcomes.
+- Decision: Tract is primary. Block group is reported in full as a
+  composition and exposure analysis.
+- Reason: Tract is the only grain where the investment-volume question can
+  be asked soundly.
+- Evidence: `correlation_analysis.md` Part 4d; `REVIEW_MEMO.md` section 4b
+  and question 4.
+- Affects: All block group analyses, including Stage B (D-042).
+
+### D-009. Unincorporated Miami-Dade as its own jurisdiction
+
+- Date: before 12 Sep 2026. Status: Final. Decided by: Amey.
+- What happened: About 45% of tracts (315 of 707) are in no municipality.
+  Census designated places such as Kendall and Westchester have no
+  government.
+- What is wrong: Treating "no municipality" as a leftover bucket would
+  misdescribe it. It is governed directly by the county.
+- How we are fixing it: Units not inside an incorporated place (TIGER
+  `CLASSFP` C*) belong to "Unincorporated Miami-Dade". Census designated
+  places fold into it.
+- Decision: Unincorporated Miami-Dade is one jurisdiction.
+- Reason: It acts as a single decision-making body.
+- Evidence: `DATA_PROCESSING.md` section 5; `INVESTMENT_TABLES.md`.
+- Affects: The municipality path, jurisdiction columns, and any multilevel
+  model.
+
+### D-010. Centroid assignment with intersect fallback
+
+- Date: before 12 Sep 2026. Status: Final. Decided by: Amey.
+- What happened: Each unit is assigned to the municipality containing its
+  centroid, computed in EPSG:6346. El Portal and Bay Harbor Islands are
+  smaller than a tract, so no tract centroid falls in either.
+- What is wrong: Without a fallback, their projects (12 projects,
+  $18,679,837) have nowhere to land and the totals do not reconcile.
+- How we are fixing it: For a municipality with no centroid-assigned unit,
+  spread its money over units whose geometry intersects it, still by
+  population.
+- Decision: Centroid assignment everywhere, with the intersect fallback only
+  for those two municipalities at tract grain (7 tracts, 0.22% of dollars).
+- Reason: It keeps every dollar while changing only 0.22% of the
+  allocation.
+- Evidence: `DATA_PROCESSING.md` section 5; `INVESTMENT_TABLES.md`.
+- Affects: Tract jurisdiction counts: 33 jurisdictions at tract, 35 at block
+  group.
+
+### D-011. County cannot be a model level
+
+- Date: 20 Sep 2026. Status: Final. Decided by: Amey (in response to the
+  professor's multilevel request).
+- What happened: The professor asked for a multilevel model of tract,
+  municipality and county effects.
+- What is wrong: There is one county, so it has no variance to estimate.
+  Groups are also very unbalanced: unincorporated holds 315 of 707 tracts.
+- How we are fixing it: Two estimable levels, tracts within jurisdictions.
+  The county is the intercept. Run on single-unit investment (D-048), and
+  recount units per jurisdiction on the 698 frame before fitting.
+- Decision: County is the intercept, not a level.
+- Reason: A random effect needs several units to estimate variance across.
+- Evidence: `DATA_PROCESSING.md` section 5 (constraints 1 to 3).
+- Affects: Any multilevel model.
+
+### D-012. EPSG:6346 for all area work
+
+- Date: before 12 Sep 2026. Status: Final. Decided by: Amey.
+- What happened: TIGER, NOAA and NHC data come in geographic coordinates
+  (EPSG:4269). Landsat comes in UTM 17N (EPSG:32617).
+- What is wrong: Areas in degrees are meaningless.
+- How we are fixing it: Reproject to NAD83(2011) / UTM 17N (EPSG:6346) before
+  any area or centroid calculation. Categorical rasters are never
+  reprojected; units are projected onto the raster grid instead.
+- Decision: EPSG:6346 for every area, centroid and overlay.
+- Reason: It is a metric, conformal projection for south Florida, and is
+  used everywhere in the project.
+- Evidence: `scripts/common/allocation.py` (`PROJ_CRS`); `slr_processing.md`;
+  `population_exposure.md` 2.3.
+- Affects: Centroids, land shares, exposure.
+
+### D-013. TIGER 2024 boundaries to match ACS 2020 to 2024
+
+- Date: before 11 Sep 2026. Status: Final. Decided by: Amey.
+- What happened: Boundaries must match the population table they carry.
+- What is wrong: A boundary vintage different from the ACS geography would
+  break the GEOID joins.
+- How we are fixing it: Use TIGER/Line 2024 tracts, block groups, area
+  water and places, which match the ACS 2024 five-year geography. 2020 census
+  blocks, used only to place people, nest exactly in them: the block load
+  checks that every block group matches.
+- Decision: TIGER 2024 for all units.
+- Reason: Same geography as the population data: 707 tracts and 1,843 block
+  groups, confirmed.
+- Evidence: `DATA_PROCESSING.md` (header); `scripts/common/population_surface.py`
+  (block group match check).
+- Affects: All tables.
+
+### D-014. GEOID as a string; Miami-Dade filter
+
+- Date: before 11 Sep 2026. Status: Final. Decided by: Amey.
+- What happened: Tools read GEOIDs as numbers by default.
+- What is wrong: That drops leading digits, and joins fail silently.
+- How we are fixing it: Read every GEOID as text and filter on prefix
+  `12086`. Check row counts after every filter.
+- Decision: GEOID is always a string: 11 digits for tracts, 12 for block
+  groups.
+- Reason: It prevents silent join failures.
+- Evidence: `DATA_PROCESSING.md` section 0.
+- Affects: Every table.
+
+---
+
+## Social indicators
+
+### D-015. No composite indices; individual components only
+
+- Date: before 11 Sep 2026. Status: Final. Decided by: Professor Paharaj.
+- What happened: SVI, ADI, CRE and EJScreen all publish composite scores.
+- What is wrong: A composite hides which component drives a result, and some
+  composites mix exposure with demographics.
+- How we are fixing it: Use each index's individual indicators:
+  - SVI `EP_*` percentages;
+  - ADI components rebuilt from ACS;
+  - EJScreen raw indicators, ignoring its EJ indexes.
+- Decision: No composite index enters any analysis.
+- Reason: The professor's rule. It keeps each indicator interpretable.
+- Evidence: `DATA_PROCESSING.md` sections 2 and 3; `nri_audit.md` (the same
+  logic applied to FEMA, D-027).
+- Affects: All vulnerability variables, the PCA, and the CDC Heat & Health
+  Index exclusion (D-033).
+
+### D-016. ACS 2020 to 2024 five-year
+
+- Date: before 11 Sep 2026. Status: Final. Decided by: Amey.
+- What happened: ACS tables are pulled at tract and block group.
+- What is wrong: Mixing vintages within a source makes rates incomparable.
+- How we are fixing it: All ACS pulls are 2024 five-year Detailed Tables.
+  Numerator cells are chosen by label, not code. MOE columns are kept.
+  Annotation flags become NA.
+- Decision: ACS 2020 to 2024 for every ACS variable and for population.
+- Reason: The most recent five-year data, in one vintage.
+- Evidence: `DATA_PROCESSING.md` sections 0 and 1.
+- Affects: Population, CRE components, ADI components.
+
+### D-017. SVI 2022, Florida ranking
+
+- Date: before 11 Sep 2026. Status: Provisional (ranking may change). Decided
+  by: Professor Paharaj.
+- What happened: SVI is published for several years and ranking areas.
+- What is wrong: Older vintages lack some indicators. Uncomputable values
+  are coded −999, which poisons means if not caught.
+- How we are fixing it: Use 2022, Florida, census tract. Replace −999 with
+  NA on load. Use the `EP_*` columns only.
+- Decision: SVI 2022 with Florida ranking. The professor may re-rank to
+  Miami-Dade.
+- Reason: 2022 has the current indicator list. Florida ranking was the
+  professor's choice.
+- Evidence: `DATA_PROCESSING.md` section 2, and "Open decisions pending from
+  professor".
+- Affects: The 24 SVI tract variables. The vintage gap (SVI describes 2018 to
+  2022, ACS 2020 to 2024) is stated in methods.
+
+### D-018. Poverty and crowding thresholds
+
+- Date: before 11 Sep 2026. Status: Final. Decided by: Professor Paharaj.
+- What happened: CRE uses poverty below 1.30 times the line and crowding
+  above 0.75 people per room. ACS bands do not split there.
+- What is wrong: The exact CRE thresholds cannot be built.
+- How we are fixing it: Use poverty below 1.25 and crowding above 1.00, and
+  record both as threshold departures.
+- Decision: `poverty_under125` and `crowding_over100`.
+- Reason: The nearest ACS bands. The professor approved both.
+- Evidence: `DATA_PROCESSING.md` section 1 (Threshold caveats).
+- Affects: Two tract CRE variables.
+
+### D-019. Proxy variables flagged; one variable dropped
+
+- Date: before 11 Sep 2026. Status: Final. Decided by: Amey.
+- What happened: Three CRE components have no exact ACS table.
+- What is wrong: Treating a proxy as exact would overstate precision.
+- How we are fixing it: Carry proxy flags through to the write-up.
+  - `no_broadband`: total minus broadband of any type.
+  - `no_fulltime_worker_hh`: households with no workers, the loosest proxy.
+  - `no_diploma_pop25`: person-level, not household-level.
+  - The single or zero caregiver component has no public table and is
+    dropped.
+- Decision: Three proxies kept and flagged; one component dropped.
+- Reason: Keep what can be measured and say how.
+- Evidence: `DATA_PROCESSING.md` section 1.
+- Affects: Tract CRE variables.
+
+### D-020. EJScreen v2.3 reconstruction
+
+- Date: before 11 Sep 2026. Status: Final. Decided by: Amey.
+- What happened: EPA withdrew EJScreen in February 2025.
+- What is wrong: The only available copy is a volunteer reconstruction.
+- How we are fixing it:
+  - Use the PEDP / Harvard Dataverse v2.3 reconstruction
+    (`EJSCREEN_2024_BG_with_AS_CNMI_GU_VI.csv`).
+  - Verify the v2.3 columns: NO2, underground storage tanks, drinking water.
+  - Cite source, version and access date.
+  - Ignore the EJ index columns.
+- Decision: EJScreen v2.3 reconstruction at block group.
+- Reason: It is the only source of these block group environmental measures.
+- Evidence: `DATA_PROCESSING.md` section 3. Only 2 of the 5 expected health
+  indicators exist in this file (`RESULTS_FOR_REVIEW.md` 7a).
+- Affects: 13 environmental, 7 socioeconomic and 2 health block group
+  variables.
+
+### D-021. ADI built from individual ACS components
+
+- Date: before 11 Sep 2026. Status: Final. Decided by: Professor Paharaj (no
+  composite); Amey (component list).
+- What happened: The Neighborhood Atlas ADI is a composite.
+- What is wrong: Four of its components duplicate EJScreen measures.
+- How we are fixing it: Pull 13 unique ADI components at block group, ACS
+  2024 five-year.
+  - The four EJScreen duplicates are dropped: no vehicle, no internet,
+    unemployment, and at-least-high-school.
+  - Income disparity is log(households under $10,000 / households $50,000 or
+    more), with the original cutoffs, not inflation-adjusted.
+- Decision: 13 ADI components, no ADI score.
+- Reason: No composite (D-015), and one source per concept.
+- Evidence: `DATA_PROCESSING.md` section 3; `correlation_analysis.md` Part 1
+  (the missing B25014 table was found and pulled).
+- Affects: The block group ADI variables.
+
+### D-022. Block group suppression handling
+
+- Date: before 11 Sep 2026. Status: Final. Decided by: Amey.
+- What happened: Block group medians are often suppressed ("-" and "**").
+  Small counts carry large MOEs.
+- What is wrong: Read as zeros, the suppressed medians would bias every
+  statistic.
+- How we are fixing it: Convert the flags to NA. Count missing values per
+  variable. Keep the MOEs.
+- Decision: Suppressed means missing. Variables missing in more than 20% of
+  block groups are flagged and also run without them in the PCA.
+- Reason: Missing is not zero.
+- Evidence: `DATA_PROCESSING.md` section 3; `pca_analysis.md` (21-variable
+  run).
+- Affects: Block group medians, the PCA.
+
+### D-023. Race adjunct columns out of scope
+
+- Date: 27 Sep 2026. Status: Final. Decided by: Amey (not recorded; confirm).
+- What happened: SVI carries seven race and ethnicity adjunct columns
+  (EP_HISP, EP_AFAM, EP_ASIAN, EP_AIAN, EP_NHPI, EP_TWOMORE, EP_OTHERRACE).
+- What is wrong: They are not on the professor's indicator list, and they
+  overlap EP_MINRTY.
+- How we are fixing it: Leave them out of both PCA lists. They stay in
+  `tract_analysis.csv`.
+- Decision: Out of scope for the vulnerability PCA.
+- Reason: Not on the indicator list.
+- Evidence: `DATA_PROCESSING.md` section 7 (Final PCA input lists);
+  `scripts/common/analysis_variables.py` (`_RACE_ADJUNCTS`).
+- Affects: The PCA inputs.
+
+### D-024. Environmental measures excluded from the vulnerability PCA
+
+- Date: 27 Sep 2026. Status: Pending professor (provisional). Decided by:
+  Amey.
+- What happened: The 13 EJScreen environmental measures are highly
+  intercorrelated. Cluster B1 has 9 measures and 8 links at 0.75 or above.
+- What is wrong: They measure exposure, not social vulnerability. Including
+  them would also need four drops under the 0.75 rule.
+- How we are fixing it: Exclude them from the vulnerability PCA. The two
+  minimal drop sets are listed in case they are included.
+- Decision: The block group PCA uses 24 social indicators only.
+- Reason: Exposure and vulnerability should not be mixed in one index.
+- Evidence: `DATA_PROCESSING.md` section 7; `correlation_screen.md`.
+- Affects: The block group PCA.
+
+### D-025. 2020 decennial counts at block group
+
+- Date: before 27 Sep 2026. Status: Pending professor. Decided by:
+  Professor Paharaj (suggestion).
+- What happened: The professor suggested 2020 decennial data at block group.
+- What is wrong: ACS block group estimates are small samples with large MOEs.
+- How we are fixing it: If approved, replace population, aged 65 and over,
+  aged under 5, owner-occupied share and single-parent households with full
+  counts, then rerun the block group PCA.
+- Decision: Not yet made.
+- Reason: Full counts are more precise than small-sample estimates.
+- Evidence: `DATA_PROCESSING.md` section 7 (Pending items, 2).
+- Affects: The block group PCA and five block group variables.
+
+### D-026. SVI kept over its ACS twin in eight pairs
+
+- Date: 27 Sep 2026. Status: Final. Decided by: Amey (applying the
+  professor's 0.75 rule, D-053).
+- What happened: Eight SVI and ACS pairs measure the same concept, with
+  Spearman between +0.764 and +0.898.
+- What is wrong: Keeping both would double-count each concept.
+- How we are fixing it: Keep the SVI version and drop the ACS twin:
+  no_diploma_pop25, age65plus, no_broadband, uninsured, no_vehicle,
+  poverty_under125, limited_english_hh and disability.
+- Decision: Keep SVI in all eight pairs. Crowding (+0.721) is below the line,
+  so both versions are kept.
+- Reason:
+  - every SVI version is graded clean;
+  - three of the ACS twins are proxies or threshold approximations;
+  - SVI matches the professor's list;
+  - it keeps one data year per concept.
+  The choice was not made on results against investment.
+- Evidence: `DATA_PROCESSING.md` section 7;
+  `outputs/correlation/correlation_screen/correlation_decisions_tract.csv`.
+- Affects: The 19-variable tract PCA list.
+
+---
+
+## Physical indicators
+
+### D-027. FEMA NRI expected annual loss only
+
+- Date: 19 Sep 2026. Status: Final. Decided by: Amey (applying D-015).
+- What happened: The NRI file has composite risk scores alongside expected
+  annual loss.
+- What is wrong: The risk score is loss times social vulnerability divided by
+  community resilience. Those are SVI and CRE, already our predictors. Using
+  it would put the predictors on both sides of the model.
+- How we are fixing it: Use expected annual loss columns only. Exclude
+  RISK_*, SOVI_*, RESL_*, CRF_VALUE and every per-hazard RISKS / RISKR column.
+- Decision: NRI enters only as expected annual loss.
+- Reason: It avoids building our predictors into the outcome.
+- Evidence: `nri_audit.md` (The exclusion to carry forward; Task 3).
+  Note: no NRI column has been joined to the analysis tables yet (D-044).
+- Affects: Any NRI variable, the hazard screen, the ML features.
+
+### D-028. Sea level rise: connected and low-lying kept apart, land only
+
+- Date: 22 Sep 2026. Status: Final. Decided by: Amey (the land-only
+  footprint was confirmed during processing).
+- What happened: NOAA ships ocean-connected (`_slr_`) and unconnected
+  low-lying (`_low_`) layers. Its polygons include existing open water.
+- What is wrong: Intersecting raw unit polygons would count bay water as
+  flooded land and could push shares above 1. The two layers are disjoint
+  (0.000 km² overlap at 3 ft), so they cannot be treated as nested.
+- How we are fixing it:
+  - The footprint is each unit minus TIGER area water (AWATER > 0 only).
+  - `gridcode` is ignored.
+  - `_slr_` is primary at 1, 2, 3 and 6 ft; `_low_` is a 3 ft sensitivity.
+- Decision: Land-only shares, with the two layers never combined.
+- Reason: The numerator and denominator are both land. The two layers
+  measure different places (Spearman −0.106 at 3 ft).
+- Evidence: `slr_processing.md` (Land footprint; `_slr_` versus `_low_`);
+  `slr_inspection.md`.
+- Affects: `slr_tract.csv`, `slr_blockgroup.csv`, population exposure.
+
+### D-029. Storm surge read as raw values
+
+- Date: 22 Sep 2026. Status: Final. Decided by: Amey.
+- What happened: In the NHC rasters, 255 is the nodata tag, but on county
+  land it also means "not inundated". 99 is levee. Classes 1 to 21 are 1 ft
+  depth bins.
+- What is wrong: A masked or nodata-aware read drops dry land from the
+  denominator and inflates every share.
+- How we are fixing it:
+  - Read raw values only.
+  - On land, 255 means dry and stays in the denominator.
+  - 99 is counted separately and never enters a depth (0 pixels in
+    Miami-Dade).
+  - Use only the June 2026 reprocessing, which fixed a South Florida bug.
+- Decision: Raw-value handling for every surge calculation.
+- Reason: It is the only correct reading of this file's coding.
+- Evidence: `surge_inspection.md` (1c, 1e); `scripts/03_physical/process_surge.py`.
+- Affects: `surge_tract.csv`, `surge_blockgroup.csv`, population exposure.
+
+### D-030. Category 5 hole corrected by pixel maximum
+
+- Date: 5 Nov 2026 (the hole was found 22 Sep 2026). Status: Final. Decided
+  by: Amey (specified in prompt 21).
+- What happened: In central Miami, some land is wet at Category 4 or lower
+  but 255 (dry) at Category 5.
+- What is wrong:
+  - 31 tracts have a smaller Category 5 land share than Category 4, by up to
+    0.94.
+  - In residents, 18,928 people sit in the hole.
+  - 26 tracts lose 16,599 residents between Category 4 and 5.
+- How we are fixing it: Build `cat5max`, the deepest class over Categories 1
+  to 5 at each pixel, and flag units where the hole holds at least 1% of
+  residents.
+- Decision: Only the corrected Category 5 (`cat5max`) is used. The raw
+  version stays in the files for reference.
+- Reason: The hole is a product artefact, not a hazard.
+- Evidence: `outputs/physical/surge_processing_log.txt` (monotonicity);
+  `population_exposure.md` section 3; `exposure_vs_investment.md` section 2.
+- Affects: Every Category 5 measure, Stage B, the ML scenarios.
+
+### D-031. Primary hazard scenarios
+
+- Date: 3 Nov 2026 (prompt 21); amended 5 Nov 2026 (D-036). Status:
+  Provisional (confirm with professor). Decided by: Amey.
+- What happened: Sea level rise has 21 scenarios and surge has 5 categories.
+- What is wrong: Picking the scenario that gives the strongest result would
+  be fishing.
+- How we are fixing it: Fix the primary scenarios in advance and show the
+  rest as sensitivity.
+- Decision:
+  - Primary: sea level rise 3 ft (ocean-connected), and storm surge
+    Categories 3 and 4 (any inundation).
+  - Heat: the population-weighted mean and the 95th percentile share
+    (D-036).
+- Reason: 3 ft is a mid-range planning level. Categories 3 and 4 separate
+  coastal and inland exposure, while Category 5 floods 62% of residents.
+- Evidence: `prompts/claude_code_prompt_21_population_exposure.md`
+  (A3, Stage B); `population_exposure.md`.
+- Affects: Stage B, the ML scenarios.
+
+### D-032. FEMA flood zone file unusable
+
+- Date: 5 Nov 2026. Status: Pending (re-download). Decided by: Amey.
+- What happened: The file in `data/raw/physical/flood_zones/` is
+  a CSV with zone codes and areas but no geometry.
+- What is wrong: Without geometry it cannot be overlaid on tracts or blocks.
+- How we are fixing it: Skip it. A National Flood Hazard Layer download with
+  geometry is needed.
+- Decision: Flood zones are not used until a file with geometry is
+  available.
+- Reason: No way to place the zones.
+- Evidence: `population_exposure.md` 2.3 and section 5; `nri_audit.md` Task 4.
+- Affects: Physical indicators (pending).
+
+### D-033. Heat from Landsat surface temperature
+
+- Date: 3 Nov 2026 (prompt 21). Status: Final. Decided by: Amey.
+- What happened: Three heat sources were available: Landsat surface
+  temperature, the CDC Heat & Health Index, and FEMA heat wave loss.
+- What is wrong:
+  - The CDC index is a composite that includes vulnerability (D-015).
+  - FEMA heat wave loss is a tract-level dollar estimate, not a map. Its
+    building loss is effectively zero in this county.
+- How we are fixing it: Use the Landsat 8/9 Collection 2 Level-2 summer
+  median composite, June to September 2021 to 2024, at 30 m. Call it
+  "surface heat", not air heat.
+- Decision: Landsat surface temperature is the heat hazard.
+- Reason: It is the only heat source that is a map and not a composite.
+- Evidence: prompt 21 (A3); `nri_audit.md` Task 4; `population_exposure.md`
+  2.3.
+- Affects: Heat exposure, Stage B, ML heat features.
+
+---
+
+## Population exposure
+
+### D-034. Built from the original hazard data
+
+- Date: 3 Nov 2026. Status: Final. Decided by: Amey.
+- What happened: The website already had resident counts read off its
+  animation images (`slr.png`, `surge.png`, `heat.png`).
+- What is wrong: Those are Web Mercator renderings at reduced resolution,
+  with values encoded for display:
+  - 30 m pixel centres for flooding;
+  - 60 m averaged pixels for heat.
+  Heat at 113°F comes out 8% lower than from the original raster.
+- How we are fixing it: Compute from the NOAA polygons, the NHC GeoTIFFs and
+  the Landsat composite. Use the website numbers only for comparison.
+- Decision: Website images are never model inputs.
+- Reason: Analysis needs the source data at full resolution.
+- Evidence: prompt 21 (A1); `population_exposure.md` section 3 (website
+  comparisons).
+- Affects: `exposure_tract.csv`, `exposure_blockgroup.csv`.
+
+### D-035. Residents spread evenly over block land
+
+- Date: 3 Nov 2026. Status: Final. Decided by: Amey.
+- What happened: Population is known per block group (ACS) and per block
+  (2020 census), not per building.
+- What is wrong: Within a block, the location of people is unknown.
+- How we are fixing it:
+  - Split each block group's ACS count over its 2020 blocks by their 2020
+    counts.
+  - Spread each block's residents evenly over its land.
+  - Exposed residents = block residents × exposed share of the block's land.
+  - Sum to block groups and tracts. Report nothing below block group.
+- Decision: Even spread within the block is the stated assumption.
+- Reason: It is the finest defensible placement without building
+  footprints. No raw footprint file exists, so the footprint sensitivity
+  could not be run.
+- Evidence: `population_exposure.md` 2.1 and 2.2, and section 5 item 6.
+- Affects: Every population exposure variable.
+
+### D-036. Heat threshold for population exposure
+
+- Date: 5 Nov 2026. Status: Final. Decided by: Amey.
+- What happened: Prompt 21 defined heat exposure as residents on land at or
+  above the county 75th percentile of surface temperature.
+- What is wrong: The percentile is taken over all county land, including the
+  cooler Everglades. So 96% of residents live above it, and the median tract
+  share is 0.999. The measure cannot tell tracts apart.
+- How we are fixing it: Use the population-weighted mean surface
+  temperature, and the share of residents at or above the county 95th
+  percentile (113.27°F).
+- Decision: The 75th percentile is not used. The primary heat measures are
+  the population-weighted mean and the 95th percentile share.
+- Reason: A measure with almost no variation adds nothing to correlations or
+  models. The mean is continuous, and the 95th percentile still varies
+  (27.7% of residents county-wide).
+- Evidence: `population_exposure.md` (2.3 update, 4.1); `exposure_tract.csv`.
+- Affects: Stage B heat measures, ML heat features and heat scenarios.
+
+### D-037. Fractional pixel coverage by supersampling
+
+- Date: 5 Nov 2026. Status: Final. Decided by: Amey.
+- What happened: Small blocks cover only a few surge or heat pixels.
+- What is wrong: A pixel-centre rule can miss or overcount partial pixels.
+  exactextract is not installed, and nothing may be downloaded.
+- How we are fixing it: Split each pixel into 4 × 4 sub-cells. Compute the
+  pixel-centre version too, and compare.
+- Decision: Fractional coverage (4 × 4) for every raster layer.
+- Reason: The prompt requires fractional coverage. The two methods differ by
+  at most 0.05% in county totals.
+- Evidence: `population_exposure.md` 2.3 and section 3;
+  `outputs/exposure/stage_a/exposure_county_totals.csv`.
+- Affects: Surge and heat exposure.
+
+### D-038. Data cautions adopted, with their flags
+
+- Date: 3 Nov 2026 (cautions); 5 Nov 2026 (flag cutoffs). Status: Final.
+  Decided by: Amey.
+- What happened: Prompt 21 listed 16 standard cautions for this kind of
+  data.
+- What is wrong: Each one could mislead if ignored. Examples: worst-case
+  surge read as a forecast, surface heat read as air heat, block noise, small
+  units.
+- How we are fixing it: Each caution is handled in the method or written
+  into Limitations. The flags in the files:
+  - `low_pop_flag`: under 100 residents; 10 tracts, 16 block groups.
+  - `bg_low_reliability`: CV above 40%; 79 block groups.
+  - `surge_cat5_hole_flag`: hole holds at least 1% of residents; 30 tracts,
+    63 block groups.
+  - `heat_nodata_share`.
+- Decision: All 16 cautions apply to every use of the exposure layers.
+- Reason: These are the known failure modes of these datasets.
+- Evidence: prompt 21 (Data cautions); `population_exposure.md` section 5.
+- Affects: Every exposure result.
+
+### D-039. Website script reverted; shared logic in a new module
+
+- Date: 5 Nov 2026. Status: Final. Decided by: Amey.
+- What happened: Early in Stage A, an optional `crs` argument was added to
+  `load_blocks()` in `scripts/website/build_population_exposure.py`. Prompt 21 had
+  said not to change that script.
+- What is wrong: It changed a website script, even though not its outputs.
+- How we are fixing it: Revert the file with `git checkout`, and copy the
+  logic into `scripts/common/population_surface.py`. Confirm that the copy
+  reproduces the block checkpoint exactly: 25,805 blocks, a difference of 0.0
+  residents and 0.0 m².
+- Decision: The website script is unchanged. The analysis imports
+  `population_surface.py`.
+- Reason: It keeps the website untouched while reusing the same logic. The
+  two copies must be kept in step.
+- Evidence: `population_exposure.md` 2.1; git shows the website script
+  unmodified.
+- Affects: `scripts/04_exposure/build_exposure_layers.py`.
+
+### D-040. Stage B: one measure per hazard family
+
+- Date: 5 Nov 2026. Status: Final. Decided by: Amey.
+- What happened: The hazard correlation screen found 157 tract pairs at
+  |rho| ≥ 0.75, all within a single hazard family. Examples: neighbouring
+  scenarios, and population share against land share.
+- What is wrong: Reporting every member of a family would repeat the same
+  signal many times.
+- How we are fixing it: Report one measure per family at the primary
+  scenarios. The others are sensitivity only.
+- Decision:
+  - Primary measures: `slr_3ft_pop_share`, `surge_cat3_any_pop_share`,
+    `surge_cat4_any_pop_share`, `heat_lst_popwt_mean_f`,
+    `heat_p95_pop_share`.
+  - Land shares are for comparison only.
+- Reason: The 0.75 rule (D-053) applied to the hazard families. No pair
+  crossed families, so one measure per family is enough.
+- Evidence: `population_exposure.md` 4.6; `exposure_vs_investment.md`
+  section 2.
+- Affects: Stage B, ML features.
+
+### D-041. Stage B: corrected Category 5 only
+
+- Date: 5 Nov 2026. Status: Final. Decided by: Amey.
+- What happened: Stage A built both raw Category 5 and `cat5max`.
+- What is wrong: Raw Category 5 contains the hole (D-030).
+- How we are fixing it: Use `cat5max` only, as sensitivity.
+- Decision: Raw Category 5 is not analysed.
+- Reason: The hole is an artefact.
+- Evidence: `exposure_vs_investment.md` section 2.
+- Affects: Stage B sensitivity.
+
+### D-042. Stage B: pairing rule, single-unit repeat, block group scope
+
+- Date: 3 Nov 2026 (prompt 21). Status: Final. Decided by: Amey.
+- What happened: Exposed-resident counts and investment totals both grow
+  with population.
+- What is wrong: Correlating a count with a count mostly measures size.
+  Municipal and county money is spread by population, so it builds in
+  jurisdiction patterns.
+- How we are fixing it:
+  - Shares go with per-person, per-area, binary and type share outcomes.
+  - Counts go only with total investment, as a partial Spearman controlling
+    for population, and raw with a note.
+  - The main correlations are repeated on single-unit sited investment.
+  - At block group, binaries and type shares only (D-008).
+- Decision: As above.
+- Reason: Caution 12, and the allocation constraint in `DATA_PROCESSING.md`
+  section 5.
+- Evidence: `exposure_vs_investment.md` section 2.
+- Affects: Stage B.
+
+### D-043. Small and unreliable units in Stage B
+
+- Date: 5 Nov 2026. Status: Final. Decided by: Amey.
+- What happened: 10 tracts have under 100 residents (9 empty plus Pennsuco),
+  and 79 block groups have CV above 40%.
+- What is wrong: Their shares are unstable.
+- How we are fixing it:
+  - Keep the small tracts in the correlations, but leave them out of every
+    top-10 and top-20 list.
+  - Run block group results with and without the low-reliability units.
+- Decision: As above. Removing the low-reliability block groups changed no
+  correlation by more than 0.015.
+- Reason: Flag, do not drop (cautions 7 and 8).
+- Evidence: `exposure_vs_investment.md` 3.3 and 3.6.
+- Affects: Stage B lists and block group results.
+
+### D-044. NRI columns used in the hazard screen
+
+- Date: 5 Nov 2026. Status: Provisional. Decided by: Amey.
+- What happened: Prompt 21 asked to screen the FEMA NRI loss variables "in
+  use".
+- What is wrong: None is in use. No NRI column is joined to the analysis
+  tables.
+- How we are fixing it: Use the loss columns that `nri_audit.md`
+  recommended: HWAV_EALT, CFLD_EALT, CFLD_EALB, IFLD_EALT, IFLD_EALB,
+  HRCN_EALT and HRCN_EALB.
+- Decision: These seven columns stand in until the NRI variables for the
+  analysis are chosen.
+- Reason: They are the audit's candidates. Heat wave building loss is
+  effectively zero, so total loss is used for heat.
+- Evidence: `population_exposure.md` 4.6 and section 5; `nri_audit.md`
+  Tasks 4 and 5.
+- Affects: The hazard screen; any later NRI join.
+
+### D-069. Heat tercile investment analysis, by hazard focus
+
+- Date: 5 Nov 2026. Status: Final. Decided by: Amey.
+- What happened: Stage B found that the hottest third of tracts (by
+  population-weighted mean surface temperature) received $1,669 per resident,
+  against $4,968 for the coolest third.
+- What is wrong: The figure mixes every kind of project. A few very large
+  projects could drive it.
+- How we are fixing it: Save the follow-up as a script and a report:
+  - the same terciles as Stage B (equal-count, 698 tracts, the 28-person
+    tract kept);
+  - dollars from the allocation ledger, so the allocation rules are
+    unchanged, for all projects and sited only;
+  - pooled (total dollars ÷ total residents), tract mean and tract median;
+  - a breakdown by each `Hazard_Focus` value plus flood-related (Flooding,
+    Coastal Hazards, Storms & Hurricanes);
+  - Extreme Heat project counts;
+  - sensitivity: drop The Underline Phases 2 and 3 and SCALER-0595 (S1), and
+    the five largest heat projects (S2). Also a count measure, sited heat
+    projects per 100,000 residents.
+- Decision: The pooled figure is the headline, with mean and median shown.
+  Extreme Heat money is reported as following the overall pattern:
+  - $240 per resident in the coolest third against $36 in the hottest;
+  - 4.5 to 7.4 times after dropping the dominant projects;
+  - 2.6 to 3.0 against 0.8 to 0.9 sited heat projects per 100,000 residents.
+- Reason:
+  - Pooled matches Stage B.
+  - The mean is distorted by the 28-person tract.
+  - The count measure cannot be driven by one project.
+- Evidence: `reports/exposure/heat_tercile_investment.md`;
+  `scripts/04_exposure/heat_tercile_investment.py`;
+  `outputs/exposure/heat_terciles/`.
+- Affects: Interpretation of the heat findings; ML heat scenarios.
+
+---
+
+## Investment measures
+
+### D-045. Investment per person as the primary outcome
+
+- Date: before 17 Sep 2026. Status: Final. Decided by: Amey (not recorded;
+  stated as "our primary outcome" in the findings sent to the professor).
+- What happened: Total, per person and per km² were all built.
+- What is wrong:
+  - Totals grow with size.
+  - Per km² is close to mechanical with housing density (+0.57 against
+    multi-unit housing).
+- How we are fixing it: Per person is primary. The others are reported
+  alongside.
+- Decision: `investment_per_capita` is the primary outcome at tract. It is
+  empty, not zero, where population is 0.
+- Reason: It measures money relative to the people it serves.
+- Evidence: `FINDINGS_FOR_PROFESSOR.md` (4.1, "per person remains our
+  primary outcome"); `INVESTMENT_TABLES.md` (columns).
+- Affects: All tract volume analyses, Stage B.
+
+### D-046. `investment_any` replaced
+
+- Date: before 16 Sep 2026. Status: Final. Decided by: Amey.
+- What happened: County projects reach every populated unit.
+- What is wrong: So `investment_any` is 1 everywhere; it has zero variance
+  at both grains.
+- How we are fixing it: Replace it with two binaries:
+  - `investment_any_excl_county`: received any non-county money;
+  - `investment_any_single_unit`: has a project sited in the unit.
+- Decision: `investment_any` is not used.
+- Reason: A constant cannot be analysed.
+- Evidence: `correlation_analysis.md` Part 2 (Outcome variables);
+  `scripts/common/analysis_variables.py` (`BINARY_OUTCOMES`).
+- Affects: All binary outcome analyses.
+
+### D-047. Per-area units and undefined values
+
+- Date: before 12 Sep 2026. Status: Final. Decided by: Amey.
+- What happened: Some units have no land or no residents.
+- What is wrong: Dividing by zero gives meaningless values, and writing them
+  as zero would make it look like no money went there.
+- How we are fixing it: Per person and per area are empty where the
+  denominator is 0. `investment_per_area` is dollars per m² of TIGER land;
+  multiply by 1e6 for $/km².
+- Decision: Undefined, not zero.
+- Reason: Missing is not zero.
+- Evidence: `INVESTMENT_TABLES.md` (columns).
+- Affects: Volume outcomes.
+
+### D-048. Single-unit sited investment as the clean outcome
+
+- Date: 20 Sep 2026. Status: Final. Decided by: Amey.
+- What happened: Municipal and county money is spread by population. So
+  every tract in a city gets the same amount per person from those projects.
+- What is wrong: Jurisdiction effects on total investment would partly be
+  our own allocation rule.
+- How we are fixing it: Repeat key analyses, and run any multilevel model, on
+  single-unit investment only: parcel, neighborhood and corridor.
+- Decision: Single-unit investment ($6,041,448,104, 70.6% of dollars) is the
+  outcome free of the allocation rule.
+- Reason: No rule distributed those dollars. The cost is losing 29.4% of
+  dollars.
+- Evidence: `DATA_PROCESSING.md` section 5 (constraint 3);
+  `exposure_vs_investment.md` 3.1.
+- Affects: The multilevel model, Stage B, ML location targets.
+
+### D-049. Type shares, and blue flagged as sparse
+
+- Date: before 16 Sep 2026. Status: Final. Decided by: Amey.
+- What happened: Investment is split by infrastructure type: gray, green,
+  blue and hybrid.
+- What is wrong: Blue has 28 projects reaching 19 units with sited blue
+  investment, below the 20-unit sparsity line.
+- How we are fixing it: Each type share is that type's dollars divided by the
+  unit's total investment. Flag any category with fewer than 20 single-unit
+  receiving units as sparse, and never read sparse cells as findings.
+- Decision: Type shares as defined, with blue flagged as sparse everywhere.
+- Reason: Too few blue projects to support a pattern.
+- Evidence: `outputs/correlation/part2_univariate/sparsity_baseline.csv`;
+  `scripts/common/analysis_variables.py` (`add_type_scale_measures`).
+- Affects: Composition analyses, Stage B.
+
+### D-050. Gray split into sub-categories
+
+- Date: 17 Sep 2026. Status: Final. Decided by: Amey.
+- What happened: Gray is the largest type and mixes transit, roads,
+  drainage, water and sewer, and more.
+- What is wrong: A single gray share hides which kind of gray drives a
+  result.
+- How we are fixing it:
+  - Classify gray projects into seven sub-categories by keyword pattern:
+    transit, coastal and seawall, drainage and stormwater, road, water and
+    sewer, power and communication facilities, other.
+  - Projects matching both drainage and road are filed under drainage by
+    priority order, and the overlap is disclosed.
+  - Each share is a fraction of total investment.
+- Decision: The drainage and stormwater share is the gray sub-measure carried
+  forward.
+- Reason: Drainage alone reproduces the gray pattern.
+- Evidence: `gray_decomposition.md`; `scripts/common/gray_classification.py`;
+  `scripts/05_analysis/part7_gray_decomposition.py`.
+- Affects: Composition analyses, Stage B.
+
+---
+
+## Analysis methods
+
+### D-051. Spearman, not Pearson
+
+- Date: before 16 Sep 2026. Status: Final. Decided by: Amey.
+- What happened: Dollar outcomes are heavily right-skewed: |skew| 6 to 37.
+- What is wrong: Pearson is driven by a few extreme values. For example,
+  no-vehicle against investment per person is Pearson 0.117 but Spearman
+  0.333.
+- How we are fixing it: Use Spearman rank correlation as the primary
+  statistic. Pearson was reported alongside in the early analysis.
+- Decision: Spearman throughout.
+- Reason: It is robust to skew and to outliers.
+- Evidence: `correlation_analysis.md` Part 4; `correlation_screen.md`.
+- Affects: Every correlation, the screens, Stage B.
+
+### D-052. Keep every variable through the correlation stage
+
+- Date: before 11 Sep 2026. Status: Final. Decided by: Professor Paharaj.
+- What happened: Many indicators overlap: SVI against CRE, and EJScreen
+  socioeconomic against ADI.
+- What is wrong: Dropping early would hide how correlated everything is.
+- How we are fixing it: Keep all variables until the correlation screen, then
+  resolve true duplicates.
+- Decision: No pre-dropping.
+- Reason: The professor wants to see the full correlation structure first.
+- Evidence: `DATA_PROCESSING.md` section 3 (EJScreen).
+- Affects: The correlation screen, the PCA inputs.
+
+### D-053. Drop one of each pair at |rho| ≥ 0.75
+
+- Date: 27 Sep 2026. Status: Final. Decided by: Professor Paharaj (rule);
+  Amey (which variable to drop).
+- What happened: The correlation screen compared every pair of indicators.
+- What is wrong: Near-duplicate variables would double-weight a concept.
+- How we are fixing it: For any pair with |Spearman rho| ≥ 0.75
+  (pairwise-complete, compared unrounded), drop one. Amey chooses which, on
+  data quality and source consistency, never on results. Anything below 0.75
+  is accepted, and both variables are kept.
+- Decision: The 0.75 rule, applied to vulnerability indicators (D-026) and
+  to the hazard families (D-040).
+- Reason: A clear, pre-set line.
+- Evidence: `DATA_PROCESSING.md` section 7; `correlation_screen.md`;
+  `population_exposure.md` 4.6.
+- Affects: The PCA lists, Stage B measures.
+
+### D-054. FDR adjustment within families
+
+- Date: before 16 Sep 2026. Status: Final. Decided by: Amey.
+- What happened: Hundreds of correlations are tested.
+- What is wrong: Some will pass p < 0.05 by chance.
+- How we are fixing it: Benjamini-Hochberg FDR within each defined family of
+  tests. Report n, raw p and adjusted p.
+- Decision: BH-FDR within families, everywhere.
+- Reason: It controls false discoveries without the loss of power of
+  Bonferroni.
+- Evidence: `correlation_analysis.md` Part 4;
+  `scripts/05_analysis/part4_investment_vs_indicators.py`; `exposure_vs_investment.md`
+  section 2.
+- Affects: Every significance statement.
+
+### D-055. Spatial weights and Moran's I
+
+- Date: before 17 Sep 2026. Status: Final. Decided by: Amey.
+- What happened: Nearby tracts are alike.
+- What is wrong:
+  - Ordinary p-values assume independent units and overstate significance.
+  - Moran's I on raw skewed dollars is misleading: investment per person
+    gives raw I = 0.006, against 0.495 on ranks.
+- How we are fixing it: k = 6 nearest-neighbour weights on centroids in
+  EPSG:6346, row-standardised, 999 permutations, on rank-transformed values.
+- Decision: Moran's I with k = 6 KNN on ranks. Every report says that
+  p-values are not adjusted for space.
+- Reason: k = 6 is a standard default, and ranks remove the effect of skew.
+- Evidence: `correlation_analysis.md` Part 5;
+  `scripts/05_analysis/part5_diagnostics.py`; `scripts/05_analysis/part6b_moran_transforms.py`;
+  `followup_analysis.md`.
+- Affects: Diagnostics, Stage B section 3.5.
+
+### D-056. Spatial diagnostic gate and core specification
+
+- Date: before 11 Sep 2026. Status: Provisional. Decided by: Amey (not
+  recorded).
+- What happened: A model of investment against risk and vulnerability is
+  planned.
+- What is wrong: A spatial model fitted without evidence of clustering adds
+  complexity for nothing. Ignoring clustering overstates confidence.
+- How we are fixing it:
+  - Core specification: `investment ~ risk + vulnerability +
+    risk*vulnerability + controls`, reporting simple slopes.
+  - Fit OLS first and run Moran's I on its residuals.
+  - Move to a spatial model only if the residuals cluster, and then report
+    direct and indirect impacts.
+  - Check zero-inflation, and consider a hurdle model if needed.
+- Decision: As above, not yet fitted.
+- Reason: Standard practice.
+- Evidence: `DATA_PROCESSING.md` section 6; `REVIEW_MEMO.md` section 5.
+- Affects: The modelling stage.
+
+### D-057. Density as a control for composition findings
+
+- Date: 17 Sep 2026. Status: Final. Decided by: Amey.
+- What happened: The access and minority composition findings could be urban
+  density effects.
+- What is wrong: Density is linked to both vulnerability and project type.
+- How we are fixing it: Partial Spearman controlling for population density,
+  and stratified by density tercile.
+  - At block group, housing density from EJScreen ACSTOTHU is also used.
+  - At tract, housing density was "not available": no total housing unit
+    table was pulled.
+  - In prompt 21 it was derived for the heat comparison only, by summing
+    block group ACSTOTHU.
+- Decision: Population density is the control at both grains, and housing
+  density at block group.
+- Reason: It tests whether findings survive urban form.
+- Evidence: `followup_analysis.md` Task 3; `gray_decomposition.md`;
+  `scripts/05_analysis/part6c_density_control.py`; `population_exposure.md` 4.7.
+- Affects: Composition findings.
+
+### D-058. PCA method
+
+- Date: 27 Sep 2026. Status: Final (method). Decided by: Amey.
+- What happened: The vulnerability indicators were reduced by PCA.
+- What is wrong: The results depend on scaling, rotation and the retention
+  rule.
+- How we are fixing it:
+  - Primary run on standardized variables; sensitivity run on ranks.
+  - Complete cases only; KMO and Bartlett checks.
+  - Eigenvalue above 1, scree and parallel analysis compared side by side.
+  - Varimax rotation; the two runs compared by Tucker congruence.
+- Decision: As above.
+- Reason: The SoVI convention, plus a rank check consistent with the
+  Spearman screen.
+- Evidence: `pca_analysis.md` (Method).
+- Affects: The PCA outputs.
+
+### D-059. Number of PCA components
+
+- Date: 27 Sep 2026. Status: Pending professor. Decided by: Amey (proposal).
+- What happened: The retention criteria disagree.
+- What is wrong: The choice changes which constructs appear.
+- How we are fixing it: Proposed values:
+
+  | Run | Proposed components | Variance explained | What the criteria say |
+  |---|---|---|---|
+  | Tract, 19 variables | 5 | 67.5% | eigenvalue and parallel analysis agree |
+  | Block group, 24 variables | 6 | 58.0% | |
+  | Block group, 21 variables | 4 | 50.4% | PC5 sits on the parallel line |
+
+- Decision: Not yet made. The brief framed the question as 4 versus 5
+  components; the proposals above are what `pca_analysis.md` reports.
+- Reason: The criteria disagree, so the professor decides.
+- Evidence: `pca_analysis.md` (Proposals for you to confirm).
+- Affects: Any use of component scores.
+
+### D-060. Component scores or representative variables
+
+- Date: 27 Sep 2026. Status: Pending professor. Decided by: not yet.
+- What happened: The PCA can feed later analysis as component scores or as
+  one representative variable per component.
+- What is wrong: Scores are harder to interpret. Single variables lose
+  information.
+- How we are fixing it: Scores are saved (`outputs/pca/pca_scores_*.csv`) but
+  not used anywhere.
+- Decision: Not yet made.
+- Reason: A professor decision.
+- Evidence: `pca_analysis.md` (header).
+- Affects: The modelling stage and ML features.
+
+### D-067. Fixed seed for every Moran's I permutation test
+
+- Date: 5 Nov 2026. Status: Final. Decided by: Amey.
+- What happened: Moran's I p-values and z-scores come from 999 random
+  permutations. Rerunning Stage B gave different z-scores each time.
+- What is wrong: Results that change on every run cannot be reproduced
+  exactly.
+- How we are fixing it: Seed numpy's random generator with 12086 before
+  every Moran call.
+  - `part5_diagnostics.py` and `part6b_moran_transforms.py` already did this.
+  - `exposure_vs_investment.py` now does too (`MORAN_SEED`).
+  - Seeding per call makes each result independent of call order.
+  - esda's `Moran` has no seed argument, so the global seed is set.
+- Decision: Every Moran's I in the project uses seed 12086.
+- Reason: Reproducibility. Moran's I itself never depended on the seed; only
+  the permutation p and z did.
+- Evidence:
+  - Stage B was run twice after the change, and all ten output files were
+    byte-identical.
+  - `part5_diagnostics.py` was run twice: identical, and identical to its
+    earlier output.
+  - Moran's I and p are unchanged from the unseeded run; only z moved, to
+    its seeded value.
+- Affects: `outputs/exposure/stage_b/morans_i.csv`; any later spatial test.
+
+---
+
+## Project organization
+
+### D-061. Folder reorganized into data, scripts, outputs and reports
+
+- Date: 5 Nov 2026. Status: Final. Decided by: Amey.
+- What happened: Everything sat at the top of `Modelling Data from Web/`:
+  - 11 tables;
+  - 17 reports;
+  - 49 scripts in one folder;
+  - raw data under `tract-level/`, `block-group-level/` and `boundaries/`;
+  - every result under `output/`.
+- What is wrong: Files were hard to find. Raw downloads, built tables and
+  results were mixed. Every script hard-coded its own paths.
+- How we are fixing it:
+  - The new layout:
+    - `data/raw/` (untouched downloads) and `data/processed/` (tables we
+      built);
+    - `scripts/01_projects` to `05_analysis`, plus `common/`, `website/` and
+      `ml/`;
+    - `outputs/`, `reports/`, `prompts/` and `archive/`.
+  - Every path is defined once in `scripts/common/paths.py`.
+  - Tracked files used `git mv`; untracked and ignored files used plain `mv`.
+  - Nothing was deleted. Leftover folders that held only Finder `.DS_Store`
+    files went to `archive/old_empty_folders/`.
+- Decision: As above. `README.md` maps the folder and explains how to rerun
+  each step.
+- Reason: One place per kind of file, and one place per path.
+- Evidence: `REORGANIZATION_PLAN.md`; `README.md`; the checks in D-064.
+- Affects: Every script path, every report link, `.gitignore`, and five
+  website scripts in `../scripts/python/`.
+
+### D-062. Website scripts moved and proven unchanged (option A)
+
+- Date: 5 Nov 2026. Status: Final. Decided by: Amey (answers to the plan's five questions,
+  5 Nov 2026).
+- What happened: `build_population_exposure.py` and `build_surge_animation.py`
+  write the website's `src/exposure/data/`. They could not move without
+  editing their path lines.
+- What is wrong: Prompt 21 said not to change `build_population_exposure.py`.
+- How we are fixing it:
+  - Move both to `scripts/website/` and edit only their path lines: the
+    `sys.path` insert, `BASE` one level up, and the surge folder.
+  - Prove `build_population_exposure.py` is unchanged: run its real code with
+    the output folder redirected to a temporary copy of `src/exposure/data`.
+    All seven files (`exposure_blocks.json`, `heat.json`, `heat.png`,
+    `slr.json`, `slr.png`, `surge.json`, `surge.png`) came out byte-identical
+    to the committed versions, and the committed folder was not touched.
+  - `build_surge_animation.py` downloads the project list from Supabase
+    whenever it runs, so it was not rerun, because no downloads were allowed.
+    Its paths were checked instead: its top level executes and its surge
+    rasters resolve.
+- Decision: Option A.
+- Reason: It keeps one copy of the shared modules, and the byte check shows
+  the website is unaffected.
+- Evidence: this entry; `README.md` (Website section).
+- Affects: `scripts/website/`.
+
+### D-063. What was archived
+
+- Date: 5 Nov 2026. Status: Final. Decided by: Amey.
+- What happened: Some files are outdated.
+- What is wrong: Archiving too much would hide files still in use.
+- How we are fixing it: Only `correlation_analysis.md` (superseded) and the
+  empty `.Rhistory` went to `archive/`. Other candidates are listed in
+  `README.md` and left in place:
+  - `reports/analysis/RESULTS_FOR_REVIEW.md` (16 Sep; predates the
+    correlation screen and the PCA);
+  - `followup_analysis.md` and `gray_decomposition.md`, whose findings are
+    folded into `FINDINGS_FOR_PROFESSOR.md`;
+  - `REORGANIZATION_PLAN.md`, now carried out.
+- Decision: Archive only the two files for now.
+- Reason: Amey's answer to the plan (5 Nov 2026): archive only these for now.
+- Evidence: `archive/`; `README.md`.
+- Affects: Nothing that runs.
+
+### D-064. Git status kept as it was; checks after the move
+
+- Date: 5 Nov 2026. Status: Final. Decided by: Amey.
+- What happened: Raw data (9.6 GB) and `output/` were git-ignored. A move
+  could have exposed them.
+- What is wrong: Untracked raw data could be committed by accident.
+- How we are fixing it:
+  1. `.gitignore` was updated first. New lines ignore `data/raw/boundaries`,
+     `social`, `physical`, `outputs/`, and the files that left `output/` (the
+     allocation audits, the join keys, the variable dictionary). The old
+     lines are kept too.
+  2. Tracked files stay tracked; the exposure tables stay untracked and not
+     ignored.
+  3. `git status` was taken before and after.
+- Decision: Every file keeps the git status it had. No raw data file became
+  tracked.
+- Reason: Amey's answer to the plan (5 Nov 2026).
+- Evidence of the checks after the move:
+  - All 424 files have the same SHA-256 before and after (the folder total
+    is unchanged).
+  - Every path in `paths.py` exists.
+  - Every script imports and runs its top level with a clean `sys.path`.
+  - The loaders give 698 tracts, 1,843 block groups and 25,805 blocks with
+    2,738,356 residents.
+  - Two reruns match the earlier outputs: `part6b_moran_transforms.py`
+    identically, and Stage B identically except the random Moran permutation
+    z-scores.
+  - `npm run build` passes.
+- Affects: `.gitignore`.
+
+### D-065. Published strings left unchanged
+
+- Date: 5 Nov 2026. Status: Final. Decided by: Amey.
+- What happened: `public/layers/storm-surge-category-3.json`,
+  `public/layers/surface-metadata.json` and the `src/admin/viz/gapMap.js`
+  label name old paths.
+- What is wrong: The text is now out of date.
+- How we are fixing it: Leave them as they are. They record where the source
+  was when each layer was built; no code reads them as paths.
+- Decision: Unchanged.
+- Reason: No changes to the website's published outputs.
+- Evidence: `REORGANIZATION_PLAN.md` 3.4.
+- Affects: Nothing.
+
+### D-066. Two website helper scripts are git-ignored
+
+- Date: 5 Nov 2026. Status: Replaced by D-068. Decided by: Amey.
+- What happened: `../scripts/python/build_lst_layer.py` and
+  `build_hhi_layer.py` are covered by the repo's `scripts/python/*` ignore
+  rule.
+- What is wrong: Their boundary-path fix (`build_lst_layer.py`, line 53) is
+  local only and will not appear in a commit.
+- How we are fixing it: Record it here. If those scripts should be shared,
+  un-ignore them in a separate change.
+- Decision: Edited locally, and flagged.
+- Reason: Changing what the repo ignores is outside this task.
+- Evidence: `git check-ignore -v scripts/python/build_lst_layer.py`.
+- Affects: Anyone rebuilding the heat layer from another clone.
+
+### D-068. Track the heat layer scripts in git
+
+- Date: 5 Nov 2026. Status: Final. Decided by: Amey.
+- What happened: `../scripts/python/build_lst_layer.py` builds the Landsat
+  surface temperature composite that all heat exposure depends on.
+  `build_hhi_layer.py` builds the CDC Heat & Health Index layer and imports
+  from it. Both were git-ignored by the repo's `scripts/python/*` rule
+  (D-066).
+- What is wrong: The heat data could not be rebuilt from a fresh clone, and
+  the boundary-path fix from the reorganization was local only.
+- How we are fixing it: Add `.gitignore` exceptions
+  (`!scripts/python/build_lst_layer.py`, `!scripts/python/build_hhi_layer.py`)
+  and stage both files. They are not committed yet.
+- Decision: Both scripts are tracked.
+- Reason: Analysis inputs should be reproducible from the repository.
+- Evidence: `.gitignore` (lines 33 to 35); `git status` shows both as added.
+  `build_lst_layer.py`'s install line names `scripts/python/requirements.txt`;
+  D-070 tracks it as well.
+- Affects: `.gitignore`; replaces D-066.
+
+### D-070. Track the heat layer requirements file
+
+- Date: 5 Nov 2026. Status: Final. Decided by: Amey.
+- What happened: `build_lst_layer.py` says to install its dependencies from
+  `scripts/python/requirements.txt`. That file was still git-ignored after
+  D-068.
+- What is wrong: A fresh clone would have the heat layer script but not its
+  dependency list, so the heat layer could not be rebuilt as documented.
+- How we are fixing it: Add `!scripts/python/requirements.txt` to
+  `.gitignore`, next to the two script exceptions.
+- Decision: The requirements file is tracked.
+- Reason: The heat data the exposure analysis depends on should be
+  rebuildable from the repository.
+- Evidence: `.gitignore`; the file lists numpy, rasterio, pystac-client,
+  planetary-computer and pyshp for `build_lst_layer.py`. It has minimum
+  versions, not pinned ones. It holds no secrets.
+- Affects: `.gitignore`.
+
+---
+
+## Machine learning
+
+Entries will be added here as prompt 22
+(`prompts/claude_code_prompt_22_ml_scenario_module.md`) runs, numbered
+from D-071. Choices already fixed by earlier entries that the ML work must
+respect:
+- the training statuses (D-002);
+- the 698-tract frame (D-007);
+- single-unit location targets (D-048);
+- the hazard scenarios (D-031, D-036, D-041).
