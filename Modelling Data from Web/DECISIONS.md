@@ -36,7 +36,7 @@ Backfilled on 5 November 2026 from:
 | Investment measures | D-045 to D-050 |
 | Analysis methods | D-051 to D-060, D-067 |
 | Project organization | D-061 to D-066, D-068, D-070 |
-| Machine learning | to be added, from D-071 |
+| Machine learning | D-071 to D-078 |
 
 ---
 
@@ -1343,3 +1343,176 @@ respect:
 - the 698-tract frame (D-007);
 - single-unit location targets (D-048);
 - the hazard scenarios (D-031, D-036, D-041).
+
+### D-071. Gradient boosting packages are not installed
+
+- Date: 5 Nov 2026. Status: Pending (Amey). Decided by: Amey.
+- What happened: Prompt 22 asks for LightGBM, XGBoost and SHAP. None is
+  installed in the repo's `.venv` or in any other Python environment on this
+  machine.
+- What is wrong: Installing them means downloading, which the prompt rules
+  out without approval. Stage 2 cannot start as written.
+- How we are fixing it: Stage 1 uses scikit-learn only (installed, 1.9.1).
+  Two options for Stage 2:
+  - install the three packages, which needs your approval;
+  - use scikit-learn's `HistGradientBoostingClassifier`, which supports
+    monotone constraints, with permutation importance and partial dependence
+    in place of SHAP.
+- Decision: Not yet made.
+- Reason: No downloads without approval.
+- Evidence: `scripts/ml/requirements.txt` (pinned versions, the three
+  packages listed as not installed); `reports/ml/stage1_report.md` section 5.
+- Affects: Stage 2 models, explanations and the scenario engine.
+
+### D-072. ML training frame: 697 tracts
+
+- Date: 5 Nov 2026. Status: Final. Decided by: Amey.
+- What happened: Prompt 22 says to exclude the 10 tracts under 100 residents
+  from training.
+- What is wrong: Nine of those ten have no residents and are already outside
+  the 698-tract frame (D-007). Only one tract in the frame is under 100:
+  Pennsuco, 12086981100, with 28 residents.
+- How we are fixing it: Train and evaluate on the other 697 tracts. Keep
+  Pennsuco in the modelling table and the outputs, flagged by
+  `low_pop_flag`.
+- Decision: 697 training tracts.
+- Reason: The prompt's rule, applied to the frame.
+- Evidence: `outputs/ml/stage1/model_table_tract.csv`; target counts in
+  `reports/ml/stage1_report.md`.
+- Affects: All ML targets.
+
+### D-073. Context features under the 0.75 rule; hazard pairs kept
+
+- Date: 5 Nov 2026. Status: Provisional (confirm). Decided by: Amey.
+- What happened: Six pairs among the main features reach |Spearman rho| ≥
+  0.75 on the 697 training tracts:
+  - population density vs housing density, +0.94;
+  - housing density vs land area, −0.87;
+  - population density vs land area, −0.86;
+  - heat population-weighted mean vs heat 95th percentile share, +0.95;
+  - surge Category 3 any vs Category 3 more than 3 ft, +0.92;
+  - surge Category 3 vs Category 4, +0.82.
+- What is wrong: Near-duplicate features double-weight a concept and split
+  explanation credit.
+- How we are fixing it:
+  - Keep population density, the established control (D-057), and leave
+    housing density and land area out of the main set. They stay in the table
+    and the dictionary.
+  - Keep the three hazard pairs, because prompt 22 names that hazard set
+    explicitly.
+- Decision: The main set has 30 features. The three hazard pairs are kept
+  and flagged.
+- Reason: The 0.75 rule (D-053) for the context features; the prompt's
+  explicit list for the hazard features.
+- Evidence: `outputs/ml/stage1/feature_screen_pairs.csv`;
+  `reports/ml/stage1_report.md` section 2.
+- Affects: ML features, Stage 2 explanations.
+
+### D-074. Fixed log transform for skewed features
+
+- Date: 5 Nov 2026. Status: Final. Decided by: Amey.
+- What happened: The first T5 ridge baseline gave R² −19 under spatial CV.
+- What is wrong: Raw, very skewed features (land area, densities, FEMA loss
+  per person, distance) produced extreme predictions in folds that held
+  unusual tracts, such as the large Everglades tracts.
+- How we are fixing it: Apply log1p to population density, housing density,
+  land area, distance to the coast and the two FEMA loss features. It is a
+  fixed elementwise transform with nothing fitted, so it cannot leak across
+  folds.
+- Decision: log1p for those six features in every model.
+- Reason: It is standard for skewed positive quantities. After it, ridge
+  under spatial CV gives R² 0.22.
+- Evidence: `scripts/ml/stage1_build.py` (`LOG1P`); `outputs/ml/stage1/baselines_T5.csv`.
+- Affects: All ML models.
+
+### D-075. Validation design for the ML module
+
+- Date: 5 Nov 2026. Status: Final. Decided by: Amey.
+- What happened: Neighbouring tracts are alike (Moran's I 0.62 to 0.88 for
+  exposure), so random folds overstate accuracy.
+- What is wrong: A single random cross-validation would report optimistic
+  scores.
+- How we are fixing it:
+  - **Primary:** 10 spatial folds from k-means of tract representative
+    points, seed 12086.
+  - **Also reported:** 10 stratified random folds, to show the gap, and
+    leave one jurisdiction out (33 groups).
+  - **Tuning:** hyperparameters chosen by an inner grouped CV on the training
+    folds only (nested). Imputation, scaling and PCA are fitted inside each
+    training fold.
+  - **Scores:** ROC-AUC, PR-AUC, log loss and Brier, pooled. ROC-AUC and
+    PR-AUC are also averaged over folds, because pooling folds with different
+    base rates distorts a constant predictor's ranking scores.
+- Decision: As above, for every ML target.
+- Reason: Prompt 22's rules, plus the pooling problem found in Stage 1.
+- Evidence: `outputs/ml/stage1/spatial_folds.csv` and
+  `spatial_fold_assignment.csv`; `reports/ml/stage1_report.md` section 4.
+- Affects: All ML scores.
+
+### D-076. Definitions of the new ML features
+
+- Date: 5 Nov 2026. Status: Final. Decided by: Amey.
+- What happened: Prompt 22 asks for FEMA loss per person and per building
+  value, distance to the coast, and a heat land measure for the comparison
+  model.
+- What is wrong: None of these existed. There is no coastline file, and FEMA
+  population is zero in 6 tracts (none of them in the frame).
+- How we are fixing it:
+  - `nri_eal_per_person` = `EAL_VALT` ÷ NRI `POPULATION` (NA where 0).
+  - `nri_ealb_per_building_value` = `EAL_VALB` ÷ `BUILDVALUE`.
+  - `dist_coast_km` = distance from each tract's representative point to the
+    union of TIGER marine water polygons: MTFCC H2051 (bay, estuary, sound)
+    and H2053 (ocean), that is Biscayne Bay, the Atlantic, and Card, Barnes
+    and Little Card Sound.
+  - `heat_land_mean_f` = land-area-weighted mean of the Landsat block group
+    means, comparison model only.
+  - `in_municipality` = 1 if the tract centroid is in an incorporated place.
+  - A named empty slot for FEMA flood zones.
+- Decision: As above.
+- Reason: The closest available measure to each requested feature, built
+  only from data already on disk.
+- Evidence: `scripts/ml/stage1_build.py`; `outputs/ml/stage1/feature_dictionary.csv`.
+- Affects: ML features.
+
+### D-077. ML target definitions
+
+- Date: 5 Nov 2026. Status: Final. Decided by: Amey.
+- What happened: Prompt 22 defines five targets.
+- What is wrong: Three need interpretation against the data.
+- How we are fixing it:
+  - **T1:** any sited (parcel, neighborhood, corridor) completed, funded or
+    ongoing project in the tract. It matches `investment_any_single_unit`
+    exactly.
+  - **T2:** any Planned sited project in the tract. 217 projects in total,
+    201 in 108 frame tracts. Scored with spatial out-of-fold T1 predictions,
+    never trained on.
+  - **T3:** trained on "first sited project's `Reported_Year` ≤ 2023". Tested
+    on tracts with none by 2023, where the positives are tracts whose first
+    project falls in 2024 to 2026. `Reported_Year` is a document year, and
+    399 sited projects carry 2020.
+  - **T4:** gray (919) against green, blue and hybrid together (180) at
+    project level. Blue has 18 projects in scope; the prompt's 36 counts
+    every status. Features are the tract's features plus scale and hazard
+    focus. Hazard focus is a project attribute decided alongside type, so it
+    describes projects but would not be known for an unproposed one.
+  - **T5:** log(sited dollars ÷ residents) for the 395 tracts with a sited
+    project.
+- Decision: As above.
+- Reason: Faithful to the prompt, and to the data as it is.
+- Evidence: `outputs/ml/stage1/target_counts.csv`; `reports/ml/stage1_report.md`
+  section 3.
+- Affects: All ML results.
+
+### D-078. Where ML reports live
+
+- Date: 5 Nov 2026. Status: Final. Decided by: Amey.
+- What happened: Prompt 22 asks for reports in `output/ml/`.
+- What is wrong: Since the reorganization (D-061), results live in
+  `outputs/`, which is git-ignored, and reports live in `reports/`.
+- How we are fixing it: Machine-readable results go to `outputs/ml/`
+  (`paths.OUT_ML`). Written reports go to `reports/ml/`, so they are tracked.
+- Decision: As above.
+- Reason: It follows the folder layout and keeps reports under version
+  control.
+- Evidence: `reports/ml/stage1_report.md`.
+- Affects: All ML reports, including the model card.

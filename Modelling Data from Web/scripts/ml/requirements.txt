@@ -1,0 +1,19 @@
+# Machine learning scenario module (prompt 22). Pinned to the versions in the
+# repo's .venv (Python 3.13.11) used for Stage 1.
+numpy==2.4.2
+pandas==3.0.1
+scipy==1.18.1
+scikit-learn==1.9.1
+geopandas==1.1.4
+shapely==2.1.2
+pyogrio==0.13.0
+pyproj==3.7.2
+esda==2.10.0
+libpysal==4.15.0
+matplotlib==3.11.2
+
+# Needed for Stage 2 and NOT installed yet (installing means downloading;
+# waiting on approval, DECISIONS.md D-071). Versions will be pinned when installed.
+# lightgbm
+# xgboost
+# shap
