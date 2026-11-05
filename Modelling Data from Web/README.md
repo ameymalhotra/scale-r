@@ -67,7 +67,7 @@ reports/         written reports
   analysis/      FINDINGS_FOR_PROFESSOR, REVIEW_MEMO (.md and .pdf),
                  RESULTS_FOR_REVIEW, correlation_screen, pca_analysis,
                  followup_analysis, gray_decomposition
-  ml/            machine learning stage reports (stage1_report.md, later the model card)
+  ml/            machine learning reports: stage1_report.md, stage2_report.md, model_card.md
 prompts/         the Claude Code prompts (21 population exposure, 22 machine learning)
 archive/         outdated files, kept, not used
 ```
@@ -114,6 +114,8 @@ already on disk.
 | 11. Exposure vs investment (Stage B) | `$PY "$M/04_exposure/exposure_vs_investment.py"` | analysis and exposure tables | `outputs/exposure/stage_b/` | about a minute |
 | 11b. Heat terciles by hazard focus | `$PY "$M/04_exposure/heat_tercile_investment.py"` | analysis and exposure tables, allocation ledger, project file | `outputs/exposure/heat_terciles/` | seconds |
 | 16. ML Stage 1: modelling table, targets, baselines | `$PY "$M/ml/stage1_build.py"` | analysis, exposure, NRI, EJScreen, boundaries, projects | `outputs/ml/stage1/`; report in `reports/ml/` | about 2 minutes |
+| 17. ML Stage 2: models, explanation, need and gap | `bash "$M/ml/run_ml.sh" "$M/ml/stage2_models.py"` (ML environment, D-079) | Stage 1 tables, PCA scores | `outputs/ml/stage2/`, `outputs/ml/dashboard/`; reports in `reports/ml/` | about 18 minutes |
+| 18. ML scenarios | `bash "$M/ml/run_ml.sh" "$M/ml/scenarios.py"`; interventions: `interventions.py --tracts ... --type gray|nature-based` | Stage 2 models | `outputs/ml/dashboard/scenarios.json` | seconds |
 | 12. Correlation analysis, parts 2 to 7 | `$PY "$M/05_analysis/part2_univariate.py"`, then `part3_correlation`, `part4_investment_vs_indicators`, `part5_diagnostics`, `part6b_moran_transforms`, `part6c_density_control`, `part7a_density_premise`, `part7_gray_decomposition` | analysis tables, audits | `outputs/correlation/part*/` | seconds to minutes each |
 | 13. Correlation screen | `$PY "$M/05_analysis/correlation_screen.py"` | analysis tables | `outputs/correlation/correlation_screen/`, `reports/analysis/correlation_screen.md` | seconds |
 | 14. PCA | `$PY "$M/05_analysis/pca_analysis.py"` | analysis tables | `outputs/pca/`, `reports/analysis/pca_analysis.md` | about a minute |

@@ -1,5 +1,9 @@
-# Machine learning scenario module (prompt 22). Pinned to the versions in the
-# repo's .venv (Python 3.13.11) used for Stage 1.
+# Machine learning scenario module (prompt 22). Dedicated environment (D-079):
+#   uv venv --python 3.13 scripts/ml/.venv-ml
+#   VIRTUAL_ENV=scripts/ml/.venv-ml uv pip install -r scripts/ml/requirements.txt
+# Run every ML script through scripts/ml/run_ml.sh, which points LightGBM and
+# XGBoost at the OpenMP runtime bundled with PyTorch (no system libomp needed).
+# Exact versions of every dependency: requirements-lock.txt.
 numpy==2.4.2
 pandas==3.0.1
 scipy==1.18.1
@@ -11,9 +15,11 @@ pyproj==3.7.2
 esda==2.10.0
 libpysal==4.15.0
 matplotlib==3.11.2
-
-# Needed for Stage 2 and NOT installed yet (installing means downloading;
-# waiting on approval, DECISIONS.md D-071). Versions will be pinned when installed.
-# lightgbm
-# xgboost
-# shap
+lightgbm==4.7.0
+xgboost==3.4.1
+shap==0.54.1
+# TabPFN challenger (Prior Labs License: Apache 2.0 with an attribution
+# requirement). Its weights need a one-time license acceptance and an API key
+# in TABPFN_TOKEN; without it the challenger is skipped (D-082).
+tabpfn==9.2.0
+torch==2.15.0

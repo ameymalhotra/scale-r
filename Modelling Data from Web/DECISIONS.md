@@ -36,7 +36,7 @@ Backfilled on 5 November 2026 from:
 | Investment measures | D-045 to D-050 |
 | Analysis methods | D-051 to D-060, D-067 |
 | Project organization | D-061 to D-066, D-068, D-070 |
-| Machine learning | D-071 to D-078 |
+| Machine learning | D-071 onward |
 
 ---
 
@@ -1346,7 +1346,7 @@ respect:
 
 ### D-071. Gradient boosting packages are not installed
 
-- Date: 5 Nov 2026. Status: Pending (Amey). Decided by: Amey.
+- Date: 5 Nov 2026. Status: Replaced by D-079. Decided by: Amey.
 - What happened: Prompt 22 asks for LightGBM, XGBoost and SHAP. None is
   installed in the repo's `.venv` or in any other Python environment on this
   machine.
@@ -1516,3 +1516,246 @@ respect:
   control.
 - Evidence: `reports/ml/stage1_report.md`.
 - Affects: All ML reports, including the model card.
+
+### D-079. Dedicated ML environment
+
+- Date: 5 Nov 2026. Status: Final. Decided by: Amey.
+- What happened: Amey approved installing LightGBM, XGBoost, SHAP and TabPFN
+  for Stage 2 (replaces D-071).
+- What is wrong: The LightGBM and XGBoost wheels need the OpenMP runtime
+  (`libomp`), which is not installed on this machine.
+- How we are fixing it:
+  - Create `scripts/ml/.venv-ml` with uv. It is ignored by git through its
+    own `.gitignore`.
+  - Install the pinned packages: lightgbm 4.7.0, xgboost 3.4.1, shap 0.54.1,
+    tabpfn 9.2.0, torch 2.15.0, plus the Stage 1 set.
+  - Run every ML script through `scripts/ml/run_ml.sh`. It points the loader
+    at the `libomp` bundled with PyTorch, so all three libraries share one
+    OpenMP runtime and nothing is installed system-wide.
+- Decision: As above.
+- Reason: It keeps the ML stack apart from the analysis `.venv` and needs no
+  system change.
+- Evidence: `scripts/ml/requirements.txt`, `requirements-lock.txt` (the full
+  freeze), `run_ml.sh`.
+- Affects: All Stage 2 and later ML scripts.
+
+### D-080. One hazard feature per family in the main model
+
+- Date: 5 Nov 2026. Status: Final. Decided by: Amey.
+- What happened: Stage 1 kept three hazard pairs above the 0.75 line
+  (D-073).
+- What is wrong: Near-duplicate hazard features split explanation credit and
+  make scenario changes ambiguous.
+- How we are fixing it: Apply the 0.75 rule to the hazard features.
+  - **Main model:** `slr_3ft_pop_share`, `surge_cat3_any_pop_share`,
+    `heat_lst_popwt_mean_f`.
+  - **Sensitivity model:** adds the three dropped versions,
+    `heat_p95_pop_share`, `surge_cat3_over3ft_pop_share` and
+    `surge_cat4_any_pop_share`.
+  - **Scenario engine:** a scenario replaces the value of the one feature in
+    its family. For example, surge Category 4 shares go into the surge
+    feature.
+- Decision: The main model has 27 features: 19 social, 3 hazard, 2 FEMA loss
+  and 3 context.
+- Reason: Amey's instruction, and the project's 0.75 rule (D-053).
+- Evidence: this entry; `reports/ml/stage2_report.md`.
+- Affects: Stage 2 models, the scenario engine, SHAP.
+
+### D-081. T3 is a diagnostic only
+
+- Date: 5 Nov 2026. Status: Final. Decided by: Amey.
+- What happened: T3 (the temporal check) scored ROC-AUC 0.57 in Stage 1.
+- What is wrong: `Reported_Year` is the year of the source document, not the
+  build year, and 399 sited projects carry 2020. So T3 does not measure "new
+  investment" reliably.
+- How we are fixing it: Report T3, flagged as limited, and never use it for
+  claims. T2 (planned projects) is the main future check.
+- Decision: As above.
+- Reason: The label cannot support a claim.
+- Evidence: `reports/ml/stage1_report.md` section 3.
+- Affects: Stage 2 reporting and the model card.
+
+### D-082. TabPFN as a challenger model
+
+- Date: 5 Nov 2026. Status: Provisional (blocked on a license key). Decided
+  by: Amey.
+- What happened: Amey asked to add TabPFN (Hollmann et al., Nature 2025) as a
+  challenger for T1 and T4, with the same nested spatial CV. LightGBM or
+  XGBoost stays the scenario model, because of the monotone constraints and
+  SHAP. If TabPFN clearly wins on spatial CV, it drives the prediction map.
+- What is wrong: tabpfn 9.2.0 installs, but its model weights need a one-time
+  license acceptance on Prior Labs' site (account, then an API key in
+  `TABPFN_TOKEN`). Creating accounts, accepting licenses and handling API
+  keys are for Amey to do.
+- How we are fixing it: The Stage 2 script runs TabPFN only when
+  `TABPFN_TOKEN` is set in the environment, and otherwise records "not run
+  (no license key)" in the results table. The model card notes the license:
+  the Prior Labs License, Apache 2.0 with an attribution requirement.
+- Decision: Built in; runs once Amey sets the key.
+- Reason: No account or credential handling by the assistant.
+- Evidence: `scripts/ml/stage2_models.py`; `scripts/ml/requirements.txt`.
+- Affects: The T1 and T4 comparison tables, and the choice of prediction map.
+
+### D-083. Conformal uncertainty intervals
+
+- Date: 5 Nov 2026. Status: Final. Decided by: Amey.
+- What happened: Amey asked for conformal prediction (split or
+  cross-conformal, inside the spatial folds) for per-tract intervals, with
+  achieved coverage reported.
+- What is wrong: A binary target gives a probability, not a value with an
+  error. A plain conformal interval does not apply directly.
+- How we are fixing it: Every method below is fitted inside each outer
+  spatial fold. One training fold is held out as the calibration set; the
+  model is fitted on the rest and applied to the test fold.
+  - **T1 likelihood:** an inductive Venn-ABERS interval [p0, p1] for each
+    tract. This is a conformal-family method that gives a calibrated
+    probability interval. It comes with conformal prediction sets at 90%,
+    whose achieved coverage is reported.
+  - **T5 amount:** split conformal intervals (absolute-residual
+    nonconformity) at 90%, with achieved coverage.
+- Decision: As above.
+- Reason: Conformal methods give distribution-free coverage. Venn-ABERS is
+  the conformal answer for probabilities.
+- Evidence: `scripts/ml/stage2_models.py`; `reports/ml/stage2_report.md`.
+- Affects: Dashboard intervals, the model card.
+
+### D-084. Heat scenarios are illustrative shifts
+
+- Date: 5 Nov 2026. Status: Provisional (confirm). Decided by: Amey.
+- What happened: Prompt 22 lists heat scenarios at the 75th and 95th
+  percentile. After D-080, the model's one heat feature is the
+  population-weighted mean surface temperature.
+- What is wrong: A threshold scenario has no meaning for a mean, and no
+  projected heat layer exists. The 75th percentile is also not used (D-036).
+- How we are fixing it: The scenario engine offers "current" plus
+  ILLUSTRATIVE uniform warming of +1, +2 and +3°F on the mean. These are
+  labelled hypothetical everywhere and are not projections. Tracts pushed
+  above the training range are flagged as extrapolation.
+- Decision: As above.
+- Reason: It keeps one feature per family (D-080), and is honest that no heat
+  projection exists.
+- Evidence: `scripts/ml/scenarios.py`.
+- Affects: The scenario engine and the dashboard heat control.
+
+### D-085. Need and gap
+
+- Date: 5 Nov 2026. Status: Final. Decided by: Amey.
+- What happened: Prompt 22 asks for a transparent need score, kept separate
+  from the model, and a gap between need and predicted investment.
+- What is wrong: The hazard measures are on different scales: two shares and
+  a temperature.
+- How we are fixing it:
+  - **exposure index** = mean of the percentile ranks of the three primary
+    hazard features: SLR 3 ft share, surge Category 3 share, heat mean.
+  - **vulnerability** = PCA component RC1, "general socioeconomic
+    disadvantage", oriented so that higher means more poverty.
+  - **need** = exposure percentile × vulnerability percentile, then ranked.
+  - **gap** = need percentile minus predicted-likelihood percentile. Positive
+    means more need than the model expects investment.
+  - Under a scenario, values are ranked against the current distribution, so
+    more hazard raises need.
+- Decision: As above. The one tract without SVI values has no need score.
+- Reason: Simple, explainable, and independent of the model.
+- Evidence: `scripts/ml/stage2_models.py` (section 8); `scenarios.py`.
+- Affects: The dashboard need and gap layers, `interventions.py`.
+
+### D-086. Model choice rule, and the monotone scenario model
+
+- Date: 5 Nov 2026. Status: Final. Decided by: Amey.
+- What happened: Several models compete for T1.
+- What is wrong: Picking whichever looks best after the fact invites
+  fishing.
+- How we are fixing it: The rule was fixed before seeing the scores:
+  - The **map model** is the tree model (LightGBM or XGBoost) with the
+    higher spatial PR-AUC; ties go to lower log loss.
+  - TabPFN replaces it on the map only if it beats it by at least 0.02 in
+    both spatial ROC-AUC and PR-AUC.
+  - The **scenario model** is the same tree family with monotone increasing
+    constraints on the three hazard features. Its accuracy cost is reported.
+  - Hyperparameters for the final fits are the values chosen most often
+    across the outer spatial folds.
+- Decision: As above.
+- Reason: A choice set in advance. Monotone constraints keep scenarios
+  plausible: more hazard never lowers predicted need.
+- Evidence: `outputs/ml/stage2/model_choice.json`; `reports/ml/stage2_report.md`.
+- Affects: The dashboard map and the scenarios.
+
+### D-087. What the dashboard shows as a tract's prediction
+
+- Date: 5 Nov 2026. Status: Final. Decided by: Amey.
+- What happened: A model fitted on all tracts and then used to predict those
+  same tracts looks better than it is.
+- What is wrong: In-sample predictions overstate how well the model knows a
+  tract.
+- How we are fixing it: Each training tract's prediction is its spatial
+  out-of-fold prediction, calibrated with Venn-ABERS, and the interval is
+  [p0, p1] (D-083). The one tract under 100 residents, not in training, gets
+  the final-fit prediction and is flagged.
+  - Scenario values come from the final monotone model, shown as the change
+    from that model's own current prediction.
+- Decision: As above.
+- Reason: Honest, out-of-sample numbers on the map.
+- Evidence: `outputs/ml/stage2/tract_predictions.csv`; `outputs/ml/dashboard/`.
+- Affects: The dashboard.
+
+### D-088. T5 is reported but unreliable, and has no dashboard numbers
+
+- Date: 5 Nov 2026. Status: Final. Decided by: Amey.
+- What happened: T5 (log sited dollars per resident) is weak: best spatial
+  R² 0.23 (ridge). Its split conformal 90% intervals hit 91.7% coverage, but
+  average 6.5 log units wide, a factor of about 650 between the bottom and
+  top of a typical interval.
+- What is wrong: Intervals that wide make dollar predictions meaningless for
+  any single tract.
+- How we are fixing it: T5 stays in the reports, flagged as unreliable. No
+  dollar prediction appears on the dashboard; `tracts.json` and
+  `scores.json` carry no T5 field.
+- Decision: As above.
+- Reason: Do not show numbers that cannot be trusted.
+- Evidence: `outputs/ml/stage2/results_T5.csv`, `results_conformal.csv`;
+  `reports/ml/stage2_report.md`.
+- Affects: The dashboard and the model card.
+
+### D-089. Tree models do not beat logistic regression on T1
+
+- Date: 5 Nov 2026. Status: Pending (Amey). Decided by: Amey.
+- What happened: Under spatial CV, T1 logistic regression scored ROC-AUC
+  0.675 and PR-AUC 0.719. XGBoost scored 0.660 and 0.714, and LightGBM 0.644
+  and 0.712. Under random CV they are about equal.
+- What is wrong: Prompt 22 says a complex model is only worth using if it
+  clearly beats the baselines. It does not. The map currently uses XGBoost
+  (D-086).
+- How we are fixing it: Results are reported as they are. Two options:
+  - put the logistic out-of-fold predictions on the map, keeping monotone
+    XGBoost for scenarios (its monotone constraint costs nothing: 0.660
+    either way);
+  - keep XGBoost on the map for its SHAP drivers. Logistic coefficients
+    could give drivers instead.
+- Decision: Not yet made. The map stays on XGBoost until Amey decides.
+- Reason: The prompt's own rule.
+- Evidence: `outputs/ml/stage2/results_binary.csv`; `reports/ml/stage2_report.md`.
+- Affects: Dashboard predictions and drivers.
+
+### D-090. Hazard exposure barely drives where projects were sited
+
+- Date: 5 Nov 2026. Status: Final (finding). Decided by: Amey.
+- What happened: SHAP ranks the three hazard features 13th (surge), 18th
+  (heat) and 20th (sea level rise) of 27. Distance to the coast and
+  population density dominate. In partial dependence, the full range of each
+  hazard moves the average prediction by 0.02 or less.
+- What is wrong: The scenario engine changes only hazard features, so the
+  scenarios barely move predicted likelihood: at most +0.01 on average (Cat 5
+  surge). Heat moves nothing, because past investment fell with heat and the
+  monotone constraint flattens that to zero.
+- How we are fixing it: Report this plainly. The scenarios say "under current
+  patterns, more hazard would hardly change where projects go". The need and
+  gap layers, which respond directly to exposure, carry the scenario story.
+  For example, tracts with a gap of 0.5 or more rise from 87 now to 97 at Cat
+  5 surge and 94 at 6 ft.
+- Decision: As above.
+- Reason: It is what the data show, and it is itself a finding about past
+  investment.
+- Evidence: `outputs/ml/stage2/shap_global.csv`, `partial_dependence.csv`,
+  `scenario_summary.csv`.
+- Affects: How the scenarios are presented, on the dashboard and in the model
+  card.
