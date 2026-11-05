@@ -1888,7 +1888,7 @@ respect:
 
 ### D-095. The admin view's data files are still public static files
 
-- Date: 5 Nov 2026. Status: Pending (Amey). Decided by: Amey.
+- Date: 5 Nov 2026. Status: Approved, deferred (see D-096). Decided by: Amey.
 - What happened: The build emits the Scenario data as hashed static assets
   (`dist/assets/scenarios-*.json`, `tracts-*.geojson`). Only the admin chunks
   reference them.
@@ -1906,3 +1906,211 @@ respect:
 - Reason: Being clear about what the login protects and what it does not.
 - Evidence: `dist/assets/` after `npm run build`; `reports/ml/stage3_report.md`.
 - Affects: The admin Scenario view, and the existing gap map's data.
+
+### D-096. Private admin data fix approved but deferred; no push or deploy until done
+
+- Date: 5 Nov 2026. Status: Final. Decided by: Amey.
+- What happened: Amey approved the D-095 fix, as planned in
+  `docs/PRIVATE_ADMIN_DATA_PLAN.md`: a private Supabase bucket
+  `admin-data`, read by admins only via `public.is_admin()`. Amey then put it
+  on hold.
+- What is wrong: Until the fix is done, the admin data would be exposed:
+  - any push would put the Scenario data (local commit `a32dbdf`) on the
+    public GitHub repository;
+  - any deploy would publish the Scenario data as static files.
+- How we are fixing it: The plan stays as written. Nothing is done yet:
+  - no bucket is created;
+  - nothing is uploaded;
+  - no policy is changed;
+  - commit `a32dbdf` is not rewritten.
+- Decision: **Nothing may be pushed or deployed until the D-095 fix is done.**
+  That covers every branch, including `data-prep-exposure` and
+  `ml-scenario-module`.
+- Reason: Amey's instruction. It keeps the unpushed Scenario data private
+  while the fix waits.
+- Evidence: `docs/PRIVATE_ADMIN_DATA_PLAN.md`; `git log` (`a32dbdf` is local
+  only).
+- Affects: All pushes and deploys from this repository.
+
+### D-097. Software for the Bayesian multiscale model: NumPyro
+
+- Date: 5 Nov 2026. Status: Final. Decided by: Amey.
+- What happened: Prompt 24 asked for R with R-INLA first, then PyMC or
+  NumPyro.
+  - R 4.5.2 is installed, but without INLA or the R spatial packages.
+  - The ML environment had no PyMC or NumPyro.
+- What is wrong: Every option needed an install.
+- How we are fixing it: Amey chose NumPyro and ArviZ in `scripts/ml/.venv-ml`
+  (numpyro 0.22.0, jax 0.12.0.1, arviz 1.3.0), pinned in
+  `scripts/ml/requirements.txt`. No existing package changed version. Models
+  are fitted by NUTS MCMC, with the ICAR and BYM2 terms written explicitly.
+- Decision: NumPyro. No R or system install.
+- Reason:
+  - It gives the required MCMC checks (R-hat, ESS, divergences) and LOO
+    directly.
+  - It uses one environment.
+  - INLA would still have needed an MCMC cross-check in another tool.
+- Evidence: `scripts/ml/requirements-lock.txt`.
+- Affects: Stage 4.
+
+### D-098. Tract adjacency graph for the spatial effects
+
+- Date: 5 Nov 2026. Status: Final. Decided by: Amey.
+- What happened: BYM2 needs a connected graph of the 697 training tracts.
+- What is wrong: Queen contiguity on the TIGER 2024 tract polygons
+  (EPSG:6346) gives 2,221 links in 2 components. The main component has 693
+  tracts. Key Biscayne's 4 tracts touch no other tract. No tract is left
+  without any neighbour.
+- How we are fixing it: Join each smaller component to the nearest tract
+  outside it, by the shortest distance between polygons. One link was added:
+  12086004602 (Key Biscayne) to 12086006802 (Miami), 4,113 m. Miami Beach and
+  Fisher Island are already connected, because TIGER tract outlines include
+  water.
+- Decision: The graph has 2,222 links and 1 component. Every tract has at
+  least 2 neighbours, and the mean is 6.4. The BYM2 scaling factor is 0.412.
+- Reason: The prompt's rule. Nearest-distance joins add the fewest
+  artificial links.
+- Evidence: `outputs/ml/stage4/graph_summary.json`, `graph_added_links.csv`;
+  `scripts/ml/stage4_graph.py`.
+- Affects: All Stage 4 spatial effects.
+
+### D-099. Missing SVI values in one tract for the Bayesian models
+
+- Date: 5 Nov 2026. Status: Final. Decided by: Amey (proposal; confirm).
+- What happened: Tract 12086008904 has no value for 8 SVI percentage
+  variables, and so no PCA vulnerability score (RC1).
+- What is wrong: NUTS needs a complete design matrix. The Stage 2 models
+  handled the gap inside their own pipelines.
+- How we are fixing it: Fill the 8 values and RC1 with the training-frame
+  median, for the Stage 4 models only. The source tables are not changed.
+- Decision: Median imputation for this one tract, listed in
+  `outputs/ml/stage4/run_meta.json`.
+- Reason: One tract of 697. Its effect on any coefficient is negligible, and
+  the tract keeps its place in the spatial graph.
+- Evidence: `scripts/ml/stage4_models.py` (`load_data`).
+- Affects: Stage 4 only.
+
+### D-100. Priors for the Bayesian multiscale models
+
+- Date: 5 Nov 2026. Status: Final. Decided by: Amey (rule from prompt 24);
+  the values are proposals.
+- What happened: Prompt 24 set the prior families. The values had to be
+  chosen.
+- What is wrong: Nothing. This records the values.
+- How we are fixing it: Not applicable.
+- Decision:
+  - Part 1 (logit scale):
+    - standardized coefficients Normal(0, 1);
+    - intercept Normal(0, 2.5);
+    - jurisdiction SD and BYM2 SD with PC (exponential) priors,
+      P(SD > 1) = 0.05;
+    - BYM2 mixing parameter with a PC prior, P(rho < 0.5) = 2/3 (the INLA
+      default), computed from this graph's eigenvalues;
+    - Model 2 slope SDs as for the other SDs.
+  - Part 2 (log dollars):
+    - same coefficient prior;
+    - intercept centred on the mean log dollars per resident, SD 2.5;
+    - SDs with P(SD > 2) = 0.05;
+    - Gamma shape Exponential(1);
+    - lognormal SD HalfNormal(2.5).
+  - Sensitivity: narrow (coefficients Normal(0, 0.5), P(SD > 0.5) = 0.05) and
+    wide (Normal(0, 2.5), P(SD > 2) = 0.05).
+- Reason: Weakly informative on the scales the predictors are on. The PC
+  priors shrink towards the simpler model without the random effect.
+- Evidence: `scripts/ml/stage4_models.py` (`PRIORS`),
+  `outputs/ml/stage4/prior_predictive.csv`.
+- Affects: Stage 4.
+
+### D-101. Part 2 spatial effect is structured only (ICAR), and longer chains
+
+- Date: 5 Nov 2026. Status: Final. Decided by: Amey (proposal; confirm).
+- What happened: With BYM2 in Part 2 (dollars per resident, 395 tracts with
+  a sited project), the lognormal fit failed: 69 divergences, R-hat 1.57,
+  ESS 7. The Gamma fit had ESS 153.
+- What is wrong: Each tract has one dollar figure. BYM2's unstructured
+  tract effect and the model's own observation noise both describe
+  tract-to-tract scatter, so the data cannot separate them.
+- How we are fixing it:
+  - Part 2 keeps the jurisdiction intercept and a structured spatial effect
+    (ICAR, scaled by the same BYM2 scaling factor). It drops the
+    unstructured tract term, whose role the observation noise already
+    plays.
+  - Part 1 keeps full BYM2: a yes or no outcome has no separate noise
+    term.
+  - Chains:
+    - spatial Part 1 models run 4 × 5,000 draws after 2,000 warmup;
+    - Model 2, the narrow-prior run and Part 2 run 4 × 10,000, keeping every
+      2nd draw, after 2,000 to 3,000 warmup.
+- Decision: As above. In Part 2 the "tract" scale is part of the residual.
+- Reason: An effect that cannot be identified gives no information and
+  breaks the sampler.
+- Evidence: `outputs/ml/stage4/diagnostics.csv`;
+  `scripts/ml/stage4_models.py` (`use_bym2="icar"`).
+- Affects: Stage 4 Part 2 variance split.
+
+### D-102. Part 2 family: lognormal; how Part 1 models are compared
+
+- Date: 5 Nov 2026. Status: Final. Decided by: Amey (rule from prompt 24:
+  choose by posterior predictive checks); the tie-break is a proposal.
+- What happened:
+  - Both Part 2 families pass every posterior predictive check: the 10th,
+    25th, 50th, 75th and 90th percentiles of sited dollars per resident all
+    fall inside the 95% predictive ranges.
+  - PSIS-LOO favours Gamma by 16 elpd. But the Gamma's LOO is unreliable:
+    101 of 395 Pareto k exceed 0.7, and p_loo is 158. The Gamma fit also had
+    1 divergence.
+  - The lognormal's LOO has no k above 0.7 (p_loo 44), and its fit passes
+    every MCMC check.
+  - For Part 1, PSIS-LOO fails for every model with a BYM2 term: about 625
+    of 697 k exceed 0.7, and p_loo is about 285. With one yes or no per
+    tract, the tract-level effect lets each tract be fitted nearly on its
+    own, so leaving one tract out changes the posterior too much for
+    importance sampling.
+- What is wrong: An unreliable LOO cannot pick a model.
+- How we are fixing it:
+  - Part 2 family rule: among fits that pass all MCMC checks and have
+    reliable LOO (no more than 1% of k above 0.7), take the higher elpd. The
+    PPCs must pass. This picks the lognormal.
+  - Part 1 models are compared by the spatial cross-validation on the
+    Stage 2 folds: log loss, ROC-AUC, PR-AUC, Brier and the summed
+    out-of-fold log predictive density. PSIS-LOO and WAIC are reported but
+    flagged.
+- Decision: Lognormal for Part 2. Spatial CV for Part 1 model comparison.
+- Reason: The PPCs cannot separate the two families. Only the lognormal's
+  fit can be checked. K-fold CV does not depend on importance sampling.
+- Evidence: `outputs/ml/stage4/loo.csv`, `posterior_predictive.csv`,
+  `diagnostics.csv`, `spatial_cv_scores.csv`.
+- Affects: Stage 4 Part 2 results; Stage 4 model comparison.
+
+### D-103. Stage 4 recommendation: the Bayesian Model 1 as the module's one model
+
+- Date: 5 Nov 2026. Status: Pending Amey. Decided by: Amey (rule from
+  prompt 24, A7); the result applied it.
+- What happened: On the Stage 2 spatial folds, Model 1 (Part 1: BYM2 plus
+  jurisdiction intercept) scored as follows.
+
+  | Model | ROC-AUC | PR-AUC | Log loss |
+  |---|---|---|---|
+  | Model 1 | 0.685 | 0.730 | 0.643 |
+  | Logistic regression | 0.675 | 0.719 | 0.653 |
+  | XGBoost | 0.660 | 0.714 | 0.651 |
+
+  Every paired-bootstrap 95% interval includes zero. Model 2 (spatially
+  varying hazard slopes) converged but did not improve the out-of-fold elpd
+  (+0.4, SE 0.8).
+- What is wrong: Nothing. The rule says a model that predicts at least as
+  well becomes the module's one model.
+- How we are fixing it: Not applicable.
+- Decision (proposed):
+  - Model 1 becomes the module's one model, with lognormal Part 2.
+  - Model 2 is not used.
+  - Model 0c (no city intercept) is equivalent for prediction (−0.9 elpd for
+    Model 1, SE 0.6). Model 1 is kept for the city level.
+  - The dashboard is not changed until Part B.
+  - Before Part B, Amey to decide whether Part 2's dollar predictions may be
+    shown (D-088 says no).
+- Reason: Prompt 24's A7 rule.
+- Evidence: `outputs/ml/stage4/spatial_cv_scores.csv`,
+  `spatial_cv_comparison.csv`, `spatial_cv_elpd_differences.csv`;
+  `reports/ml/stage4_bayesian_report.md` section 6.
+- Affects: Part B (unified admin Scenario screen).

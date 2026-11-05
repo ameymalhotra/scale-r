@@ -1,6 +1,7 @@
 # Model card: SCALE-R scenario module (preliminary)
 
-Version: Stage 2, 5 November 2026, branch `ml-scenario-module`.
+Version: Stage 2, 5 November 2026, branch `ml-scenario-module`; Bayesian
+section added in Stage 4 (same date).
 **PRELIMINARY: not reviewed, not for decisions.** Full results:
 `reports/ml/stage2_report.md`. Decisions: `DECISIONS.md` D-071 to D-090.
 
@@ -184,11 +185,62 @@ So **hazard scenarios change the predicted likelihood very little** (at most
   describes existing projects rather than predicting unproposed ones.
 - **TabPFN was not evaluated.** It needs a license key (D-082).
 
+## Bayesian multiscale model (Stage 4, preliminary)
+
+Full report: `reports/ml/stage4_bayesian_report.md`. Decisions: D-097 to
+D-103.
+
+**What it is.** A two-part (hurdle) model of sited investment, fitted by
+MCMC (NumPyro NUTS, 4 chains):
+- **Part 1:** does a tract have a sited project? This is a logit with:
+  - the 27 Stage 2 features;
+  - three hazard × vulnerability terms;
+  - a city (jurisdiction) intercept;
+  - a BYM2 spatial effect on the tract adjacency graph.
+- **Part 2:** sited dollars per resident where there is one. This is a
+  lognormal model with the same features, a city intercept and a structured
+  (ICAR) spatial effect.
+- The county is the intercept, not a level. There is only one county.
+
+**Checks.**
+- Main fits: 0 divergences, R-hat ≤ 1.009, bulk and tail ESS > 400 for every
+  parameter.
+- Posterior predictive checks pass: the share of tracts with a project, and
+  the 10th to 90th percentiles of dollars per resident.
+- PSIS-LOO is unreliable for the spatial Part 1 models, so they are
+  compared by spatial CV (D-102).
+
+**Scores (same 10 spatial folds as Stage 2).** ROC-AUC 0.685, PR-AUC 0.730,
+log loss 0.643, Brier 0.224. Against logistic regression and XGBoost, every
+paired-bootstrap interval includes zero, with point estimates slightly
+better. Out-of-fold residual Moran's I is 0.118.
+
+**What it found.**
+- City effects are small. Every interval includes zero, and jurisdictions
+  with fewer than 3 tracts are uninformative.
+- Neighbourhood-level spatial effects are real and improve prediction.
+- Hazard effects are weak. Population-averaged odds ratios per SD:
+  - sea level rise 0.80 (0.60 to 1.03);
+  - Category 3 surge 1.21 (0.91 to 1.59);
+  - heat 1.08 (0.82 to 1.40).
+- The raw heat gap (0.67 per SD) disappears after controls.
+
+**Cautions.**
+- The size of the latent spatial variance, and so the variance split and
+  ICC, depends on the prior.
+- Use the population-averaged effects, which do not depend on it.
+- Spatial effects mean "more or fewer projects than the features predict
+  here", not why.
+
+**Status.** Recommended as the module's one model (D-103), pending your
+decision. The dashboard still uses the Stage 2 models.
+
 ## Software and licenses
 
 - Python 3.13.11. Pinned versions are in `scripts/ml/requirements.txt`, and
   the full lock is in `requirements-lock.txt`: scikit-learn 1.9.1, XGBoost
-  3.4.1, LightGBM 4.7.0, SHAP 0.54.1.
+  3.4.1, LightGBM 4.7.0, SHAP 0.54.1. Stage 4: NumPyro 0.22.0, JAX
+  0.12.0.1, ArviZ 1.3.0 (all Apache 2.0).
 - **TabPFN** 9.2.0 (Hollmann et al., *Nature*, 2025) is installed as a
   challenger for T1 and T4.
   - It is licensed under the **Prior Labs License: Apache 2.0 with an
@@ -203,6 +255,8 @@ So **hazard scenarios change the predicted likelihood very little** (at most
   bash scripts/ml/run_ml.sh scripts/ml/stage1_build.py
   bash scripts/ml/run_ml.sh scripts/ml/stage2_models.py
   bash scripts/ml/run_ml.sh scripts/ml/scenarios.py
+  bash scripts/ml/run_ml.sh scripts/ml/stage4_graph.py
+  bash scripts/ml/run_ml.sh scripts/ml/stage4_run.py
   ```
 
   Seeds are fixed (12086) everywhere.

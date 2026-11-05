@@ -68,7 +68,7 @@ reports/         written reports
   analysis/      FINDINGS_FOR_PROFESSOR, REVIEW_MEMO (.md and .pdf),
                  RESULTS_FOR_REVIEW, correlation_screen, pca_analysis,
                  followup_analysis, gray_decomposition
-  ml/            machine learning reports: stage1_report.md, stage2_report.md, model_card.md
+  ml/            machine learning reports: stage1_report.md, stage2_report.md, stage3_report.md, stage4_bayesian_report.md, model_card.md
 prompts/         the Claude Code prompts (21 population exposure, 22 machine learning)
 archive/         outdated files, kept, not used
 ```
@@ -119,6 +119,7 @@ already on disk.
 | 18. ML scenarios | `bash "$M/ml/run_ml.sh" "$M/ml/scenarios.py"`; interventions: `interventions.py --tracts ... --type gray|nature-based` | Stage 2 models | `outputs/ml/dashboard/scenarios.json` | seconds |
 | 18b. Map model test and gaps | `bash "$M/ml/run_ml.sh" "$M/ml/stage2b_map_model.py"` | Stage 2 outputs | `outputs/ml/stage2/`, `outputs/ml/dashboard/tracts.json` | about 2 minutes |
 | 19. Admin Scenario view data | `.venv/bin/python "$M/website/build_scenario_data.py"` | `outputs/ml/dashboard/` | `../src/admin/viz/scenario/data/` (admin panel only, D-094) | seconds |
+| 20. ML Stage 4: Bayesian multiscale model | `bash "$M/ml/run_ml.sh" "$M/ml/stage4_graph.py"`, then `bash "$M/ml/run_ml.sh" "$M/ml/stage4_run.py"` | Stage 1 table, PCA scores, tract boundaries, Stage 2 code (for the logistic and XGBoost comparison) | `outputs/ml/stage4/` (fits cached in `fits/`); report `reports/ml/stage4_bayesian_report.md` | about 25 minutes from scratch; about 10 with cached fits |
 | 12. Correlation analysis, parts 2 to 7 | `$PY "$M/05_analysis/part2_univariate.py"`, then `part3_correlation`, `part4_investment_vs_indicators`, `part5_diagnostics`, `part6b_moran_transforms`, `part6c_density_control`, `part7a_density_premise`, `part7_gray_decomposition` | analysis tables, audits | `outputs/correlation/part*/` | seconds to minutes each |
 | 13. Correlation screen | `$PY "$M/05_analysis/correlation_screen.py"` | analysis tables | `outputs/correlation/correlation_screen/`, `reports/analysis/correlation_screen.md` | seconds |
 | 14. PCA | `$PY "$M/05_analysis/pca_analysis.py"` | analysis tables | `outputs/pca/`, `reports/analysis/pca_analysis.md` | about a minute |
