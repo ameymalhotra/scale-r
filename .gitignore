@@ -30,6 +30,10 @@ scripts/python/*
 !scripts/python/validate_map_surfaces.py
 !scripts/python/build_viz_tracts.py
 !scripts/python/build_viz_exposure.py
+# The surface heat layer used by the population exposure analysis: build scripts and their requirements
+!scripts/python/build_lst_layer.py
+!scripts/python/build_hhi_layer.py
+!scripts/python/requirements.txt
 !scripts/python/prepare_footprint_tiles.py
 !scripts/js/
 scripts/js/*
