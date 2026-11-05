@@ -18,7 +18,7 @@ The module has four parts:
 
 | Part | Model |
 |---|---|
-| Map model (T1) | XGBoost: 100 trees, depth 2, min child weight 5, class-weighted |
+| Map model (T1) | L2 logistic regression, class-weighted, C tuned by nested spatial CV (D-091) |
 | Scenario model (T1) | the same XGBoost, with monotone increasing constraints on the three hazard features |
 | Project type (T4) | XGBoost and LightGBM, with isotonic calibration inside the folds for probabilities |
 | Baselines | prevalence; L2 logistic regression |
@@ -27,7 +27,11 @@ The module has four parts:
 
 - Showing, on a preliminary dashboard, **where future projects are likely
   under current patterns of investment**, next to **need** (hazard exposure
-  × vulnerability), and the **gap** between the two.
+  × vulnerability).
+- Showing the **gap**:
+  - primary: need versus ACTUAL sited investment, with a flag for high need
+    and no sited project;
+  - secondary: need versus expected investment (D-092).
 - Exploring how that picture changes under hazard scenarios. Results outside
   the training range are flagged as extrapolation.
 - Describing what a proposed set of projects would **cover**: residents,
@@ -109,9 +113,10 @@ fitted inside each training fold.
 | T4 | LightGBM, calibrated | 0.805 | 0.522 | 0.346 | 0.106 |
 | T5 | ridge | R² 0.23 | | | |
 
-**The gradient-boosted models do not beat logistic regression on T1.**
-Choosing the map model is pending (D-089). Random folds score 0.03 to 0.06
-higher than spatial folds.
+**The gradient-boosted models do not beat logistic regression on T1.** A
+paired bootstrap finds no real difference: logistic minus XGBoost ROC-AUC is
++0.016 [−0.010, +0.042]. So the simpler logistic regression drives the map
+(D-091). Random folds score 0.03 to 0.06 higher than spatial folds.
 
 **Future check (T2).** The top 20% of tracts hold 42% (XGBoost) to 58%
 (logistic) of planned projects. PR-AUC is 0.29 to 0.32, against a base rate
@@ -134,15 +139,20 @@ bootstrap refits, the top two drivers are always the same.
 **Spatial residuals.** Moran's I of the out-of-fold residuals is 0.13. Spatial
 lags of the inputs did not reduce it.
 
-## Top drivers (T1, SHAP)
+## Top drivers (T1)
 
-1. Distance from the bay or ocean.
-2. Population density.
-3. FEMA expected yearly loss per resident.
-4. Single-parent households.
-5. FEMA building loss per dollar of buildings.
-6. Being in a city rather than unincorporated Miami-Dade.
-7. Households with no vehicle.
+**Map model (logistic, log-odds contribution):**
+1. Distance from the bay or ocean (farther lowers).
+2. Population density (higher lowers).
+3. Being in a city (raises).
+4. FEMA expected yearly loss per resident (raises).
+5. Limited English households (lowers).
+6. No internet access (raises).
+7. FEMA building loss per dollar of buildings (lowers).
+
+**XGBoost (SHAP), the scenario model's family:** distance from the bay or
+ocean, population density, FEMA loss per resident, single-parent households,
+FEMA building loss, being in a city.
 
 Hazard exposure ranks low: surge 13th, heat 18th, sea level rise 20th of 27.
 So **hazard scenarios change the predicted likelihood very little** (at most
@@ -163,9 +173,9 @@ So **hazard scenarios change the predicted likelihood very little** (at most
   - Surface heat is ground temperature, not air temperature.
   - The flood maps predate many projects, so they do not show protection
     the projects added.
-- **Heat scenarios are illustrative** uniform shifts of +1 to +3°F, not
-  projections (D-084). Under the monotone constraint, the model gives heat no
-  effect.
+- **Heat scenarios are illustrative** uniform warming of +1 to +3°F, not
+  projections (D-084). They change need and the gap only, not predicted
+  investment, because past investment did not follow heat (D-093).
 - **Extrapolation.** 6 ft of sea level rise is outside the training range for
   56 tracts (191,028 residents). These are flagged.
 - **Spatial dependence.** Residuals still cluster (Moran's I 0.13), so the

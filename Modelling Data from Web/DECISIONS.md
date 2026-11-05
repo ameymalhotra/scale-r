@@ -1621,7 +1621,7 @@ respect:
 
 ### D-084. Heat scenarios are illustrative shifts
 
-- Date: 5 Nov 2026. Status: Provisional (confirm). Decided by: Amey.
+- Date: 5 Nov 2026. Status: Final (confirmed and extended by D-093). Decided by: Amey.
 - What happened: Prompt 22 lists heat scenarios at the 75th and 95th
   percentile. After D-080, the model's one heat feature is the
   population-weighted mean surface temperature.
@@ -1667,7 +1667,8 @@ respect:
   fishing.
 - How we are fixing it: The rule was fixed before seeing the scores:
   - The **map model** is the tree model (LightGBM or XGBoost) with the
-    higher spatial PR-AUC; ties go to lower log loss.
+    higher spatial PR-AUC; ties go to lower log loss. (The map model was
+    later changed to logistic regression by D-091.)
   - TabPFN replaces it on the map only if it beats it by at least 0.02 in
     both spatial ROC-AUC and PR-AUC.
   - The **scenario model** is the same tree family with monotone increasing
@@ -1718,7 +1719,7 @@ respect:
 
 ### D-089. Tree models do not beat logistic regression on T1
 
-- Date: 5 Nov 2026. Status: Pending (Amey). Decided by: Amey.
+- Date: 5 Nov 2026. Status: Replaced by D-091. Decided by: Amey.
 - What happened: Under spatial CV, T1 logistic regression scored ROC-AUC
   0.675 and PR-AUC 0.719. XGBoost scored 0.660 and 0.714, and LightGBM 0.644
   and 0.712. Under random CV they are about equal.
@@ -1759,3 +1760,87 @@ respect:
   `scenario_summary.csv`.
 - Affects: How the scenarios are presented, on the dashboard and in the model
   card.
+
+### D-091. Map model: logistic regression
+
+- Date: 5 Nov 2026. Status: Final. Decided by: Amey (rule); the result
+  applied it.
+- What happened: Logistic regression scored slightly above XGBoost on T1
+  under spatial CV (D-089). Amey asked for a significance test, plus an
+  average of the two and TabPFN as candidates.
+- What is wrong: A difference of 0.015 ROC-AUC on 697 tracts may be noise.
+- How we are fixing it:
+  - A paired bootstrap of the spatial out-of-fold predictions: 2,000
+    resamples of tracts, seed 12086, 95% intervals.
+
+    | Comparison | ROC-AUC difference [95%] | PR-AUC difference [95%] | Log loss difference [95%] |
+    |---|---|---|---|
+    | Logistic minus XGBoost | +0.016 [−0.010, +0.042] | +0.005 [−0.028, +0.039] | +0.002 [−0.021, +0.027] |
+    | Average minus logistic | −0.002 [−0.016, +0.011] | +0.010 [−0.010, +0.027] | −0.012 [−0.028, +0.001] |
+
+  - The average scores best on spatial PR-AUC (0.729), but it is not
+    reliably better than logistic regression.
+  - TabPFN was not run: no `TABPFN_TOKEN` (D-082).
+- Decision: Logistic regression drives the map. Each tract's prediction is
+  its spatial out-of-fold probability with a Venn-ABERS interval: coverage of
+  the 90% sets is 89.2%, and the average interval width 0.21. Drivers are the
+  per-tract log-odds contributions (coefficient × standardized value).
+  Monotone XGBoost stays the scenario model.
+- Reason: Amey's rule: with no real difference, use the simpler and more
+  transparent model.
+- Evidence: `outputs/ml/stage2/map_model_scores.csv`, `map_model_test.csv`;
+  `scripts/ml/stage2b_map_model.py`.
+- Affects: The dashboard map, intervals and drivers.
+
+### D-092. Primary gap is need versus actual investment
+
+- Date: 5 Nov 2026. Status: Final. Decided by: Amey.
+- What happened: The Stage 2 gap compared need with the model's expected
+  likelihood. Two of the three highest-gap tracts already had a sited
+  project.
+- What is wrong: A gap against expected investment is hard to read as
+  "underserved".
+- How we are fixing it:
+  - **Primary gap** = need percentile minus the percentile of actual sited
+    dollars per resident. Tracts with no sited project share the bottom rank.
+  - **Flag:** high need (top quarter, need percentile ≥ 0.75) with no sited
+    project.
+  - **Secondary layer**, labelled "need versus expected investment" = need
+    percentile minus predicted-likelihood percentile.
+  - `interventions.py` and the dashboard export use both. A funded tract
+    gets an assumed sited amount per resident, by default the county median
+    among tracts with a sited project ($580 per resident). The high-need flag
+    is cleared for funded tracts.
+- Decision: As above.
+- Reason: Amey's instruction. The actual gap reads directly as underserved.
+- Evidence:
+  - Need and actual sited dollars per resident are unrelated (Spearman
+    +0.02).
+  - 85 tracts have a primary gap of 0.5 or more.
+  - **72 tracts (275,141 residents) have high need and no sited project:**
+    Hialeah 21, Miami 19, Unincorporated 18, Miami Beach 8.
+  - `tracts.json` carries observed sited dollars per resident (not a
+    prediction) so the dashboard can recompute the gap.
+- Affects: The dashboard layers, the scenarios and interventions.
+
+### D-093. Heat scenarios change need and the gap only
+
+- Date: 5 Nov 2026. Status: Final. Decided by: Amey.
+- What happened: Under the monotone constraint, the scenario model gives heat
+  no effect (D-090). Past investment fell, if anything, with heat.
+- What is wrong: Feeding heat scenarios to the model would show "no change"
+  and could be misread.
+- How we are fixing it:
+  - Heat scenarios (+1, +2, +3°F illustrative uniform warming, D-084) are not
+    passed to the model. Predicted likelihood stays at its current value, and
+    only need and the gaps change.
+  - The dashboard states: "Heat scenarios change need and the gap only. They
+    do not change predicted investment, because past investment did not
+    follow heat."
+  - High-need tracts with no sited project rise from 72 now to 93 (+1°F), 104
+    (+2°F) and 112 (+3°F).
+- Decision: As above.
+- Reason: Amey's instruction. It keeps the dashboard honest about what the
+  model can say.
+- Evidence: `scripts/ml/scenarios.py`; `outputs/ml/stage2/scenario_summary.csv`.
+- Affects: The dashboard heat control.

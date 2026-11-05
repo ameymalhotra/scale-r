@@ -10,9 +10,12 @@ NFIP flood insurance claims (OpenFEMA).
 
 "Vulnerable residents" are residents of tracts in the top third of the
 vulnerability score (PCA component RC1, general socioeconomic disadvantage).
-"Funded" means the tract's predicted likelihood of a sited project is set to 1,
-and the gap (need percentile minus predicted-likelihood percentile) is
-recomputed for every tract.
+"Funded" adds an assumed sited amount per resident to each chosen tract
+(default: the county median among tracts with a sited project; --dollars-per-resident
+to change it). The primary gap (need percentile minus the percentile of actual
+sited dollars per resident, D-092) and the high-need-with-no-project flag are
+recomputed for every tract. The secondary gap (need versus expected investment)
+is recomputed with the funded tracts' predicted likelihood set to 1.
 """
 import argparse
 import json
@@ -23,6 +26,7 @@ import pandas as pd
 import ml_common as C
 
 TYPES = {"gray": "Gray", "nature-based": "Green, Blue or Hybrid"}
+HIGH_NEED = 0.75
 
 
 def historical_mix(kind):
@@ -32,7 +36,7 @@ def historical_mix(kind):
     return (sub.Hazard_Focus.value_counts(normalize=True).round(3)).to_dict()
 
 
-def coverage(geoids, kind="gray", table=None):
+def coverage(geoids, kind="gray", table=None, dollars_per_resident=None):
     tp = table if table is not None else pd.read_csv(C.STAGE2 / "tract_predictions.csv", dtype={"GEOID": str})
     tp = tp.copy()
     unknown = sorted(set(geoids) - set(tp.GEOID))
@@ -41,14 +45,24 @@ def coverage(geoids, kind="gray", table=None):
     sel = tp.GEOID.isin(geoids)
     vul_pct = tp.vulnerability_rc1.rank(pct=True)
     vulnerable = vul_pct >= 2 / 3
-    before = tp.gap.copy()
-    after_pred = tp.pred_likelihood.where(~sel, 1.0)
-    after_gap = tp.need_pct - after_pred.rank(pct=True)
-    rank_b = before.rank(ascending=False, method="min")
-    rank_a = after_gap.rank(ascending=False, method="min")
-    k = int(np.ceil(0.1 * tp.gap.notna().sum()))
+    obs = tp.sited_dollars_per_resident_observed
+    if dollars_per_resident is None:
+        dollars_per_resident = float(obs[obs > 0].median())   # a typical sited project, per resident
+    # primary gap: need versus ACTUAL sited investment (D-092). Funding adds the assumed amount.
+    after_obs = obs + np.where(sel, dollars_per_resident, 0.0)
+    gap_b = tp.need_pct - obs.rank(pct=True)
+    gap_a = tp.need_pct - after_obs.rank(pct=True)
+    high_b = (tp.need_pct >= HIGH_NEED) & (tp.T1_observed == 0)
+    high_a = high_b & ~sel
+    # secondary gap: need versus expected investment (predicted likelihood set to 1 if funded)
+    exp_b = tp.need_pct - tp.pred_likelihood.rank(pct=True)
+    exp_a = tp.need_pct - tp.pred_likelihood.where(~sel, 1.0).rank(pct=True)
+    rank_b = gap_b.rank(ascending=False, method="min")
+    rank_a = gap_a.rank(ascending=False, method="min")
+    k = int(np.ceil(0.1 * gap_b.notna().sum()))
     res = {
         "intervention_type": kind, "tracts": int(sel.sum()),
+        "assumed_sited_dollars_per_resident": round(dollars_per_resident, 2),
         "residents": float(tp.population[sel].sum()),
         "residents_exposed": {
             "sea_level_rise_3ft": float(tp.slr_3ft_pop_exposed[sel].sum()),
@@ -59,25 +73,37 @@ def coverage(geoids, kind="gray", table=None):
         "share_of_county": {"residents": float(tp.population[sel].sum() / tp.population.sum()),
                             "vulnerable_residents": float(tp.population[sel & vulnerable].sum()
                                                           / tp.population[vulnerable].sum())},
-        "gap_top10pct_tracts_before": int((rank_b <= k).sum()),
-        "gap_top10pct_tracts_covered": int(((rank_b <= k) & sel).sum()),
+        "high_need_no_sited_project": {"tracts_before": int(high_b.sum()), "tracts_after": int(high_a.sum()),
+                                       "residents_before": float(tp.population[high_b].sum()),
+                                       "residents_after": float(tp.population[high_a].sum())},
+        "gap_top10pct_tracts": int(k), "gap_top10pct_tracts_covered": int(((rank_b <= k) & sel).sum()),
         "original_gap_top10pct_tracts_still_top10pct_after": int(((rank_b <= k) & (rank_a <= k)).sum()),
-        "per_tract": [{"GEOID": g, "gap_before": None if pd.isna(b) else round(float(b), 3),
-                       "gap_after": None if pd.isna(a) else round(float(a), 3),
-                       "gap_rank_before": None if pd.isna(rb) else int(rb), "gap_rank_after": None if pd.isna(ra) else int(ra)}
-                      for g, b, a, rb, ra in zip(tp.GEOID[sel], before[sel], after_gap[sel], rank_b[sel], rank_a[sel])],
+        "per_tract": [{"GEOID": g, "gap_actual_before": r3(b), "gap_actual_after": r3(a),
+                       "gap_rank_before": None if pd.isna(rb) else int(rb), "gap_rank_after": None if pd.isna(ra) else int(ra),
+                       "gap_expected_before": r3(eb), "gap_expected_after": r3(ea),
+                       "had_sited_project": int(h)}
+                      for g, b, a, rb, ra, eb, ea, h in zip(tp.GEOID[sel], gap_b[sel], gap_a[sel], rank_b[sel], rank_a[sel],
+                                                            exp_b[sel], exp_a[sel], tp.T1_observed[sel])],
         "historical_hazard_focus_of_this_type": historical_mix(kind),
         "note": "Coverage only. No damages avoided are estimated (no outcome data yet; next step: NFIP claims from OpenFEMA).",
     }
     return res
 
 
+def r3(v):
+    return None if pd.isna(v) else round(float(v), 3)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--tracts", required=True, help="comma-separated 11-digit tract GEOIDs")
     ap.add_argument("--type", choices=list(TYPES), default="gray")
+    ap.add_argument("--dollars-per-resident", type=float, default=None,
+                    help="assumed sited dollars per resident for a funded tract (default: county median among "
+                         "tracts with a sited project)")
     a = ap.parse_args()
-    print(json.dumps(coverage([g.strip() for g in a.tracts.split(",") if g.strip()], a.type), indent=1))
+    print(json.dumps(coverage([g.strip() for g in a.tracts.split(",") if g.strip()], a.type,
+                              dollars_per_resident=a.dollars_per_resident), indent=1))
 
 
 if __name__ == "__main__":

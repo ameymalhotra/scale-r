@@ -12,7 +12,8 @@ scenario:
                   the corrected Category 5 (pixel maximum)
   surface heat    heat_lst_popwt_mean_f <- current values, or ILLUSTRATIVE
                   uniform warming of +1, +2, +3 F (no heat scenario layer
-                  exists for this measure; D-084)
+                  exists for this measure; D-084). Heat scenarios change need
+                  and the gap only; the model is not applied (D-093)
 A tract whose new value falls outside the range seen in training is flagged
 as extrapolation. Need and gap are recomputed with each scenario's exposure,
 ranked against the current (baseline) distribution so that more hazard raises
@@ -41,9 +42,22 @@ SCENARIOS = (
 )
 
 
+def r4(v):
+    return None if np.isnan(v) else round(float(v), 4)
+
+
 def pct_vs(base, x):
+    """Percentile of x within the current (baseline) values, average-rank convention.
+
+    For x drawn from base this equals pandas rank(pct=True), the convention used
+    for need and the gaps in stage2_models.py, so the current scenario
+    reproduces tracts.json exactly.
+    """
     b = np.sort(base[~np.isnan(base)])
-    return np.searchsorted(b, x, side="right") / len(b)
+    lo = np.searchsorted(b, x, side="left")
+    hi = np.searchsorted(b, x, side="right")
+    out = (lo + hi + 1) / 2 / len(b)
+    return np.where(np.isnan(x), np.nan, out)
 
 
 def main():
@@ -58,8 +72,9 @@ def main():
     p0 = m.predict_proba(X0)[:, 1]
     base_haz = {f: X0[f].to_numpy() for f in C.HAZ_MAIN}
     base_expo = np.nanmean(np.column_stack([pct_vs(base_haz[f], base_haz[f]) for f in C.HAZ_MAIN]), axis=1)
-    base_need = base_expo * vul_pct
+    base_need = pct_vs(base_expo, base_expo) * vul_pct
     pop = t.population.to_numpy()
+    sited_pct = tp.sited_pct.to_numpy()
     out, summ = [], []
     for s in SCENARIOS:
         X = X0.copy()
@@ -67,24 +82,33 @@ def main():
         X[f] = t[s["source"]].to_numpy() if "source" in s else X0[f].to_numpy() + s["shift"]
         v = X[f].to_numpy()
         extrap = (v > hi[f] + 1e-12) | (v < lo[f] - 1e-12)
-        p = m.predict_proba(X)[:, 1]
+        # heat changes need and gap only: past investment did not follow heat, so the model
+        # is not applied to heat scenarios and the likelihood stays at its current value (D-093)
+        model_applied = s["family"] != "surface heat"
+        p = m.predict_proba(X)[:, 1] if model_applied else p0.copy()
         expo = np.nanmean(np.column_stack([pct_vs(base_haz[g], X[g].to_numpy()) for g in C.HAZ_MAIN]), axis=1)
-        need = expo * vul_pct
+        need = pct_vs(base_expo, expo) * vul_pct
         need_pct = pct_vs(base_need, need)
         pred_pct = pct_vs(p0, p)
-        gap = need_pct - pred_pct
+        gap_expected = need_pct - pred_pct          # secondary: need versus expected investment
+        gap = need_pct - sited_pct                  # primary: need versus actual sited investment (D-092)
+        high_no = (need_pct >= 0.75) & (t.T1.to_numpy() == 0)
         exposed = ex.loc[t.GEOID, s["exposed"]].to_numpy() if s["exposed"] in ex else np.full(len(t), np.nan)
         summ.append({"id": s["id"], "family": s["family"], "label": s["label"], "hypothetical": s["hypothetical"],
                      "expected_tracts_with_sited_project": float(p.sum()),
                      "mean_likelihood": float(p.mean()), "mean_change_vs_current": float((p - p0).mean()),
                      "tracts_extrapolated": int(extrap.sum()), "residents_in_extrapolated_tracts": float(pop[extrap].sum()),
                      "residents_exposed": float(np.nansum(exposed)),
-                     "mean_need_pct": float(np.nanmean(need_pct)), "tracts_gap_over_0.5": int(np.nansum(gap >= 0.5))})
+                     "model_applied": model_applied,
+                     "mean_need_pct": float(np.nanmean(need_pct)), "tracts_gap_over_0.5": int(np.nansum(gap >= 0.5)),
+                     "tracts_expected_gap_over_0.5": int(np.nansum(gap_expected >= 0.5)),
+                     "tracts_high_need_no_sited_project": int(high_no.sum()),
+                     "residents_high_need_no_sited_project": float(pop[high_no].sum())})
         out.append({**{k: s[k] for k in ("id", "family", "label", "hypothetical")}, "summary": summ[-1],
-                    "columns": ["GEOID", "likelihood", "change", "extrapolated", "need_pct", "gap"],
-                    "tracts": [[g, round(float(a), 4), round(float(a - b), 4), int(e),
-                                None if np.isnan(n) else round(float(n), 4), None if np.isnan(q) else round(float(q), 4)]
-                               for g, a, b, e, n, q in zip(t.GEOID, p, p0, extrap, need_pct, gap)]})
+                    "columns": ["GEOID", "likelihood", "change", "extrapolated", "need_pct", "gap_actual",
+                                "gap_expected", "high_need_no_sited_project"],
+                    "tracts": [[g, round(float(a), 4), round(float(a - b), 4), int(e), r4(n), r4(q), r4(q2), int(h)]
+                               for g, a, b, e, n, q, q2, h in zip(t.GEOID, p, p0, extrap, need_pct, gap, gap_expected, high_no)]})
     S = pd.DataFrame(summ)
     print(S.to_string(index=False, float_format=lambda v: f"{v:,.3f}"))
     S.to_csv(C.STAGE2 / "scenario_summary.csv", index=False)
@@ -96,7 +120,11 @@ def main():
     meta = {"model": bundle["name"], "monotone_features": C.HAZ_MAIN, "preliminary": True,
             "note": ("Predicted likelihood of a sited project under current patterns of investment, not where "
                      "investment should go. Extrapolated tracts have scenario values outside the training range. "
-                     "Heat +1 to +3 F are illustrative uniform shifts, not projections.")}
+                     "Heat +1 to +3 F are illustrative uniform warming, not projections."),
+            "heat_note": ("Heat scenarios change need and the gap only. They do not change predicted investment, "
+                          "because past investment did not follow heat."),
+            "gap_actual": "need percentile minus the percentile of actual sited dollars per resident (primary)",
+            "gap_expected": "need percentile minus the percentile of predicted likelihood (need versus expected investment)"}
     (C.DASH / "scenarios.json").write_text(json.dumps({"meta": meta, "scenarios": out}, separators=(",", ":")))
     print("wrote", C.DASH / "scenarios.json")
 

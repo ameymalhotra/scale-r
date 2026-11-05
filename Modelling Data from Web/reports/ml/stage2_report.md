@@ -21,6 +21,103 @@ bash scripts/ml/run_ml.sh scripts/ml/interventions.py --tracts <GEOIDs> --type g
 - Model card: `reports/ml/model_card.md`.
 - Decisions: D-079 to D-090.
 
+## In plain language
+
+- **The simple model does as well as the machine learning models.** A
+  logistic regression predicts where projects have been sited as well as
+  XGBoost and LightGBM do. A paired bootstrap finds no real difference
+  between them, so the dashboard map uses the simpler model (D-091).
+- **Past investment follows coastal location and general risk, not the
+  specific hazard maps.**
+  - The strongest signals are distance to the bay or ocean, population
+    density, being in a city, and FEMA's overall expected loss.
+  - The sea level rise, storm surge and heat maps add very little once those
+    are known.
+- **So the value of the scenarios is in need and the gap, not in predicted
+  investment.**
+  - Under current patterns, more flooding or heat would hardly change where
+    projects go.
+  - It would change where need is highest and unmet. Tracts with high need
+    and no sited project rise from 72 today (275,141 residents) to 115 under
+    Category 5 surge and 128 under 6 ft of sea level rise.
+- **Both are coverage and pattern statements.** Neither says where money
+  should go, or what damage it would avoid.
+
+## Update after the Stage 2 decisions (5 Nov 2026)
+
+These supersede the matching parts of the sections below.
+
+1. **Map model: logistic regression (D-091).** Spatial out-of-fold scores,
+   with paired bootstrap 95% intervals (2,000 resamples):
+
+   | Model | ROC-AUC | PR-AUC | Log loss | Brier |
+   |---|---|---|---|---|
+   | Logistic | 0.675 | 0.719 | 0.653 | 0.227 |
+   | XGBoost | 0.660 | 0.714 | 0.651 | 0.230 |
+   | Average of the two | 0.673 | 0.729 | 0.641 | 0.225 |
+   | TabPFN | not run (no license key) | | | |
+
+   | Comparison | ROC-AUC difference [95%] | PR-AUC difference [95%] | Log loss difference [95%] |
+   |---|---|---|---|
+   | Logistic minus XGBoost | +0.016 [−0.010, +0.042] | +0.005 [−0.028, +0.039] | +0.002 [−0.021, +0.027] |
+   | Average minus logistic | −0.002 [−0.016, +0.011] | +0.010 [−0.010, +0.027] | −0.012 [−0.028, +0.001] |
+   | Average minus XGBoost | +0.013 [+0.001, +0.026] | +0.015 [−0.002, +0.031] | −0.011 [−0.021, −0.001] |
+
+   - **Logistic regression and XGBoost cannot be told apart.**
+   - The average is reliably better than XGBoost, but not than logistic
+     regression.
+   - So the map uses logistic regression. Its Venn-ABERS 90% sets achieve
+     89.2% coverage, and the average interval width is 0.21.
+   - **Its top drivers** (log-odds contribution):
+     1. distance from the bay or ocean (farther lowers)
+     2. population density (higher lowers)
+     3. being in a city (raises)
+     4. FEMA expected loss per resident (raises)
+     5. limited English households (lowers)
+     6. no internet access (raises)
+     7. FEMA building loss per dollar of buildings (lowers)
+     8. minority share (lowers)
+     9. heat (lowers)
+     10. multi-unit housing (lowers)
+   - Monotone XGBoost stays the scenario model.
+2. **Primary gap: need versus actual investment (D-092).**
+   - The gap is need percentile minus the percentile of actual sited dollars
+     per resident. A flag marks high need (top quarter) with no sited project.
+   - Need and actual sited dollars are unrelated (Spearman +0.02).
+   - **72 tracts (275,141 residents) have high need and no sited project:**
+     Hialeah 21, Miami 19, Unincorporated 18, Miami Beach 8.
+   - The model-based gap stays as a secondary layer, "need versus expected
+     investment".
+3. **Heat scenarios change need and the gap only (D-093).** Predicted
+   likelihood is not changed, because past investment did not follow heat.
+
+**Scenarios with the primary gap:**
+
+| Scenario | Tracts with gap ≥ 0.5 (actual) | Tracts with gap ≥ 0.5 (expected) | High need, no sited project: tracts (residents) |
+|---|---|---|---|
+| Current | 85 | 81 | 72 (275,141) |
+| Sea level rise 1 ft | 80 | 78 | 67 (257,383) |
+| Sea level rise 6 ft (56 tracts extrapolated) | 139 | 118 | 128 (492,480) |
+| Surge Category 1 | 66 | 67 | 57 (211,125) |
+| Surge Category 4 | 101 | 95 | 91 (348,000) |
+| Surge Category 5 | 128 | 119 | 115 (445,378) |
+| Heat +1°F (illustrative) | 104 | 94 | 93 (359,406) |
+| Heat +2°F (illustrative) | 110 | 106 | 104 (395,223) |
+| Heat +3°F (illustrative) | 122 | 116 | 112 (434,341) |
+
+"Expected" here uses the scenario model's own predictions, so it differs
+slightly from the map's out-of-fold count of 98.
+
+**Interventions, retested** on the three highest-gap tracts that have high
+need and no sited project (12086005202, 12086005104, 12086004204),
+nature-based:
+- 12,484 residents, all in the top vulnerability third.
+- Exposed: 2,361 to 3 ft sea level rise, 8,354 to Category 3 surge, 4,795 on
+  the hottest land.
+- With the median $580 per resident assumed, the high-need, no-project count
+  falls from 72 to 69 tracts. Each tract's actual gap falls from about 0.78
+  to 0.28.
+
 ## Short summary
 
 1. **The machine learning models do not beat simple logistic regression**
