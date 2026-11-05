@@ -32,6 +32,7 @@ export default function AdminApp() {
               <Suspense fallback={<div className="admin-center" role="status">Loading map…</div>}>
                 <Routes>
                   <Route index element={<VizPage view="gap" />} />
+                  <Route path="scenario" element={<VizPage view="scenario" />} />
                   <Route path="exposure" element={<Navigate to="/exposure" replace />} />
                 </Routes>
               </Suspense>

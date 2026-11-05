@@ -56,7 +56,9 @@ def plain(name):
     if name in PLAIN:
         return PLAIN[name]
     if name in TRACT_VARS:
-        return TRACT_VARS[name][0].lower()
+        label = TRACT_VARS[name][0]
+        # lower-case only the first letter, so names such as "English" keep their capital
+        return label[0].lower() + label[1:] if label[:2] != label[:2].upper() else label
     if name.startswith("scale_"):
         return f"project scale: {name[6:].lower()}"
     if name.startswith("focus_"):

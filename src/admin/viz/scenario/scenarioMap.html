@@ -1,0 +1,55 @@
+<div id="map" role="region" aria-label="Map of census tracts colored by the selected layer"></div>
+<aside class="panel" aria-label="Scenario controls">
+  <nav class="back" aria-label="Admin"><a href="/admin">← Admin</a><a href="/admin/viz">Resilience gap map</a></nav>
+  <div class="prelim" role="note">PRELIMINARY: model results for discussion, not for decisions</div>
+  <h1>Scenarios</h1>
+  <p id="intro">Where resilience projects have tended to go, where need is highest, and the gap between them, under different hazard scenarios.</p>
+
+  <h2>Map shows</h2>
+  <div class="seg seg-2" role="group" aria-label="Map layer">
+    <button type="button" data-layer="gap" class="on">Gap: need vs investment</button>
+    <button type="button" data-layer="need">Need</button>
+    <button type="button" data-layer="likelihood">Likely investment</button>
+    <button type="button" data-layer="gapExpected">Need vs expected</button>
+  </div>
+  <div id="ramp-wrap">
+    <div class="ramp" id="ramp"></div>
+    <div class="ramp-labels" id="ramp-labels"></div>
+    <p class="ramp-note" id="ramp-note"></p>
+  </div>
+
+  <h2>Scenario</h2>
+  <div class="seg" role="group" aria-label="Hazard family">
+    <button type="button" data-family="slr" class="on">Sea level rise</button>
+    <button type="button" data-family="surge">Storm surge</button>
+    <button type="button" data-family="heat">Surface heat</button>
+  </div>
+  <div class="seg levels" id="levels" role="group" aria-label="Scenario level"></div>
+  <p class="note" id="scenario-note"></p>
+
+  <div class="stats" id="summary" aria-live="polite"></div>
+
+  <h2>Tract</h2>
+  <div class="tract" id="tract"><p class="muted">Click a tract on the map to see its details.</p></div>
+
+  <details class="more" id="interventions">
+    <summary>Try an intervention</summary>
+    <p>Choose tracts on the map and a project type to see who it would cover, and how the gap would change. This shows coverage only, not damages avoided.</p>
+    <div class="seg" role="group" aria-label="Selecting tracts">
+      <button type="button" id="select-toggle">Select tracts on the map</button>
+      <button type="button" id="select-clear">Clear</button>
+    </div>
+    <label class="field">Project type
+      <select id="itype">
+        <option value="nature-based">Nature-based or hybrid</option>
+        <option value="gray">Gray</option>
+      </select>
+    </label>
+    <div id="iresult" aria-live="polite"><p class="muted">No tracts selected.</p></div>
+  </details>
+
+  <details class="more">
+    <summary>About this model</summary>
+    <div id="about"></div>
+  </details>
+</aside>

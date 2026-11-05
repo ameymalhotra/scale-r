@@ -1844,3 +1844,65 @@ respect:
   model can say.
 - Evidence: `scripts/ml/scenarios.py`; `outputs/ml/stage2/scenario_summary.csv`.
 - Affects: The dashboard heat control.
+
+### D-094. The Scenario dashboard lives in the admin panel only
+
+- Date: 5 Nov 2026. Status: Final. Decided by: Amey.
+- What happened: Prompt 22 Stage 3 asked for a public Scenario page. Partway
+  through, Amey changed the plan: the Scenario dashboard must be in the admin
+  panel only.
+- What is wrong: A public page would show preliminary, unreviewed model
+  results to everyone.
+- How we are fixing it:
+  - **Public changes undone:**
+    - `src/App.jsx` (lazy import, `/scenario` route, route metadata,
+      full-window class) and `src/components/Navbar.jsx` (the "Scenarios"
+      link) were restored to their committed versions with `git checkout`;
+    - `src/pages/Scenario.jsx` was removed;
+    - `src/scenario/` was moved into the admin panel.
+
+    Nothing else on the public site was touched.
+  - **The view now lives at** `src/admin/viz/scenario/` (markup, script,
+    styles, data). It is served at `/admin/viz/scenario` through the
+    existing `VizPage`, behind `RequireAdmin`, with a "Scenarios
+    (preliminary)" link in the admin navigation.
+  - **Data:** `scripts/website/build_scenario_data.py` writes to
+    `src/admin/viz/scenario/data/`.
+- Decision: As above.
+- Reason: Amey's instruction. It matches how the existing draft
+  visualizations (the resilience gap map) are kept off the public site.
+- Evidence:
+  - The public source files are identical to HEAD.
+  - A production build compared with the pre-Stage-3 build, with the same
+    env files, gives public chunks (`index`, `Team`, `TechnicalDocs`,
+    `dataParser.core`, `index.html`) of the same size and content. Only
+    content hashes and minified names differ, because the admin chunk
+    changed.
+  - Scenario code and data URLs appear only in the admin `VizPage` and
+    `AdminApp` chunks.
+  - A logged-out visit to `/admin/viz/scenario` redirects to the login and
+    requests no Scenario data.
+  - New tests (`src/admin/viz/scenarioAccess.test.jsx`) cover signed-out,
+    non-admin and admin access.
+- Affects: The website, the admin panel, the build script.
+
+### D-095. The admin view's data files are still public static files
+
+- Date: 5 Nov 2026. Status: Pending (Amey). Decided by: Amey.
+- What happened: The build emits the Scenario data as hashed static assets
+  (`dist/assets/scenarios-*.json`, `tracts-*.geojson`). Only the admin chunks
+  reference them.
+- What is wrong: A logged-out visitor cannot reach the view, and nothing
+  public links to the data. But anyone who reads the admin JavaScript chunk
+  (itself a public static file) can find the hashed URLs and fetch the files
+  directly. The existing gap map's data has the same exposure. Login does
+  not protect static assets on Vercel.
+- How we are fixing it: Not yet. The robust fix serves the files from a
+  private Supabase Storage bucket readable only by admins, checked with the
+  existing `is_admin()`, and has the view fetch them with the admin's
+  session. That needs a new bucket, access policies and an upload step, so
+  it waits for Amey's approval.
+- Decision: Not yet made.
+- Reason: Being clear about what the login protects and what it does not.
+- Evidence: `dist/assets/` after `npm run build`; `reports/ml/stage3_report.md`.
+- Affects: The admin Scenario view, and the existing gap map's data.

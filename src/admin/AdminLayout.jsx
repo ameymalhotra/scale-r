@@ -66,8 +66,11 @@ export default function AdminLayout({ children }) {
           >
             Map layers
           </NavLink>
-          <NavLink to="/admin/viz" className="admin-nav__link">
+          <NavLink to="/admin/viz" end className="admin-nav__link">
             Draft visualizations
+          </NavLink>
+          <NavLink to="/admin/viz/scenario" className="admin-nav__link">
+            Scenarios (preliminary)
           </NavLink>
           <a className="admin-nav__link" href="/dashboard" target="_blank" rel="noreferrer">
             Open public map ↗
