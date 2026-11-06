@@ -3,53 +3,82 @@
   <nav class="back" aria-label="Admin"><a href="/admin">← Admin</a><a href="/admin/viz">Resilience gap map</a></nav>
   <div class="prelim" role="note">PRELIMINARY: model results for discussion, not for decisions</div>
   <h1>Scenarios</h1>
-  <p id="intro">Where resilience projects have tended to go, where need is highest, and the gap between them, under different hazard scenarios.</p>
 
-  <h2>Map shows</h2>
-  <div class="seg seg-2" role="group" aria-label="Map layer">
-    <button type="button" data-layer="gap" class="on">Gap: need vs investment</button>
-    <button type="button" data-layer="need">Need</button>
-    <button type="button" data-layer="likelihood">Likely investment</button>
-    <button type="button" data-layer="gapExpected">Need vs expected</button>
+  <h2 class="first">Model</h2>
+  <div class="seg" role="group" aria-label="Model">
+    <button type="button" data-model="bayes" class="on">Bayesian multiscale model</button>
+    <button type="button" data-model="ml">Machine learning model</button>
   </div>
-  <div id="ramp-wrap">
+  <p class="note" id="model-note"></p>
+
+  <div class="tabs" role="tablist" aria-label="View">
+    <button type="button" role="tab" data-view="scenarios" aria-selected="true" class="on">Scenarios</button>
+    <button type="button" role="tab" data-view="compare" aria-selected="false">Compare models</button>
+  </div>
+
+  <section id="view-scenarios" aria-label="Scenarios">
+    <h2>Map shows</h2>
+    <div class="seg seg-2" role="group" aria-label="Map layer">
+      <button type="button" data-layer="gap" class="on">Gap: need vs investment<small>same for both models</small></button>
+      <button type="button" data-layer="need">Need<small>same for both models</small></button>
+      <button type="button" data-layer="likelihood">Likely investment<small>changes with the model</small></button>
+      <button type="button" data-layer="gapExpected">Need vs expected<small>changes with the model</small></button>
+    </div>
     <div class="ramp" id="ramp"></div>
     <div class="ramp-labels" id="ramp-labels"></div>
     <p class="ramp-note" id="ramp-note"></p>
-  </div>
 
-  <h2>Scenario</h2>
-  <div class="seg" role="group" aria-label="Hazard family">
-    <button type="button" data-family="slr" class="on">Sea level rise</button>
-    <button type="button" data-family="surge">Storm surge</button>
-    <button type="button" data-family="heat">Surface heat</button>
-  </div>
-  <div class="seg levels" id="levels" role="group" aria-label="Scenario level"></div>
-  <p class="note" id="scenario-note"></p>
+    <h2>Scenario</h2>
+    <div class="seg seg-2" id="presets" role="group" aria-label="Scenario preset"></div>
+    <p class="note" id="preset-note"></p>
+    <details class="custom" id="custom">
+      <summary>Choose each hazard level</summary>
+      <div class="row"><span>Sea level rise</span><div class="seg levels" data-family="slr" role="group" aria-label="Sea level rise"></div></div>
+      <div class="row"><span>Storm surge</span><div class="seg levels" data-family="surge" role="group" aria-label="Storm surge"></div></div>
+      <div class="row"><span>Surface heat</span><div class="seg levels" data-family="heat" role="group" aria-label="Surface heat"></div></div>
+    </details>
+    <p class="note" id="scenario-note"></p>
 
-  <div class="stats" id="summary" aria-live="polite"></div>
+    <div class="stats" id="summary" aria-live="polite"></div>
 
-  <h2>Tract</h2>
-  <div class="tract" id="tract"><p class="muted">Click a tract on the map to see its details.</p></div>
+    <h2>Tract</h2>
+    <div class="tract" id="tract"><p class="muted">Click a tract on the map to see both models' predictions for it.</p></div>
 
-  <details class="more" id="interventions">
-    <summary>Try an intervention</summary>
-    <p>Choose tracts on the map and a project type to see who it would cover, and how the gap would change. This shows coverage only, not damages avoided.</p>
-    <div class="seg" role="group" aria-label="Selecting tracts">
-      <button type="button" id="select-toggle">Select tracts on the map</button>
-      <button type="button" id="select-clear">Clear</button>
+    <details class="more" id="interventions">
+      <summary>Try an intervention</summary>
+      <p>Choose tracts on the map and a project type to see who it would cover, and how the gap would change. Coverage does not depend on the project type. This shows coverage only, not damages avoided.</p>
+      <div class="seg" role="group" aria-label="Selecting tracts">
+        <button type="button" id="select-toggle">Select tracts on the map</button>
+        <button type="button" id="select-clear">Clear</button>
+      </div>
+      <label class="field">Project type
+        <select id="itype">
+          <option value="Gray">Gray</option>
+          <option value="Green">Green</option>
+          <option value="Blue">Blue</option>
+          <option value="Hybrid">Hybrid</option>
+        </select>
+      </label>
+      <p class="note" id="itype-note"></p>
+      <div id="iresult" aria-live="polite"><p class="muted">No tracts selected.</p></div>
+    </details>
+  </section>
+
+  <section id="view-compare" aria-label="Compare models" hidden>
+    <h2>Map shows</h2>
+    <div class="seg" role="group" aria-label="Comparison layer">
+      <button type="button" data-clayer="diff" class="on">Difference</button>
+      <button type="button" data-clayer="neighbourhood">Neighbourhood effect</button>
+      <button type="button" data-clayer="city">City effect</button>
     </div>
-    <label class="field">Project type
-      <select id="itype">
-        <option value="nature-based">Nature-based or hybrid</option>
-        <option value="gray">Gray</option>
-      </select>
-    </label>
-    <div id="iresult" aria-live="polite"><p class="muted">No tracts selected.</p></div>
-  </details>
+    <div class="ramp" id="cramp"></div>
+    <div class="ramp-labels" id="cramp-labels"></div>
+    <p class="ramp-note" id="cramp-note"></p>
+    <div id="compare"></div>
+  </section>
 
   <details class="more">
-    <summary>About this model</summary>
+    <summary>About these models</summary>
     <div id="about"></div>
   </details>
 </aside>

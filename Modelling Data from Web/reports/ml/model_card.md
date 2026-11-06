@@ -188,7 +188,7 @@ So **hazard scenarios change the predicted likelihood very little** (at most
 ## Bayesian multiscale model (Stage 4, preliminary)
 
 Full report: `reports/ml/stage4_bayesian_report.md`. Decisions: D-097 to
-D-103.
+D-109.
 
 **What it is.** A two-part (hurdle) model of sited investment, fitted by
 MCMC (NumPyro NUTS, 4 chains):
@@ -232,8 +232,21 @@ better. Out-of-fold residual Moran's I is 0.118.
 - Spatial effects mean "more or fewer projects than the features predict
   here", not why.
 
-**Status.** Recommended as the module's one model (D-103), pending your
-decision. The dashboard still uses the Stage 2 models.
+**Status.**
+- Approved as the module's main model (D-104).
+- The admin Scenario screen shows it by default, with the Stage 2/3 machine
+  learning setup available for comparison (D-109). Model 0c is reported as
+  a comparison.
+- No dollar predictions are shown (D-105). A tract's 90% predictive range
+  for dollars per resident has a median width of $8,635.
+
+**Project type, four classes (D-108).** In spatial CV, gray and green are
+partly predictable:
+- gray: precision 0.93 and recall 0.67 (logistic);
+- green: 0.35 and 0.68.
+
+Blue (17 projects, precision 0.04 or lower) and hybrid (F1 0.29 or lower)
+are not. The binary type model stays.
 
 ## Software and licenses
 

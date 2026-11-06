@@ -61,14 +61,16 @@ bash scripts/ml/run_ml.sh scripts/ml/stage4_run.py     # everything else, about 
   - Surface heat shows nothing: 1.08, 0.82 to 1.40.
   - The strongest signals are FEMA expected loss per resident (higher odds)
     and population density (lower odds).
-- **The heat gap does not hold after controls.**
+- **Heat (D-106): hotter tracts receive less investment, but after controls
+  this is explained mainly by distance from the coast (inland location),
+  not by heat itself.**
   - On its own, hotter tracts are less likely to have a sited project, at
     0.67 times the odds per 4°F. They also get 42% fewer dollars per
     resident when they do.
   - With the other features in the model, both effects shrink to about
     zero.
-  - No single control explains it. Distance from the bay or ocean explains
-    about half.
+  - Distance from the bay or ocean explains the most: about half on its
+    own. The other features remove the rest.
 - **Spatially varying hazard effects (Model 2) are not supported.** The local
   hazard slopes hardly vary across the county, and Model 2 is no better than
   Model 1.
@@ -546,7 +548,9 @@ equal-count terciles:
 | Model 0a: all controls, no city or spatial effect | 1.13 (0.82 to 1.53) | |
 | Model 1, population-averaged | 1.08 (0.82 to 1.40) | −6% (−31 to +25) |
 
-- **The heat gap does not hold after controls.**
+- **In plain words (D-106): hotter tracts receive less investment, but after
+  controls this is explained mainly by distance from the coast (inland
+  location), not by heat itself.**
   - Hotter tracts are less likely to have a sited project, and get fewer
     dollars when they do.
   - But that is explained by the features that go with heat.
@@ -605,7 +609,37 @@ bootstrap intervals or better, it becomes the module's one model.
    dollar figures needs your decision. D-088 currently says no dollar
    predictions.
 
-Nothing in the dashboard was changed.
+Nothing in the dashboard was changed in Part A.
+
+### Decisions after Part A (5 November 2026)
+
+- **D-104.** Model 1 is approved as the main model. Model 0c stays as a
+  comparison.
+- **D-105.** Dollar figures stay off the dashboard. Model 1's 90% intervals
+  for sited dollars per resident (`outputs/ml/stage4/dollar_interval_widths.csv`):
+
+  | Interval | Tracts with a sited project (395) | All 697 training tracts |
+  |---|---|---|
+  | Predictive: what one tract's figure could be, median width | **$8,635** (about $28 to $8,664; the high end is about 300 times the low end) | $6,286 |
+  | Credible: the tract's typical (median) amount, median width | **$990** (typical amount $497; high end about 5.5 times the low end) | $711 |
+
+  Read: the model cannot say much about one tract's dollars. It can say
+  roughly what a typical amount for that kind of tract is, within a factor
+  of about 5.
+- **D-106.** Heat wording, as above.
+- **D-107 and D-108.** Project types.
+  - The intervention tool offers gray, green, blue and hybrid, with a
+    typical cost per resident for each.
+  - A four-class type model is not reliable for blue (17 projects) or
+    hybrid, so the binary model stays. Part B report.
+- **Correction to point 2 above.** Part B found that Model 1's scenario
+  changes are not small.
+  - Its sea level rise effect is negative and the model is not monotone, so
+    under 6 ft and Category 5 its mean likelihood falls by 8.5 points.
+    Some tracts fall by up to 61 points, mostly where the inputs are beyond
+    the training range.
+  - The monotone machine learning model rises by 1.6 points.
+  - See `reports/ml/stage4_partB_report.md`.
 
 ## 7. Limitations
 

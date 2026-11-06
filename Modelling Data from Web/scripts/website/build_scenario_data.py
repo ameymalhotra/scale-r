@@ -2,14 +2,18 @@
 
     ../.venv/bin/python scripts/website/build_scenario_data.py      (from Modelling Data from Web/)
 
-Reads outputs/ml/dashboard/{tracts,scores,scenarios}.json (written by
-scripts/ml/stage2b_map_model.py and scripts/ml/scenarios.py) and the TIGER 2024
+Reads outputs/ml/dashboard/{tracts,scores,models,compare}.json (written by
+scripts/ml/stage2b_map_model.py and scripts/ml/stage4_dashboard.py) and the TIGER 2024
 tract boundaries, and writes:
   src/admin/viz/scenario/data/tracts.geojson  tract outlines (land only, simplified) with
                                     the current-state attributes
-  src/admin/viz/scenario/data/scenarios.json  per-scenario county summary and per-tract
-                                    arrays, in the same tract order
-  src/admin/viz/scenario/data/scores.json     model scores and definitions for the About panel
+  src/admin/viz/scenario/data/models.json     both models (machine learning and Bayesian):
+                                    per-tract likelihoods, intervals and scenario changes,
+                                    and the inputs the page needs to recompute need (D-109)
+  src/admin/viz/scenario/data/compare.json    the Compare models view (scores, drivers,
+                                    city effects, heat result, cost per resident by type)
+  src/admin/viz/scenario/data/scores.json     Stage 2 scores for the About panel
+The single-family scenarios.json of Stage 3 is replaced by models.json.
 Nothing is hand-edited; rerun after the ML pipeline. No dollar predictions are
 written (T5 is unreliable, D-088); observed sited dollars per resident are, so the
 page can recompute the actual-investment gap for interventions.
@@ -39,10 +43,11 @@ KEEP = ["GEOID", "jurisdiction", "low_pop_flag", "population", "T1_observed", "T
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     tracts = json.loads((DASH / "tracts.json").read_text())
-    scen = json.loads((DASH / "scenarios.json").read_text())
+    models = json.loads((DASH / "models.json").read_text())
     scores = json.loads((DASH / "scores.json").read_text())
     by = {r["GEOID"]: r for r in tracts}
     order = [r["GEOID"] for r in tracts]
+    assert models["order"] == order, "models.json must use the tract order of tracts.json"
 
     u = gpd.read_file(f"zip://{paths.BOUNDARY_DIR / 'tl_2024_12_tract.zip'}", where="COUNTYFP='086'")
     u = u[u.GEOID.isin(by)].to_crs(6346)
@@ -62,15 +67,11 @@ def main():
     (OUT / "tracts.geojson").write_text(json.dumps({"type": "FeatureCollection", "features": feats},
                                                    separators=(",", ":")))
 
-    # scenarios: drop the GEOID column and keep the tract order of tracts.json
-    out = []
-    for s in scen["scenarios"]:
-        cols = s["columns"]
-        rows = {r[0]: r for r in s["tracts"]}
-        arr = {c: [rows[gid][j] for gid in order] for j, c in enumerate(cols) if c != "GEOID"}
-        out.append({k: s[k] for k in ("id", "family", "label", "hypothetical")} | {"summary": s["summary"], **arr})
-    (OUT / "scenarios.json").write_text(json.dumps({"meta": scen["meta"], "order": order, "scenarios": out},
-                                                   separators=(",", ":")))
+    (OUT / "models.json").write_text(json.dumps(models, separators=(",", ":"), ensure_ascii=False))
+    (OUT / "compare.json").write_text((DASH / "compare.json").read_text())
+    old = OUT / "scenarios.json"
+    if old.exists():
+        old.unlink()        # Stage 3 single-family file, replaced by models.json
     (OUT / "scores.json").write_text(json.dumps(scores, indent=1))
     for f in sorted(OUT.iterdir()):
         print(f"{f.name}: {f.stat().st_size / 1024:,.0f} KB")

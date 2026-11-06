@@ -2084,7 +2084,7 @@ respect:
 
 ### D-103. Stage 4 recommendation: the Bayesian Model 1 as the module's one model
 
-- Date: 5 Nov 2026. Status: Pending Amey. Decided by: Amey (rule from
+- Date: 5 Nov 2026. Status: Final (approved in D-104). Decided by: Amey (rule from
   prompt 24, A7); the result applied it.
 - What happened: On the Stage 2 spatial folds, Model 1 (Part 1: BYM2 plus
   jurisdiction intercept) scored as follows.
@@ -2114,3 +2114,176 @@ respect:
   `spatial_cv_comparison.csv`, `spatial_cv_elpd_differences.csv`;
   `reports/ml/stage4_bayesian_report.md` section 6.
 - Affects: Part B (unified admin Scenario screen).
+
+### D-104. Bayesian Model 1 approved as the module's main model
+
+- Date: 5 Nov 2026. Status: Final. Decided by: Amey.
+- What happened: Amey approved D-103.
+- What is wrong: Nothing.
+- How we are fixing it: Not applicable.
+- Decision:
+  - Bayesian Model 1 (BYM2 plus city intercepts; lognormal Part 2) is the
+    module's main model.
+  - Model 0c (BYM2, no city intercept) stays reported as a comparison.
+  - The Stage 2 machine learning setup stays available for comparison in
+    the admin dashboard (Part B):
+    - logistic regression for likelihood;
+    - monotone XGBoost for scenario changes.
+- Reason: D-103.
+- Evidence: `reports/ml/stage4_bayesian_report.md` sections 4.3 and 6.
+- Affects: Part B; the model card.
+
+### D-105. Dollar figures stay off the dashboard; report the interval width
+
+- Date: 5 Nov 2026. Status: Final. Decided by: Amey.
+- What happened: Model 1's Part 2 predicts sited dollars per resident and
+  passes its posterior predictive checks.
+- What is wrong: Whether its intervals are narrow enough to show is not yet
+  known.
+- How we are fixing it: Report the median width, in dollars, of Model 1's
+  90% intervals for dollars per resident, so Amey can decide later.
+- Decision: D-088 stands. No dollar predictions on the dashboard.
+- Reason: Amey's call. The decision waits for the interval widths.
+- Evidence: `outputs/ml/stage4/dollar_interval_widths.csv` (written by
+  `scripts/ml/stage4_dashboard.py`).
+- Affects: Part B (no dollar figures shown).
+
+### D-106. Wording of the heat result
+
+- Date: 5 Nov 2026. Status: Final. Decided by: Amey.
+- What happened: Stage 4 found that the raw heat gap disappears after
+  controls. Distance from the coast explains the most.
+- What is wrong: Nothing. This fixes the wording.
+- How we are fixing it: The report and the dashboard About panel say it
+  plainly. Hotter tracts receive less investment. After controls, this is
+  explained mainly by distance from the coast (inland location), not by
+  heat itself.
+- Decision: Use that wording.
+- Reason: Amey's call. It matches section 5.7 of the Stage 4 report.
+- Evidence: `outputs/ml/stage4/heat_gap_after_controls.csv`.
+- Affects: Stage 4 report; dashboard About panel.
+
+### D-107. Four project types in the intervention tool; cost per resident by type
+
+- Date: 5 Nov 2026. Status: Final. Decided by: Amey.
+- What happened: The intervention tool offered two types, gray and
+  nature-based or hybrid.
+- What is wrong: The database has four types. In the sited, completed,
+  funded or ongoing projects in training tracts there are:
+  - Gray: 919;
+  - Hybrid: 122;
+  - Green: 40;
+  - Blue: 18.
+- How we are fixing it:
+  - The tool offers gray, green, blue and hybrid.
+  - Coverage (residents, exposed and vulnerable residents) does not depend
+    on type, and the tool says so.
+  - Typical sited cost per resident is computed per type: the median over
+    that type's projects of project cost ÷ the receiving tract's residents.
+  - Green and blue are flagged with their project counts, because so few
+    projects make their medians unstable.
+  - A four-class version of T4 is run (D-108).
+- Decision: As above.
+- Reason: Amey's call.
+- Evidence: `outputs/ml/stage4/cost_per_resident_by_type.csv`.
+- Affects: Part B intervention tool.
+
+### D-108. Four-class project type (T4): not reliable for blue or hybrid; the binary model stays
+
+- Date: 5 Nov 2026. Status: Final. Decided by: Amey (rule); the result
+  applied it.
+- What happened: Following D-107, a four-class T4 (gray, green, blue,
+  hybrid) was fitted:
+  - same frame as the binary model: 1,092 projects, 27 tract features,
+    project scale and hazard focus;
+  - same spatial folds;
+  - class weights: multinomial logistic with balanced weights, and
+    XGBoost with balanced sample weights;
+  - tuning inside each training fold.
+
+  Spatial cross-validation:
+
+  | Class | Projects | Logistic precision / recall | XGBoost precision / recall |
+  |---|---|---|---|
+  | Gray | 913 | 0.93 / 0.67 | 0.91 / 0.78 |
+  | Green | 40 | 0.35 / 0.68 | 0.36 / 0.58 |
+  | Blue | 17 | 0.04 / 0.35 | 0.00 / 0.00 |
+  | Hybrid | 122 | 0.23 / 0.39 | 0.17 / 0.30 |
+
+  Collapsing the four classes back to two gives ROC-AUC 0.79, the same as
+  the binary model (0.79 to 0.80).
+- What is wrong: Blue is not predictable from 17 projects. Hybrid is weak.
+- How we are fixing it: Keep the binary model (gray against green, blue or
+  hybrid) wherever a type model is used. Show no four-class predictions.
+- Decision: The binary T4 stays. The intervention tool offers four types
+  for coverage and cost only (D-107). Type does not come from a model.
+- Reason: Amey's rule. Keep the binary model if blue or green are
+  unreliable, and blue is.
+- Evidence: `outputs/ml/stage4/t4_multiclass_per_class.csv`,
+  `t4_multiclass_confusion.csv`; `scripts/ml/stage4_t4_multiclass.py`.
+- Affects: Part B; model card.
+
+### D-109. Part B design: two models in one admin Scenario screen
+
+- Date: 5 Nov 2026. Status: Final. Decided by: Amey (the model switch, the
+  compare view, the Bayesian default); the details are proposals.
+- What happened: Amey asked for one admin screen with a switch between the
+  machine learning setup (Stage 2/3) and Bayesian Model 1, plus a Compare
+  models view.
+- What is wrong: Several details had to be fixed so that the two models are
+  shown on equal terms.
+- How we are fixing it:
+  - **Map likelihood.**
+    - Machine learning: as in Stage 3, the logistic model's spatial
+      out-of-fold, Venn-ABERS calibrated probability.
+    - Bayesian: the spatial out-of-fold posterior mean from the Stage 4
+      cross-validation fits, not the in-sample fit. The in-sample fit
+      nearly reproduces each tract's own outcome (D-102).
+  - **Bayesian interval.**
+    - The 90% credible interval averages over the tract's own unexplained
+      effect, and keeps parameter and neighbourhood uncertainty.
+    - Median width is 0.73, against 0.13 for Venn-ABERS, which measures
+      calibration uncertainty only.
+    - Averaging out the neighbourhood effect too gives 0.34. That figure is
+      reported but not shown.
+  - **Scenario changes.**
+    - Machine learning: the monotone XGBoost change is added to the map
+      probability, as in Stage 3.
+    - Bayesian: the sea level rise and surge inputs and their vulnerability
+      interactions change draw by draw, using each fold fit's own
+      standardization. City and neighbourhood effects are held fixed.
+    - The Bayesian model is not monotone. Its sea level rise effect is
+      negative, so higher sea level lowers its predictions. Under 6 ft and
+      Category 5 the mean change is −0.085, against +0.016 for the machine
+      learning model. The screen says so, and hatches extrapolated tracts.
+  - **Heat** changes need and the gap only, for both models (D-093).
+  - **Combined presets.**
+    - Current baseline: 3 ft, Category 3, heat now.
+    - Professor's median: 3 ft, Category 4, +2°F.
+    - Lower: 1 ft, Category 1, now.
+    - Higher: 6 ft, Category 5, +3°F.
+    - Custom levels can be chosen per family.
+    - Need is recomputed on the page from per-family percentiles, the same
+      way as `scenarios.py`. For the professor's median this gives 118
+      high-need tracts with no sited project (454,281 residents).
+  - **The tract under 100 residents** is not in the Bayesian model's graph.
+    Its Bayesian values are shown as not modelled.
+  - **Compare models view:**
+    - spatial CV scores for the Bayesian model, Model 0c, the logistic model
+      both as shown (calibrated) and uncalibrated, and XGBoost;
+    - paired bootstrap intervals and Moran's I;
+    - a difference map and the 12 largest disagreements;
+    - drivers side by side;
+    - city effects, the neighbourhood effect map and the heat result;
+    - a note on when to trust each model.
+  - **The calibrated machine learning probabilities score lower** than the
+    uncalibrated logistic model: ROC-AUC 0.644 against 0.675. Venn-ABERS
+    calibration creates large ties, and many tracts sit at exactly 0.385.
+    Both rows are shown.
+  - The Bayesian model is the default. The PRELIMINARY label stays. No
+    dollar predictions are shown (D-105).
+- Decision: As above.
+- Reason: Like-for-like comparison. Honest intervals.
+- Evidence: `scripts/ml/stage4_dashboard.py`;
+  `outputs/ml/dashboard/models.json`, `compare.json`.
+- Affects: the admin Scenario screen (`src/admin/viz/scenario/`).

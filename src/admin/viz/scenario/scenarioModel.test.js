@@ -1,0 +1,65 @@
+import { describe, expect, it } from 'vitest';
+import data from './data/models.json';
+import geo from './data/tracts.geojson?raw';
+import compare from './data/compare.json';
+import { likelihoodFor, median, needFor, summary } from './scenarioModel.js';
+
+// The page recomputes need and the gap from per-family percentiles. These checks tie it to the
+// Python pipeline: scenarios.py (single families, Stage 3) and stage4_dashboard.py (presets).
+const tracts = [];
+JSON.parse(geo).features.forEach((f) => { tracts[f.id] = f.properties; });
+const t1 = tracts.map((t) => t.T1_observed);
+const lv = (slr, surge, heat) => ({ slr, surge, heat });
+
+describe('scenario arithmetic', () => {
+  it('reproduces the current need percentiles and primary gap', () => {
+    const nd = needFor(data, lv('slr_3ft', 'surge_cat3', 'heat_current'), t1);
+    tracts.forEach((t, i) => {
+      if (t.need_pct == null) expect(nd.needPct[i]).toBeNull();
+      else expect(nd.needPct[i]).toBeCloseTo(t.need_pct, 3);
+      if (t.gap_actual != null) expect(nd.gap[i]).toBeCloseTo(t.gap_actual, 3);
+    });
+  });
+
+  it.each([
+    ['current baseline', lv('slr_3ft', 'surge_cat3', 'heat_current'), 72, 275141, 85],
+    ['sea level rise 6 ft (Stage 3)', lv('slr_6ft', 'surge_cat3', 'heat_current'), 128, 492480, 139],
+    ['heat +3 F (Stage 3)', lv('slr_3ft', 'surge_cat3', 'heat_plus3f'), 112, 434341, 122],
+    ...compare.preset_check.map((p) => {
+      const pr = data.presets.find((x) => x.label === p.preset);
+      return [`preset ${p.preset}`, lv(pr.slr, pr.surge, pr.heat), p.high_need_no_sited_project, p.residents, p['tracts_gap_over_0.5']];
+    }),
+  ])('%s matches the pipeline', (_, levels, flagged, residents, gapHigh) => {
+    for (const model of ['bayes', 'ml']) {
+      const s = summary(data, model, levels, tracts);
+      expect(s.flagged).toBe(flagged);
+      expect(Math.round(s.flaggedPop)).toBe(Math.round(residents));
+      expect(s.gapHigh).toBe(gapHigh);
+    }
+  });
+
+  it('keeps heat from changing either model', () => {
+    for (const model of ['bayes', 'ml']) {
+      const a = likelihoodFor(data, model, lv('slr_3ft', 'surge_cat4', 'heat_current')).p;
+      const b = likelihoodFor(data, model, lv('slr_3ft', 'surge_cat4', 'heat_plus3f')).p;
+      expect(b).toEqual(a);
+    }
+  });
+
+  it('never lowers the machine learning likelihood as hazard rises (monotone)', () => {
+    const a = likelihoodFor(data, 'ml', lv('slr_3ft', 'surge_cat3', 'heat_current')).p;
+    const b = likelihoodFor(data, 'ml', lv('slr_6ft', 'surge_cat5', 'heat_current')).p;
+    a.forEach((v, i) => expect(b[i]).toBeGreaterThanOrEqual(v - 1e-9));
+  });
+
+  it('leaves the tract under 100 residents out of the Bayesian model', () => {
+    const i = tracts.findIndex((t) => t.low_pop_flag === 1);
+    expect(likelihoodFor(data, 'bayes', lv('slr_3ft', 'surge_cat3', 'heat_current')).p[i]).toBeNull();
+    expect(likelihoodFor(data, 'ml', lv('slr_3ft', 'surge_cat3', 'heat_current')).p[i]).not.toBeNull();
+  });
+
+  it('computes the median the way pandas does', () => {
+    expect(median([3, 1, 2])).toBe(2);
+    expect(median([4, 1, 3, 2])).toBe(2.5);
+  });
+});
