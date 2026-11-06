@@ -147,8 +147,9 @@ def main():
     # ---------------- Bayesian: spatial out-of-fold posterior, with scenario shifts ----------------
     names = list(M.design(d["raw"], np.arange(len(tr)))[0].columns)
     hz = ["slr_3ft_pop_share", "surge_cat3_any_pop_share"]
-    bay = {k: {"mean": np.full(n, np.nan), "lo": np.full(n, np.nan), "hi": np.full(n, np.nan)}
-           for k in ml_change}
+    bay = {k: {"mean": np.full(n, np.nan), "lo": np.full(n, np.nan), "hi": np.full(n, np.nan),
+               "ch_lo": np.full(n, np.nan), "ch_hi": np.full(n, np.nan)} for k in ml_change}
+    county = {k: 0.0 for k in ml_change}       # per-draw sum of tract changes, for the county interval (D-111)
     oof_draws_ok = np.zeros(n, bool)
     folds = d["folds"]
     for f in np.unique(folds):
@@ -166,6 +167,7 @@ def main():
         beta = z["beta_1"].reshape(-1, len(names))
         zv = ((d["raw"]["vulnerability"].iloc[tst] - mu["vulnerability"]) / sd["vulnerability"]).to_numpy()
         pos = [order.index(g) for g in tr.GEOID.iloc[tst]]
+        pm_cur = expit(eta_nt * shrink)
         for a, b in itertools.product(SLR, SURGE):
             new = {"slr_3ft_pop_share": tr[SLR[a]].iloc[tst].to_numpy(), "surge_cat3_any_pop_share": tr[SURGE[b]].iloc[tst].to_numpy()}
             de = np.zeros_like(eta)
@@ -178,11 +180,19 @@ def main():
             pm = expit((eta_nt + de) * shrink)
             bay[k]["lo"][pos] = np.percentile(pm, 5, axis=0)
             bay[k]["hi"][pos] = np.percentile(pm, 95, axis=0)
+            # change from the current baseline, draw by draw, with its 90% credible interval (D-111)
+            dch = pm - pm_cur
+            bay[k]["ch_lo"][pos] = np.percentile(dch, 5, axis=0)
+            bay[k]["ch_hi"][pos] = np.percentile(dch, 95, axis=0)
+            county[k] = county[k] + dch.sum(axis=1)
         oof_draws_ok[pos] = True
     cur = bay["slr_3ft|surge_cat3"]
     assert oof_draws_ok.sum() == len(tr)
-    oof = pd.read_csv(S4 / "spatial_cv_oof.csv", dtype={"GEOID": str}).set_index("GEOID")
-    chk = oof.loc[[g for g in order if g in gi], "oof_m1_part1"].to_numpy()
+    # draws are paired by index across the ten independent fold fits; each fold's draws are exchangeable
+    county_ch = {k: {"mean": float(np.mean(v / len(tr))), "lo": float(np.percentile(v / len(tr), 5)),
+                     "hi": float(np.percentile(v / len(tr), 95))} for k, v in county.items()}
+    oofc = pd.read_csv(S4 / "spatial_cv_oof.csv", dtype={"GEOID": str}).set_index("GEOID")
+    chk = oofc.loc[[g for g in order if g in gi], "oof_m1_part1"].to_numpy()
     assert np.allclose(chk, cur["mean"][tix >= 0], atol=1e-9), "Bayesian current must equal the CV out-of-fold mean"
 
     # ---------------- Bayesian per-tract drivers and effects (full fit) ----------------
@@ -214,7 +224,12 @@ def main():
     ldrv = pd.read_csv(C.STAGE2 / "logistic_drivers_global.csv").sort_values("mean_abs_contribution", ascending=False)
 
     # ---------------- models.json ----------------
-    ml_pred = tp.pred_likelihood.to_numpy()
+    # machine learning map (D-110): the uncalibrated logistic spatial out-of-fold probability (Stage 2 found it
+    # already well calibrated); the tract under 100 residents keeps the final-fit value. Venn-ABERS gives the
+    # interval only: a calibration range, not full uncertainty.
+    oof = pd.read_csv(S4 / "spatial_cv_oof.csv", dtype={"GEOID": str}).set_index("GEOID")
+    ml_pred = np.array([oof.oof_logistic.get(g, np.nan) if g in gi else tp.pred_likelihood[g] for g in order])
+    assert not np.isnan(ml_pred).any()
     diff = cur["mean"] - ml_pred
     models = {
         "order": order,
@@ -229,7 +244,12 @@ def main():
         "exposed": exposed,
         "ml": {"current": r4(ml_pred), "lo": r4(tp.interval_lo.to_numpy()), "hi": r4(tp.interval_hi.to_numpy()),
                "change": {k: r4(v) for k, v in ml_change.items()}, "drivers": tp[["driver1", "driver2", "driver3"]].values.tolist()},
-        "bayes": {k: {"mean": r4(v["mean"]), "lo": r4(v["lo"]), "hi": r4(v["hi"])} for k, v in bay.items()},
+        "bayes": {k: {"mean": r4(v["mean"]), "lo": r4(v["lo"]), "hi": r4(v["hi"]), "ch_lo": r4(v["ch_lo"]),
+                      "ch_hi": r4(v["ch_hi"]), "county_change": county_ch[k],
+                      # +1 / -1 where the 90% interval of the change excludes zero, at full precision; 0 otherwise
+                      "reliable": [int(np.sign(c)) if (lo_ > 0 or hi_ < 0) else 0 for c, lo_, hi_ in
+                                   zip(np.nan_to_num(v["ch_lo"] + v["ch_hi"]), np.nan_to_num(v["ch_lo"]), np.nan_to_num(v["ch_hi"]))]}
+                  for k, v in bay.items()},
         "bayes_drivers": drivers,
         "bayes_effects": {"city": r4([eff.city_effect.get(g, np.nan) for g in order]),
                           "neighbourhood": r4([eff.neighbourhood_effect.get(g, np.nan) for g in order])},
@@ -239,21 +259,21 @@ def main():
 
     # ---------------- compare.json ----------------
     y = tr.T1.to_numpy()
-    shown_ml = tp.pred_likelihood.loc[tr.GEOID].to_numpy()
+    shown_ml = oof.loc[tr.GEOID, "oof_logistic"].to_numpy()
+    va_ml = tp.pred_likelihood.loc[tr.GEOID].to_numpy()
     cvs = pd.read_csv(S4 / "spatial_cv_scores.csv").set_index("model")
     rows = [{"model": "Bayesian Model 1 (city + BYM2)", "key": "bayes", **scores(y, oof.loc[tr.GEOID, "oof_m1_part1"].to_numpy())},
             {"model": "Bayesian Model 0c (BYM2, no city), comparison", "key": "m0c",
              **scores(y, oof.loc[tr.GEOID, "oof_m0c_part1"].to_numpy())},
-            {"model": "Machine learning: logistic, as shown on the map (Venn-ABERS calibrated)", "key": "ml_shown",
-             **scores(y, shown_ml)},
-            {"model": "Machine learning: logistic, uncalibrated", "key": "logistic", **scores(y, oof.loc[tr.GEOID, "oof_logistic"].to_numpy())},
+            {"model": "Machine learning: logistic, as shown on the map", "key": "ml_shown", **scores(y, shown_ml)},
+            {"model": "Reference: logistic after Venn-ABERS calibration (the Stage 3 map; no longer shown)", "key": "va",
+             **scores(y, va_ml)},
             {"model": "Machine learning: XGBoost", "key": "xgb", **scores(y, oof.loc[tr.GEOID, "oof_xgb"].to_numpy())}]
     bm = oof.loc[tr.GEOID, "oof_m1_part1"].to_numpy()
-    diffs = [{"comparison": "Bayesian minus machine learning (as shown)", **boot(y, bm, shown_ml)},
-             {"comparison": "Bayesian minus logistic (uncalibrated)", **boot(y, bm, oof.loc[tr.GEOID, "oof_logistic"].to_numpy())},
+    diffs = [{"comparison": "Bayesian minus machine learning (both as shown on the map)", **boot(y, bm, shown_ml)},
              {"comparison": "Bayesian minus XGBoost", **boot(y, bm, oof.loc[tr.GEOID, "oof_xgb"].to_numpy())}]
     for r in diffs:
-        k = {"Bayesian minus machine learning (as shown)": "ml_shown", "Bayesian minus logistic (uncalibrated)": "logistic",
+        k = {"Bayesian minus machine learning (both as shown on the map)": "ml_shown",
              "Bayesian minus XGBoost": "xgb"}[r["comparison"]]
         a, b = rows[0], next(x for x in rows if x["key"] == k)
         r["point"] = {m: a[m] - b[m] for m in ("roc_auc", "pr_auc", "log_loss", "brier")}
@@ -290,6 +310,16 @@ def main():
     print("largest disagreements:\n", dis.drop(columns="i").to_string(index=False, float_format=lambda v: f"{v:.3f}"))
     print("Bayesian 90% interval width (current): median", np.nanmedian(cur["hi"] - cur["lo"]).round(3),
           "; machine learning Venn-ABERS width: median", np.nanmedian(tp.interval_hi - tp.interval_lo).round(3))
+
+    vlo, vhi = tp.interval_lo.to_numpy(), tp.interval_hi.to_numpy()
+    print("machine learning map probability outside its Venn-ABERS range:",
+          int(np.nansum((ml_pred < vlo - 1e-9) | (ml_pred > vhi + 1e-9))), "of", int(np.isfinite(vlo).sum()))
+    for k in ("slr_3ft|surge_cat4", "slr_6ft|surge_cat3", "slr_3ft|surge_cat5", "slr_6ft|surge_cat5", "slr_1ft|surge_cat1"):
+        lo_, hi_ = bay[k]["ch_lo"], bay[k]["ch_hi"]
+        rel = (lo_ > 0) | (hi_ < 0)
+        print(f"Bayesian {k}: reliable change in {int(np.nansum(rel))} tracts (up {int(np.nansum(lo_ > 0))}, "
+              f"down {int(np.nansum(hi_ < 0))}); county mean change {county_ch[k]['mean']:+.4f} "
+              f"[{county_ch[k]['lo']:+.4f}, {county_ch[k]['hi']:+.4f}]")
 
     # ---------------- D-105: dollar interval widths (not for the dashboard) ----------------
     z2 = np.load(FITS / "m1_part2_lognormal.npz")

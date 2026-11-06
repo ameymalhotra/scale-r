@@ -58,6 +58,28 @@ describe('scenario arithmetic', () => {
     expect(likelihoodFor(data, 'ml', lv('slr_3ft', 'surge_cat3', 'heat_current')).p[i]).not.toBeNull();
   });
 
+  it.each([
+    ['professor median', lv('slr_3ft', 'surge_cat4', 'heat_plus2f'), 144, 0],
+    ['6 ft, Category 3', lv('slr_6ft', 'surge_cat3', 'heat_current'), 0, 253],
+    ['6 ft, Category 5', lv('slr_6ft', 'surge_cat5', 'heat_current'), 45, 153],
+  ])('counts reliable Bayesian changes as the pipeline does: %s', (_, levels, up, down) => {
+    const s = summary(data, 'bayes', levels, tracts);
+    expect(s.reliableUp).toBe(up);
+    expect(s.reliableDown).toBe(down);
+    s.change.forEach((c, i) => {
+      if (c == null) return;
+      // the shown change lies inside its own interval (to rounding)
+      expect(c).toBeGreaterThanOrEqual(s.chLo[i] - 0.02);
+      expect(c).toBeLessThanOrEqual(s.chHi[i] + 0.02);
+    });
+  });
+
+  it('shows the machine learning map probability uncalibrated (D-110)', () => {
+    const cur = likelihoodFor(data, 'ml', lv('slr_3ft', 'surge_cat3', 'heat_current')).p;
+    const tied = cur.filter((v) => v === 0.385).length;
+    expect(tied).toBeLessThan(10); // Venn-ABERS put many tracts on exactly 0.385
+  });
+
   it('computes the median the way pandas does', () => {
     expect(median([3, 1, 2])).toBe(2);
     expect(median([4, 1, 3, 2])).toBe(2.5);

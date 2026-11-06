@@ -143,3 +143,6 @@
       .forest { grid-template-columns: 110px 1fr; }
     }
 }
+
+/* Bayesian changes whose 90% credible interval includes zero (D-111) */
+.viz-scenario .nr { color: var(--muted); font-style: italic; font-weight: 400; }

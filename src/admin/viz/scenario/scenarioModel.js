@@ -46,10 +46,16 @@ export function likelihoodFor(data, model, levels) {
     const base = data.ml.current;
     const ch = data.ml.change[key];
     const p = base.map((v, i) => (v == null ? null : Math.min(1, Math.max(0, v + (ch[i] || 0)))));
-    return { p, lo: data.ml.lo, hi: data.ml.hi, current: base, intervalIsCurrent: true };
+    const change = p.map((v, i) => (v == null ? null : v - base[i]));
+    // no interval for the machine learning change: every change is shown as a number
+    return { p, lo: data.ml.lo, hi: data.ml.hi, current: base, intervalIsCurrent: true, change, chLo: null, chHi: null, reliable: change.map((c) => c != null), countyChange: null };
   }
   const s = data.bayes[key];
-  return { p: s.mean, lo: s.lo, hi: s.hi, current: data.bayes['slr_3ft|surge_cat3'].mean, intervalIsCurrent: false };
+  const current = data.bayes['slr_3ft|surge_cat3'].mean;
+  const change = s.mean.map((v, i) => (v == null ? null : v - current[i]));
+  // a Bayesian change is reliable only when its 90% credible interval excludes zero (D-111)
+  const reliable = change.map((c, i) => c != null && s.reliable[i] !== 0);
+  return { p: s.mean, lo: s.lo, hi: s.hi, current, intervalIsCurrent: false, change, chLo: s.ch_lo, chHi: s.ch_hi, reliable, sign: s.reliable, countyChange: s.county_change };
 }
 
 /** Tracts whose scenario value for any chosen family is outside the training range. */
@@ -67,17 +73,20 @@ export function summary(data, model, levels, tracts) {
   const lk = likelihoodFor(data, model, levels);
   const ex = extrapolated(data, levels, tracts.length);
   let flagged = 0; let flaggedPop = 0; let gapHigh = 0; let ext = 0; let extPop = 0; let expected = 0; let change = 0; let k = 0;
+  let up = 0; let down = 0;
   tracts.forEach((_, i) => {
     if (nd.flag[i]) { flagged += 1; flaggedPop += pop[i]; }
     if (nd.gap[i] != null && nd.gap[i] >= 0.5) gapHigh += 1;
     if (ex[i]) { ext += 1; extPop += pop[i]; }
     if (lk.p[i] != null) { expected += lk.p[i]; change += lk.p[i] - lk.current[i]; k += 1; }
+    if (lk.sign && lk.sign[i] > 0) up += 1;
+    if (lk.sign && lk.sign[i] < 0) down += 1;
   });
   const predPct = pctWithin(lk.current, lk.p);
   const gapExpected = nd.needPct.map((n, i) => (n == null || predPct[i] == null ? null : n - predPct[i]));
   return {
     ...nd, ...lk, extrap: ex, gapExpected,
-    flagged, flaggedPop, gapHigh, ext, extPop, expected, meanChange: k ? change / k : 0, modelled: k,
+    flagged, flaggedPop, gapHigh, ext, extPop, expected, meanChange: k ? change / k : 0, modelled: k, reliableUp: up, reliableDown: down,
     exposedSlr: data.exposed[levels.slr], exposedSurge: data.exposed[levels.surge],
   };
 }
@@ -89,3 +98,6 @@ export function median(values) {
   const m = v.length >> 1;
   return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2;
 }
+
+/** True when a county or tract change interval excludes zero. */
+export const excludesZero = (lo, hi) => lo != null && hi != null && (lo > 0 || hi < 0);

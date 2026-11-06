@@ -303,3 +303,57 @@ deleted afterwards and never committed.
 - **The Bayesian scenario changes are large beyond 3 ft.** They come from a
   negative, uncertain sea level effect applied outside the training range.
   The screen hatches those tracts and explains this.
+
+## 9. Fixes after Part B (D-110, D-111)
+
+**Machine learning map now shows the uncalibrated logistic probability**
+(D-110).
+- Both maps are now scored on what they show:
+
+  | Model, as shown on the map | ROC-AUC | PR-AUC | Log loss | Brier |
+  |---|---|---|---|---|
+  | Bayesian Model 1 | 0.685 | 0.730 | 0.643 | 0.224 |
+  | Machine learning (logistic) | 0.675 | 0.719 | 0.653 | 0.227 |
+
+- The difference, Bayesian minus machine learning:
+  - ROC-AUC +0.010 (−0.012 to +0.030);
+  - log loss −0.010 (−0.030 to +0.011).
+- Neither is clearly better. The Venn-ABERS version stays as a labelled
+  reference row (0.644).
+- The Venn-ABERS interval is labelled "calibration range, not full
+  uncertainty".
+- **The uncalibrated probability lies outside that range in 423 of 697
+  tracts.** The range was built around the calibrated value, so the tract
+  panel says "the map value lies outside it" where that happens. This needs
+  your decision: drop the range, or build an interval around the
+  uncalibrated value.
+
+**Bayesian scenario changes carry 90% credible intervals** (D-111).
+- Where an interval includes zero, the screen says "no reliable change",
+  greyed out.
+- A new "Change from current" layer shows those tracts in pale grey.
+- The added line reads: "Under current patterns, more future flood exposure
+  does not attract more projects, so need and the gap are the main scenario
+  outputs."
+
+| Scenario | County average change (90% CrI) | Tracts reliably up | Tracts reliably down |
+|---|---|---|---|
+| Professor's median | +1.7 points (−0.5 to +3.8): no reliable change | 144 | 0 |
+| 6 ft, Category 3 | −11.8 (−18.6 to −4.3) | 0 | 253 |
+| 6 ft, Category 5 | −8.5 (−16.0 to −0.8) | 45 | 153 |
+
+The 144 reliable increases under the professor's median come from surge.
+Its effect is positive, so moving to Category 4 raises some tracts. The
+added line is true county-wide (no reliable change) and for sea level rise
+(reliable decreases), but not for surge in those 144 tracts.
+
+New screenshots:
+- `11_fix_bayes_change_layer_no_reliable_change.jpg`;
+- `12_fix_ml_uncalibrated_calibration_range.jpg`;
+- `13_fix_compare_scores_as_shown.jpg`.
+
+Checks:
+- lint passes;
+- 184 tests pass, including 7 new: the reliable-change counts match Python
+  for three scenarios, and the map value is uncalibrated;
+- the build passes.

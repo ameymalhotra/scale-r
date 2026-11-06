@@ -2,7 +2,7 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 // Small Stage 2 summary, bundled so the About panel fills in before the map loads.
 import scores from './data/scores.json';
-import { MODELS, median, pctWithin, summary } from './scenarioModel.js';
+import { MODELS, excludesZero, median, pctWithin, summary } from './scenarioModel.js';
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
 
@@ -28,6 +28,10 @@ const LAYERS = {
   likelihood: {
     colors: SEQ_LIKELY, domain: [0, 1], labels: ['0%', '50%', '100%'],
     note: 'Changes with the model. Chance that a tract has a sited project under current patterns of investment, predicted for each area by a fit that never saw it. It describes past placement, not where investment should go.',
+  },
+  change: {
+    colors: DIVERGE, domain: [-0.3, 0.3], labels: ['less likely', 'no change', 'more likely'],
+    note: 'Changes with the model. Change in likelihood from the current baseline. Bayesian: tracts in pale grey have no reliable change (the 90% credible interval includes zero). Machine learning: no interval, so every change is shown.',
   },
   gapExpected: {
     colors: DIVERGE, domain: [-1, 1], labels: ['more expected', 'balanced', 'more need'],
@@ -61,7 +65,7 @@ const range = (lo, hi) => (lo == null || hi == null ? 'n/a' : `${pct(lo)} to ${p
 function colorExpr(layer) {
   const { colors, domain: [lo, hi] } = LAYERS[layer];
   const stops = colors.flatMap((c, i) => [lo + ((hi - lo) * i) / (colors.length - 1), c]);
-  return ['case', ['==', ['feature-state', 'v'], null], '#d9dde1',
+  return ['case', ['boolean', ['feature-state', 'nr'], false], '#eef0f2', ['==', ['feature-state', 'v'], null], '#d9dde1',
     ['interpolate', ['linear'], ['to-number', ['feature-state', 'v']], ...stops]];
 }
 
@@ -86,8 +90,22 @@ function bbox(geom) {
 function modelNote(model) {
   return model === 'bayes'
     ? 'Main model (D-104). Bayesian Model 1: tract features, a city effect and a neighbourhood spatial effect, with 90% credible intervals. It is not monotone: because past projects went less often to tracts with more residents in the 3 ft zone, higher sea level lowers its predictions.'
-    : 'Stage 2/3 setup: logistic regression for likelihood (Venn-ABERS calibrated), monotone XGBoost for scenario changes, so more hazard can never lower a prediction.';
+    : 'Stage 2/3 setup: logistic regression for likelihood (Stage 2 found its probabilities already well calibrated), with a Venn-ABERS calibration range; monotone XGBoost for scenario changes, so more hazard can never lower a prediction.';
 }
+
+/** A change in points; a Bayesian change whose 90% credible interval includes zero is shown greyed out (D-111). */
+function changeText(model, c, ci, isBase) {
+  if (c == null) return 'n/a';
+  if (isBase) return '<span class="chg">current baseline</span>';
+  if (model === 'bayes') {
+    const ok = ci && (ci.reliable != null ? ci.reliable : excludesZero(ci.lo, ci.hi));
+    if (!ok) return '<span class="nr">no reliable change</span>';
+    return `<span class="chg">${sgn(c * 100, 1)} points (${sgn(ci.lo * 100, 1)} to ${sgn(ci.hi * 100, 1)})</span>`;
+  }
+  return `<span class="chg">${sgn(c * 100, 1)} points</span>`;
+}
+
+const outside = (s, i) => s.lo[i] != null && s.hi[i] != null && (s.p[i] < s.lo[i] - 1e-9 || s.p[i] > s.hi[i] + 1e-9);
 
 function aboutHtml(cmp) {
   const b = cmp ? cmp.cv.find((r) => r.key === 'bayes') : null;
@@ -149,7 +167,7 @@ function compareHtml(cmp) {
     <p class="note">Hotter tracts receive less investment. After controls, this is explained mainly by distance from the coast (inland location), not by heat itself.</p>
     <h3>When to trust each</h3>
     <ul class="lim">
-      <li><b>Both predict about equally well</b> on areas they have not seen, against the uncalibrated logistic and XGBoost models. Against the calibrated probabilities the machine learning map shows, the Bayesian model ranks tracts better (ROC-AUC +0.04, interval above zero).</li>
+      <li><b>Both predict about equally well</b> on areas they have not seen, scored on what each map shows. Neither is clearly better at ranking tracts.</li>
       <li><b>Use the Bayesian model</b> for uncertainty and for questions about scale: city versus neighbourhood, and effects with intervals. Its wide tract intervals are honest: a tract's local pattern is hard to predict from its features.</li>
       <li><b>Use the machine learning model</b> for a narrow, stable ranking and for scenarios where more hazard should never lower a prediction. Its narrow ranges measure calibration only, not all the uncertainty.</li>
       <li><b>Watch the extremes.</b> In large, sparse tracts the Bayesian model can be very sure and still wrong (for example 97% for a rural tract with no sited project), because an area it has not seen gets no neighbourhood correction.</li>
@@ -188,6 +206,8 @@ export function mount() {
   $('about').innerHTML = aboutHtml(null);
   $('model-note').textContent = modelNote(model);
 
+  // heat never changes likelihood (D-093), so any heat level with 3 ft and Category 3 is the baseline for it
+  const isBase = () => levels.slr === 'slr_3ft' && levels.surge === 'surge_cat3';
   const presetOf = () => (data ? data.presets.find((p) => p.slr === levels.slr && p.surge === levels.surge && p.heat === levels.heat) : null);
   const label = (fam, id) => (data.levels[fam].find(([k]) => k === id) || [id, id])[1];
 
@@ -214,7 +234,7 @@ export function mount() {
       const fam = el.dataset.family;
       el.innerHTML = data.levels[fam].map(([id, l]) => `<button type="button" data-level="${id}" class="${levels[fam] === id ? 'on' : ''}">${l}</button>`).join('');
     });
-    $('scenario-note').textContent = `${FAMILY_NOTES.slr} ${FAMILY_NOTES.surge} ${FAMILY_NOTES.heat}`;
+    $('scenario-note').innerHTML = `<b>Under current patterns, more future flood exposure does not attract more projects, so need and the gap are the main scenario outputs.</b> ${FAMILY_NOTES.slr} ${FAMILY_NOTES.surge} ${FAMILY_NOTES.heat}`;
   }
 
   function renderSummary(s) {
@@ -225,10 +245,10 @@ export function mount() {
       <div><div class="n">${fmt(s.exposedSurge)}</div><div class="l">residents reached by ${label('surge', levels.surge)} surge</div></div>
       <div><div class="n">${fmt(s.gapHigh)}</div><div class="l">tracts with a large gap (0.5 or more) · same for both</div></div>
       <div><div class="n">${fmt(s.ext)}</div><div class="l">tracts beyond the training range${s.ext ? ` (${fmt(s.extPop)} residents), hatched` : ''}</div></div>
-      <div class="wide model"><div class="n">${fmt(s.expected)} tracts <span class="chg">${sgn(ch * 100, 1)} points</span></div><div class="l">expected to have a sited project under current patterns, and the average change in likelihood from the current baseline · ${MODELS[model]}</div></div>`;
+      <div class="wide model"><div class="n">${fmt(s.expected)} tracts ${changeText(model, ch, s.countyChange, isBase())}</div><div class="l">expected to have a sited project under current patterns, and the county average change in likelihood from the current baseline${model === 'bayes' && s.countyChange ? ` (90% credible interval). Reliable change in ${fmt(s.reliableUp)} tracts up and ${fmt(s.reliableDown)} down` : ''} · ${MODELS[model]}</div></div>`;
   }
 
-  function tractHtml(i, sb, sm) {
+  function tractHtml(i, sb, sm, base = isBase()) {
     const t = tracts[i];
     const tags = [];
     if (t.T1_observed) tags.push('<span class="tag">has a sited project</span>');
@@ -243,8 +263,8 @@ export function mount() {
       <div>${tags.join('')}</div>
       <table class="both"><thead><tr><th></th><th${col('bayes')}>Bayesian</th><th${col('ml')}>Machine learning</th></tr></thead><tbody>
         <tr><td>Likely investment</td><td${col('bayes')}>${pct(sb.p[i])}</td><td${col('ml')}>${pct(sm.p[i])}</td></tr>
-        <tr><td>Range</td><td${col('bayes')}>${range(sb.lo[i], sb.hi[i])}<br><span class="muted">90% credible</span></td><td${col('ml')}>${range(sm.lo[i], sm.hi[i])}<br><span class="muted">Venn-ABERS, current</span></td></tr>
-        <tr><td>Change from current (points)</td><td${col('bayes')}>${sb.p[i] == null ? 'n/a' : sgn((sb.p[i] - sb.current[i]) * 100, 1)}</td><td${col('ml')}>${sgn((sm.p[i] - sm.current[i]) * 100, 1)}</td></tr>
+        <tr><td>Range</td><td${col('bayes')}>${range(sb.lo[i], sb.hi[i])}<br><span class="muted">90% credible</span></td><td${col('ml')}>${range(sm.lo[i], sm.hi[i])}<br><span class="muted">calibration range, not full uncertainty${outside(sm, i) ? '; the map value lies outside it' : ''}</span></td></tr>
+        <tr><td>Change from current (points)</td><td${col('bayes')}>${sb.p[i] == null ? 'n/a' : changeText('bayes', sb.change[i], { lo: sb.chLo[i], hi: sb.chHi[i], reliable: sb.reliable[i] }, base)}</td><td${col('ml')}>${changeText('ml', sm.change[i], null, base)}</td></tr>
         <tr><td>Need vs expected</td><td${col('bayes')}>${sgn(sb.gapExpected[i])}</td><td${col('ml')}>${sgn(sm.gapExpected[i])}</td></tr>
       </tbody></table>
       <dl>
@@ -310,7 +330,7 @@ export function mount() {
     if (!el || clickedIndex == null || view !== 'compare') return;
     const cur = { slr: 'slr_3ft', surge: 'surge_cat3', heat: 'heat_current' };
     el.hidden = false;
-    el.innerHTML = tractHtml(clickedIndex, summary(data, 'bayes', cur, tracts), summary(data, 'ml', cur, tracts));
+    el.innerHTML = tractHtml(clickedIndex, summary(data, 'bayes', cur, tracts), summary(data, 'ml', cur, tracts), true);
   }
 
   function render() {
@@ -321,14 +341,15 @@ export function mount() {
     const s = model === 'bayes' ? sb : sm;
     let v; let flag = () => false; let ext = () => false;
     if (view === 'scenarios') {
-      v = { gap: s.gap, need: s.needPct, likelihood: s.p, gapExpected: s.gapExpected }[layer];
+      v = { gap: s.gap, need: s.needPct, likelihood: s.p, gapExpected: s.gapExpected, change: s.change }[layer];
       flag = (i) => layer === 'gap' && !!s.flag[i];
       ext = (i) => !!s.extrap[i];
     } else {
       v = { diff: data.diff_current, neighbourhood: data.bayes_effects.neighbourhood, city: data.bayes_effects.city }[clayer];
     }
     for (let i = 0; i < tracts.length && map.getSource('tracts'); i += 1) {
-      map.setFeatureState({ source: 'tracts', id: i }, { v: v[i], extrap: ext(i), flag: flag(i), sel: selected.has(i) || (view === 'compare' && i === clickedIndex) });
+      const nr = view === 'scenarios' && layer === 'change' && s.change[i] != null && !s.reliable[i];
+      map.setFeatureState({ source: 'tracts', id: i }, { v: v[i], nr, extrap: ext(i), flag: flag(i), sel: selected.has(i) || (view === 'compare' && i === clickedIndex) });
     }
     if (map.getLayer('tract-fill')) map.setPaintProperty('tract-fill', 'fill-color', colorExpr(view === 'scenarios' ? layer : clayer));
     renderLegend('ramp', layer);

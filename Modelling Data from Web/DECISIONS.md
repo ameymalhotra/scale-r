@@ -2287,3 +2287,72 @@ respect:
 - Evidence: `scripts/ml/stage4_dashboard.py`;
   `outputs/ml/dashboard/models.json`, `compare.json`.
 - Affects: the admin Scenario screen (`src/admin/viz/scenario/`).
+
+### D-110. Machine learning map shows the uncalibrated logistic probability
+
+- Date: 5 Nov 2026. Status: Final. Decided by: Amey.
+- What happened: Part B found that the Venn-ABERS calibrated probabilities
+  on the machine learning map rank tracts worse than the uncalibrated
+  logistic model (ROC-AUC 0.644 against 0.675). Calibration puts many
+  tracts on the same value. Stage 2 found the logistic probabilities
+  already well calibrated.
+- What is wrong: The map showed the weaker version.
+- How we are fixing it:
+  - The machine learning map shows the uncalibrated logistic probability:
+    spatial out-of-fold, from the same nested fits as Stage 2. The tract
+    under 100 residents keeps its final-fit value.
+  - Venn-ABERS is used only for the interval, labelled "calibration range,
+    not full uncertainty".
+  - The comparison table scores both models on what the map shows. The
+    Venn-ABERS version stays as a labelled reference row.
+- Decision:
+  - As above.
+  - Both as shown, Bayesian minus machine learning: ROC-AUC +0.010 (−0.012
+    to +0.030), log loss −0.010 (−0.030 to +0.011). No clear difference.
+- Reason: Amey's call. Better ranking at no cost in calibration.
+- Evidence: `outputs/ml/dashboard/compare.json`;
+  `scripts/ml/stage4_dashboard.py`.
+- Affects: the admin Scenario screen.
+- **Open question for Amey:** the uncalibrated probability lies outside its
+  Venn-ABERS range in 423 of 697 tracts, because the range was built around
+  the calibrated value. The screen says so tract by tract ("the map value
+  lies outside it"). Dropping the range, or recomputing an interval around
+  the uncalibrated value, needs a decision.
+
+### D-111. Bayesian scenario changes with credible intervals; "no reliable change"
+
+- Date: 5 Nov 2026. Status: Final. Decided by: Amey.
+- What happened: The screen showed Bayesian scenario changes as point
+  values only.
+- What is wrong: Many of those changes are smaller than their
+  uncertainty.
+- How we are fixing it:
+  - **Per tract:** the change is computed draw by draw against the current
+    baseline, from the same out-of-fold posterior as the likelihood
+    interval (D-109). The 90% credible interval is the 5th to 95th
+    percentile.
+  - **Where the interval includes zero,** the screen shows "no reliable
+    change", greyed out, instead of a number. A new "Change from current"
+    map layer shows these tracts in pale grey.
+  - **County average change** carries an interval too. Draws are paired by
+    index across the ten independent fold fits.
+  - The reliability flag is computed in Python at full precision and
+    shipped with the data.
+  - One added line on the screen: "Under current patterns, more future
+    flood exposure does not attract more projects, so need and the gap are
+    the main scenario outputs."
+  - Machine learning changes have no interval and are shown as numbers.
+- Decision: As above. Results:
+
+  | Scenario | County average change (90% CrI) | Tracts reliably up | Tracts reliably down |
+  |---|---|---|---|
+  | Professor's median (3 ft, Cat 4) | +1.7 points (−0.5 to +3.8): no reliable change | 144 | 0 |
+  | 6 ft, Cat 3 | −11.8 (−18.6 to −4.3) | 0 | 253 |
+  | 6 ft, Cat 5 | −8.5 (−16.0 to −0.8) | 45 | 153 |
+
+  The surge effect is positive, so a stronger surge reliably raises the
+  likelihood in some tracts. Sea level rise lowers it.
+- Reason: Amey's call.
+- Evidence: `outputs/ml/stage4/stage4_dashboard_log.txt`;
+  `src/admin/viz/scenario/scenarioModel.test.js`.
+- Affects: the admin Scenario screen.
