@@ -87,6 +87,7 @@ __pycache__/
 Modelling Data from Web/data/raw/boundaries/
 Modelling Data from Web/data/raw/social/
 Modelling Data from Web/data/raw/physical/
+Modelling Data from Web/data/raw/fema/nfip_claims_miami_dade.csv
 # Analysis outputs, and the processed files that used to live in output/ (kept ignored, as before)
 Modelling Data from Web/outputs/
 Modelling Data from Web/archive/output_part1_tables/

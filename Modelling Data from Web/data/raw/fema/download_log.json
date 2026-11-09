@@ -1,0 +1,39 @@
+{
+  "downloaded_local_date": "2026-11-08",
+  "downloaded_utc": "2026-11-09T04:20:27+00:00",
+  "nfip": {
+    "dataset": {
+      "name": "NfipClaims",
+      "title": "NFIP Redacted Claims",
+      "version": 3,
+      "lastRefresh": "2026-08-04T22:40:36.263Z",
+      "lastDataSetRefresh": "2026-09-09T16:23:10.614Z",
+      "recordCount": 2725989,
+      "webService": "https://www.fema.gov/api/open/v3/NfipClaims",
+      "dataDictionary": "https://www.fema.gov/openfema-data-page/nfip-redacted-claims-v3"
+    },
+    "query": "https://www.fema.gov/api/open/v3/NfipClaims?%24filter=countyCode%20eq%20%2712086%27&%24top=10000&%24orderby=id&%24count=true",
+    "api_count": 62029,
+    "rows_saved": 62029,
+    "api_rundate": "2026-11-09T04:20:27.673Z"
+  },
+  "hma": {
+    "dataset": {
+      "name": "HmaSubapplications",
+      "title": "HMA Subapplications",
+      "version": 2,
+      "lastRefresh": "2026-07-27T22:39:30.327Z",
+      "lastDataSetRefresh": "2026-11-08T12:06:46.186Z",
+      "recordCount": 63635,
+      "webService": "https://www.fema.gov/api/open/v2/HmaSubapplications",
+      "dataDictionary": "https://www.fema.gov/openfema-data-page/HMA-Subapplications-v2"
+    },
+    "query_county": "https://www.fema.gov/api/open/v2/HmaSubapplications?%24filter=subapplicantStateAbbreviation%20eq%20%27FL%27%20and%20substringof%28%27Miami-Dade%27%2CbenefitingCounties%29&%24top=10000&%24orderby=id&%24count=true",
+    "api_count_county": 283,
+    "query_null_county": "https://www.fema.gov/api/open/v2/HmaSubapplications?%24filter=subapplicantStateAbbreviation%20eq%20%27FL%27%20and%20benefitingCounties%20eq%20null&%24top=10000&%24orderby=id&%24count=true",
+    "api_count_null_county": 69,
+    "null_county_kept": 5,
+    "rows_saved": 288,
+    "api_rundate": "2026-11-09T04:21:04.185Z"
+  }
+}

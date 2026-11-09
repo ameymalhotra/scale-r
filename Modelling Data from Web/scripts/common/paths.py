@@ -24,6 +24,13 @@ SLR_DIR = RAW / "physical" / "sea_level_rise" / "FL_SE_slr_data_dist"
 SLR_GPKG = SLR_DIR / "FL_SE_slr_final_dist.gpkg"
 SURGE_DIR = RAW / "physical" / "storm_surge" / "US_SLOSH_MOM_Inundation_v4_20260617"
 FLOOD_ZONE_DIR = RAW / "physical" / "flood_zones"
+# FEMA open data for the impact work (D-113): NFIP claims, HMA subapplications
+FEMA_RAW_DIR = RAW / "fema"
+NFIP_CLAIMS_CSV = FEMA_RAW_DIR / "nfip_claims_miami_dade.csv"
+HMA_PROJECTS_CSV = FEMA_RAW_DIR / "hma_projects_miami_dade.csv"
+FEMA_DOWNLOAD_LOG = FEMA_RAW_DIR / "download_log.json"
+TRACT_REL_2010_2020 = BOUNDARY_DIR / "rel2020" / "tab20_tract20_tract10_natl.txt"
+TRACT_2024_ZIP = BOUNDARY_DIR / "tl_2024_12_tract.zip"
 # kept outside this folder because website and repo-root scripts use them
 NRI_CSV = REPO / "fema_miami_dade_dec_2025.csv"
 LST_TIF = REPO / "output" / "lst" / "lst_composite_f.tif"
@@ -35,6 +42,9 @@ INVESTMENT_DIR = PROCESSED / "investment"
 ANALYSIS_DIR = PROCESSED / "analysis"
 HAZARDS_DIR = PROCESSED / "hazards"
 EXPOSURE_DIR = PROCESSED / "exposure"
+IMPACT_DIR = PROCESSED / "impact"
+NFIP_TRACT_YEAR_CSV = IMPACT_DIR / "nfip_claims_tract_year.csv"
+HMA_MATCHES_CSV = IMPACT_DIR / "hma_scaler_matches.csv"
 
 # results by analysis
 OUTPUTS = ROOT / "outputs"
@@ -46,10 +56,12 @@ OUT_EXPOSURE_A = OUTPUTS / "exposure" / "stage_a"
 OUT_EXPOSURE_B = OUTPUTS / "exposure" / "stage_b"
 OUT_EXPOSURE_CK = OUTPUTS / "exposure" / "checkpoints"
 OUT_ML = OUTPUTS / "ml"
+OUT_IMPACT = OUTPUTS / "impact"
 
 # reports written by scripts
 REPORTS = ROOT / "reports"
 REPORTS_ANALYSIS = REPORTS / "analysis"
+REPORTS_IMPACT = REPORTS / "impact"
 
 
 def use(*folders):

@@ -65,6 +65,9 @@ The module has four parts:
 | Boundaries, coast | US Census Bureau | TIGER/Line 2024 | 1 Jan 2024 | 2024 | `data/raw/boundaries/` |
 | Vulnerability score | this project | PCA component RC1 of the 19 tract indicators | as SVI and ACS | 27 Sep 2026 | `outputs/pca/pca_scores_tract.csv` |
 | FEMA flood zones | FEMA | National Flood Hazard Layer | | | **not available**; an empty slot is kept in the feature list |
+| NFIP flood insurance claims (impact data, not a model input; D-113) | FEMA (OpenFEMA) | NFIP Redacted Claims, API `NfipClaims` v3, https://www.fema.gov/api/open/v3/NfipClaims, filter countyCode 12086; downloaded 8 Nov 2026; 62,029 rows (equal to the API count) | loss years 1978 to 2026 | data refresh 9 Sep 2026 | `data/raw/fema/nfip_claims_miami_dade.csv` |
+| HMA mitigation grants (impact data, not a model input; D-113, D-114) | FEMA (OpenFEMA) | HMA Subapplications, API `HmaSubapplications` v2, https://www.fema.gov/api/open/v2/HmaSubapplications, Florida rows benefiting Miami-Dade; downloaded 8 Nov 2026; 288 rows (283 + 5) | fiscal years 1999 to 2025 | data refresh 8 Nov 2026 | `data/raw/fema/hma_projects_miami_dade.csv` |
+| 2010 to 2020 tract relationship (impact data; D-115) | US Census Bureau | 2020 to 2010 Census Tract Relationship File, https://www2.census.gov/geo/docs/maps-data/data/rel2020/tract/tab20_tract20_tract10_natl.txt; downloaded 8 Nov 2026; 126,450 rows (national) | 2010 and 2020 tracts | 2021 | `data/raw/boundaries/rel2020/tab20_tract20_tract10_natl.txt` |
 
 **Frame.** 698 tracts. Training uses 697: the one tract under 100 residents is
 excluded and kept, flagged, in the outputs.

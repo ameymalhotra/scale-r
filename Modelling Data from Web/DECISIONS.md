@@ -37,6 +37,7 @@ Backfilled on 5 November 2026 from:
 | Analysis methods | D-051 to D-060, D-067 |
 | Project organization | D-061 to D-066, D-068, D-070 |
 | Machine learning | D-071 onward |
+| Impact data (FEMA claims and grants) | D-113 onward |
 
 ---
 
@@ -2356,3 +2357,205 @@ respect:
 - Evidence: `outputs/ml/stage4/stage4_dashboard_log.txt`;
   `src/admin/viz/scenario/scenarioModel.test.js`.
 - Affects: the admin Scenario screen.
+
+## Impact data (FEMA claims and grants)
+
+D-112 is used on the `ml-scenario-module` branch, so this topic starts at
+D-113.
+
+### D-113. FEMA datasets: current OpenFEMA names, where the files live
+
+- Date: 8 Nov 2026. Status: Provisional. Decided by: Amey (proposal; confirm).
+- What happened: The brief asked for OpenFEMA `FimaNfipClaims` and
+  `HazardMitigationAssistanceProjects`, latest version.
+- What is wrong: Neither name is served any more. Every version returns
+  404, and neither appears in the OpenFEMA dataset list.
+- How we are fixing it:
+  - **Claims:** `NfipClaims` v3, title "NFIP Redacted Claims". This is the
+    same dataset under its new name. Last data refresh 9 Sep 2026; records
+    as of 8 Sep 2026.
+  - **Grants:** `HmaSubapplications` v2, title "HMA Subapplications". This
+    is the successor to the HMA projects dataset. Last data refresh
+    8 Nov 2026.
+  - Downloaded 8 Nov 2026 by paging the API (10,000 rows a page, ordered
+    by `id`). The script stops if the rows saved differ from the API count
+    or any `id` repeats.
+  - Paths added to `scripts/common/paths.py`.
+  - The raw claims CSV (27 MB) is git-ignored, like the other large raw
+    downloads. The grants CSV and `download_log.json` (queries, counts,
+    refresh dates) are kept in git.
+  - The Census 2010-to-2020 tract relationship file was downloaded, as
+    allowed, because conversion was needed (D-115). It sits under
+    `data/raw/boundaries/rel2020/`, which is git-ignored.
+  - Sources were recorded in two places:
+    - a sources table at the top of `reports/impact/fema_first_look.md`,
+      the project's convention;
+    - new rows appended to the "Data and sources" table in
+      `reports/ml/model_card.md`, the closest project-wide table. No
+      existing row was changed.
+- Decision: As above. Rows: 62,029 claims (equal to the API count); 288
+  grant rows (D-114).
+- Reason: These are the same datasets under their current names, and the
+  latest versions, as the brief asked.
+- Evidence: `data/raw/fema/download_log.json`;
+  `scripts/impact/download_fema.py`.
+- Affects: everything in `reports/impact/`.
+
+### D-114. Which HMA rows count as Miami-Dade
+
+- Date: 8 Nov 2026. Status: Provisional. Decided by: Amey (proposal; confirm).
+- What happened: HMA subapplications have no county code. The county is
+  in `benefitingCounties`, a text field that can list several counties.
+- What is wrong:
+  - 69 Florida rows have no county at all.
+  - "Statewide" rows benefit every county, Miami-Dade included, but are
+    not Miami-Dade projects.
+- How we are fixing it:
+  - Kept: Florida rows whose `benefitingCounties` contains "Miami-Dade"
+    (283).
+  - Also kept: 5 rows with no county from bodies that are plainly in
+    Miami-Dade, checked by hand against the Florida list:
+    - City of Opa-locka;
+    - Miami-Dade County;
+    - Miami-Dade County DERM (2);
+    - University of Miami.
+  - Statewide rows that do not name Miami-Dade were left out.
+- Decision: 288 rows.
+- Reason: Keep what is clearly a Miami-Dade project, and nothing that
+  only might be.
+- Evidence: `scripts/impact/download_fema.py` (`HMA_NULL_COUNTY_KEEP`).
+- Affects: D-117 and section 6 of the report.
+
+### D-115. NFIP claims mix 2010 and 2020 tracts; how they were put on 2020 tracts
+
+- Date: 8 Nov 2026. Status: Provisional. Decided by: Amey (proposal; confirm).
+- What happened:
+  - The only small-area location in the claims is `censusGeoid`, a
+    12-digit block group code. Latitude and longitude are rounded to one
+    decimal (29 points for the whole county). The data dictionary does not
+    say which census the codes use.
+  - Checked against the Census relationship file, the codes mix both
+    censuses, record by record. 2010-only codes still appear in 2023
+    claims. 2020-only codes appear in 1990s claims.
+- What is wrong: Tract totals on 2020 GEOIDs need every claim on a 2020
+  tract.
+- How we are fixing it:
+  - **Same tract in both censuses** (same code, at least 99% of land
+    shared both ways): kept. 33,382 claims, 327 codes.
+  - **2020-only code:** kept. 2,380 claims, 253 codes.
+  - **Code valid in both but the shape changed:** kept as 2020. 2,588
+    claims, 25 codes. These keep a median 98% of their land (lowest 81%).
+    Treating them as 2010 would move 88 claims.
+  - **2010-only code:** converted. 23,512 claims, 160 codes. Each claim is
+    shared out to the 2020 tracts its 2010 tract overlaps, weighted by
+    land area (`AREALAND_PART` over the 2010 tract's land). Total area is
+    used only where a tract has no land. Claims and dollars become
+    fractional. Only 794 of these claims have 90% or more of the land in
+    one 2020 tract.
+  - **Missing (160) or invalid or out of county (7):** not placed in a
+    tract, kept in county totals.
+  - The table carries `share_converted_from_2010`.
+- Decision: As above. 341 of the 701 tracts get more than half their
+  claims from conversion.
+- Reason: The relationship file was the one conversion source allowed.
+  Land area is the only weight it carries.
+- Evidence: `scripts/impact/fema_first_look.py` (`classify_vintage`,
+  `to_2020`); `outputs/impact/fema_first_look_log.json`.
+- Affects: `data/processed/impact/nfip_claims_tract_year.csv`; sections 2,
+  4 and 5 of the report.
+- **Open question for Amey:** weighting the split by 2020 housing units
+  per block would be better than land area. It needs the Census
+  block-level relationship file, which was not downloaded.
+
+### D-116. What counts as a claim and as dollars paid
+
+- Date: 8 Nov 2026. Status: Provisional. Decided by: Amey (proposal; confirm).
+- What happened: 25,307 of the 62,029 claims paid nothing. Payments come in
+  three parts: building, contents and increased cost of compliance.
+- What is wrong: "Claims" and "dollars" need one meaning across the tables.
+- How we are fixing it:
+  - `claims` counts every claim record.
+  - `claims_paid` counts only those with building plus contents above
+    zero.
+  - Dollars are building plus contents, as the brief asked. Increased
+    cost of compliance is left out.
+  - Dollars are nominal, not inflation-adjusted.
+  - Year is `yearOfLoss`.
+  - No row has a negative payment, so none needed handling.
+- Decision: As above.
+- Reason: As asked, and simple to explain.
+- Evidence: `scripts/impact/fema_first_look.py` (`load_claims`).
+- Affects: all claim tables and the report.
+
+### D-117. Matching HMA grants to SCALE-R projects: cost and jurisdiction only
+
+- Date: 8 Nov 2026. Status: Provisional. Decided by: Amey (proposal; confirm).
+- What happened:
+  - `subapplicationTitle` is empty in all 288 Miami-Dade rows, so names
+    cannot be matched.
+  - The only date fields with content are `dateSubmittedToFema` and
+    `fiscalYear`. There is no approval or close date.
+- What is wrong: The brief asked for matching by name, jurisdiction and
+  cost.
+- How we are fixing it:
+  - **Cost:** SCALE-R `Estimated_Cost` against the FEMA total amount,
+    federal share or benefit-cost total cost, within 2%.
+  - **Jurisdiction:** the FEMA applicant mapped by hand to a SCALE-R
+    jurisdiction. City names, county departments and the Public Health
+    Trust map to Miami-Dade County; the water district maps to SFWMD.
+    Hospitals, universities, nonprofits and state agencies are left
+    unmapped. A county applicant counts as a plausible jurisdiction for a
+    city project.
+  - **Two checks on the name:**
+    - the SCALE-R name or description cites the same disaster number;
+    - a keyword test of whether FEMA's activity type contradicts the
+      SCALE-R name.
+  - **High:** cost equal to the dollar and not a multiple of $1,000;
+    one-to-one among plausible exact candidates, with re-filings of one
+    application counted once; activity not contradicted; and same
+    jurisdiction or the same disaster cited.
+  - **Medium:** one-to-one, activity not contradicted, plus one of:
+    - same jurisdiction with an equal cost that is a multiple of $1,000
+      but not $10,000;
+    - same jurisdiction with costs within 1% and neither a multiple of
+      $1,000;
+    - a county applicant with cost equal to the dollar.
+  - **Low:** everything else plausible. Not to be used as a date.
+  - The date offered is `dateSubmittedToFema` (the earliest, for
+    re-filings). Matches are written only to
+    `data/processed/impact/hma_scaler_matches.csv`.
+    `SCALE-R_Database.csv` is unchanged.
+- Decision: 15 SCALE-R projects dated: 12 high, 3 medium. The medium
+  S-25A pair (SFWMD, 2002 grant) is doubtful and should be checked by hand.
+- Reason: Without titles, an exact non-round cost in the right
+  jurisdiction is the strongest evidence available. Round costs match too
+  many projects by chance; a $200,000 grant matched 22.
+- Evidence: `scripts/impact/fema_first_look.py` (`hma`);
+  `data/processed/impact/hma_scaler_matches.csv`.
+- Affects: any later use of project dates.
+
+### D-118. First-look correlations: frame and measures
+
+- Date: 8 Nov 2026. Status: Provisional. Decided by: Amey (proposal; confirm).
+- What happened: The brief asked for Spearman correlations of tract claims,
+  total and per 1,000 residents, with four measures:
+  - FEMA expected annual loss;
+  - 3 ft sea level rise exposure;
+  - Category 3 surge exposure;
+  - sited investment per resident.
+- What is wrong: The frame and the exact columns needed fixing.
+- How we are fixing it:
+  - **Frame:** the 697 training tracts from `ml_common.load_table()`. The
+    tract under 100 residents is left out, as in the ML work.
+  - **Columns:** `nri_eal_per_person`, `slr_3ft_pop_share`,
+    `surge_cat3_any_pop_share`, and `sited_dollars / population`.
+  - **Claims:** 1978 to 2026 totals. Tracts with no claims count as zero.
+  - **Per 1,000 residents** uses the table's ACS 2020 to 2024 population.
+  - Dollars paid (total and per resident) were added alongside.
+  - A 2010-onward version was added as a check, because 1999 and 2000
+    dominate the counts.
+- Decision: As above. Descriptive only, no model.
+- Reason: Same frame and variables as the rest of the project.
+- Evidence: `outputs/impact/nfip_spearman.csv`;
+  `outputs/impact/fema_first_look_log.json`.
+- Affects: section 5 of the report.
