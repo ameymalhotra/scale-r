@@ -269,9 +269,13 @@ The first method (one NFIP community at a time, D-120) stopped after 4 of
 - Only 26 of 80 fields are kept (location, dates, flood zone, building type
   and foundation, elevations, coverage, premium).
 
-**Status:** downloading; the first 200,000-row page arrived in 2 minutes.
-The file is needed only in Stage 2 (claims per insured building), and its
-coverage will be reported there.
+**Status (11 November 2026): stopped.** 650,000 records were saved (pages
+at offsets 0 to 600,000) before FEMA's server returned 503 errors at every
+page size (200,000, 100,000 and 50,000 rows) at offset 650,000. As the user
+instructed, the script stopped there rather than keep retrying. The user
+plans to download FEMA's full Parquet file by hand. The saved pages are kept
+in `data/raw/fema/nfip_policies_parts/`, and a rerun would resume at offset
+650,000. The file is needed only in Stage 2 (claims per insured building).
 
 ## 8. FHFA house price index
 
