@@ -1,0 +1,141 @@
+{
+  "note": "NFIP policies: see fema/nfip_policies_download_log.json",
+  "files": [
+    {
+      "file": "data/raw/dor/Dade_23_Final_NAL_2026.zip",
+      "url": "https://floridarevenue.com/property/dataportal/Documents/PTO%20Data%20Portal/Tax%20Roll%20Data%20Files/NAL/2026F/Dade%2023%20Final%20NAL%202026.zip",
+      "publisher_date": "posted 28 Oct 2026; CSV inside dated 16 Oct 2026",
+      "downloaded": "2026-11-10",
+      "bytes": 60286847,
+      "sha256": "7aa5d4f6720ad8def25df72d3b077eeb909b2bf349bcf4ea978993b881a8f930"
+    },
+    {
+      "file": "data/raw/dor/miamidade_2026Ppar.zip",
+      "url": "https://floridarevenue.com/property/dataportal/Documents/PTO%20Data%20Portal/Map%20Data/2026F/2026F%20PAR/miamidade_2026Ppar.zip",
+      "publisher_date": "posted 7 Aug 2026; shapefile dated 27 Jul 2026",
+      "downloaded": "2026-11-10",
+      "bytes": 184287329,
+      "sha256": "f52d9e525554cecd9ea89c5f10721a0f1980ca2aeb15207617b82aa4237ab49a"
+    },
+    {
+      "file": "data/raw/dor/miamidade_condos_2026.zip",
+      "url": "https://floridarevenue.com/property/dataportal/Documents/PTO%20Data%20Portal/Map%20Data/2026F/2026F%20PAR/miamidade_condos_2026.zip",
+      "publisher_date": "posted 7 Aug 2026; shapefile dated 28 Apr 2026",
+      "downloaded": "2026-11-10",
+      "bytes": 78143264,
+      "sha256": "ff856a7491d06fabaaaaf8decf27634ac99d85f55413434a32400d32874984ff"
+    },
+    {
+      "file": "data/raw/dor/parcel_shapefiles_readme.pdf",
+      "url": "https://floridarevenue.com/property/dataportal/Documents/PTO%20Data%20Portal/Map%20Data/parcel%20shapefiles%20readme.pdf",
+      "publisher_date": "10 Feb 2026",
+      "downloaded": "2026-11-10",
+      "bytes": 93412,
+      "sha256": "17b82a710a0affc74ce9db28bb24d6ea052546358a59b8bb198127e6ad9892b6"
+    },
+    {
+      "file": "data/raw/reference_docs/dor/2026_NAL_SDF_NAP_Users_Guide.pdf",
+      "url": "https://floridarevenue.com/property/dataportal/Documents/PTO%20Data%20Portal/User%20Guides/2026%20Users%20guide%20and%20quick%20reference/2026_NAL_SDF_NAP_Users_Guide.pdf",
+      "publisher_date": "2026",
+      "downloaded": "2026-11-10",
+      "bytes": 283728,
+      "sha256": "b0fdce41b212324c5c3c430c4c75e21d77ed4003cd42ecc343ce4c27ec0359c4"
+    },
+    {
+      "file": "data/raw/nsi/nsi_2022_12.gpkg.zip",
+      "url": "https://nsi.sec.usace.army.mil/downloads/nsi_2022/nsi_2022_12.gpkg.zip",
+      "publisher_date": "Last-Modified 30 Sep 2022; comparison only (D-130)",
+      "downloaded": "2026-11-10",
+      "bytes": 760417112,
+      "sha256": "d4a967872879e17e2aebcc602d2f5ff07eb200ee0d493e184685d0b5f5bb10a5"
+    },
+    {
+      "file": "data/raw/nsi/nsi_2026_api_12086.geojson",
+      "url": "https://nsi.sec.usace.army.mil/nsiapi/structures?fips=12086&fmt=fc",
+      "publisher_date": "NSI 2026 via API; used (D-130)",
+      "downloaded": "2026-11-10",
+      "bytes": 553916071,
+      "sha256": "e81deb71ea27cf5401a12656f3fe0a70183aa312b88bbc7eefbaabeb42355865"
+    },
+    {
+      "file": "data/raw/fema/nfhl/12086C_20260125.zip",
+      "url": "https://hazards.fema.gov/nfhlv2/output/County/12086C_20260125.zip",
+      "publisher_date": "NFHL database revised 26 Jan 2026; FIRM effective 11 Sep 2009",
+      "downloaded": "2026-11-10",
+      "bytes": 131656386,
+      "sha256": "4f9b4902308921f2bc466078183febcfc89a447f2edbf80feb32f95dac6ccd5d"
+    },
+    {
+      "file": "data/raw/fhfa/hpi_at_tract_miami_dade.csv",
+      "url": "https://www.fhfa.gov/hpi/download/annual/hpi_at_tract.csv",
+      "publisher_date": "Miami-Dade rows of the national file (national SHA-256 in fhfa/sha256.txt); data to 2025",
+      "downloaded": "2026-11-10",
+      "bytes": 577191,
+      "sha256": "58532811df15946b617dc6745871a76b77cfb9fc7da911a942322a3cfd548267"
+    },
+    {
+      "file": "data/raw/reference_docs/usace/occtypes.json",
+      "url": "https://raw.githubusercontent.com/USACE/go-consequences/dff647cabbc1abae3f084e80b7f6a166651d05d8/structures/occtypes.json",
+      "publisher_date": "commit 27 Dec 2021",
+      "downloaded": "2026-11-10",
+      "bytes": 561852,
+      "sha256": "ac0d2222b68884d581a17fb48ee4fdbfa36fe06e7de5ab7fa44de69c5badaab9"
+    },
+    {
+      "file": "data/raw/reference_docs/fema/fema_bca_general-economic-values_2025.pdf",
+      "url": "https://www.fema.gov/sites/default/files/documents/fema_bca_general-economic-values_2025.pdf",
+      "publisher_date": "v13.0, Sep 2024, updated Jul 2025",
+      "downloaded": "2026-11-10",
+      "bytes": 2398416,
+      "sha256": "adbcf013c3ef0f08323faa5b2f6ec94a602883706dcd22c6fa7bd9eeafe60bac"
+    },
+    {
+      "file": "data/raw/reference_docs/fema/fema_bca_hazard-methodology-riverine-coastal-flood_2025.pdf",
+      "url": "https://www.fema.gov/sites/default/files/documents/fema_bca_hazard-methodology-riverine-coastal-flood_2025.pdf",
+      "publisher_date": "v6, Jan 2025, updated Jun 2025",
+      "downloaded": "2026-11-10",
+      "bytes": 1904049,
+      "sha256": "6f4b290bf0e1ee2beb1c99fd5d26fc77e9db302f9a0cc738f072c6fd08d07afc"
+    },
+    {
+      "file": "data/raw/reference_docs/fema/fema_bca_methodology-project-configuration-cost-estimation_2025.pdf",
+      "url": "https://www.fema.gov/sites/default/files/documents/fema_bca_methodology-project-configuration-cost-estimation_2025.pdf",
+      "publisher_date": "v6.0, Dec 2024, updated Jul 2025",
+      "downloaded": "2026-11-10",
+      "bytes": 600902,
+      "sha256": "72afb310f2f6ac35e2f974e3133ea0b4a9321a4082b16683b58d44a8711e211b"
+    },
+    {
+      "file": "data/raw/reference_docs/fema/bca-allhelpcontent-pdf-08-28-2025.pdf",
+      "url": "https://www.fema.gov/sites/default/files/documents/bca-allhelpcontent-pdf-08-28-2025.pdf",
+      "publisher_date": "28 Aug 2025",
+      "downloaded": "2026-11-10",
+      "bytes": 16430165,
+      "sha256": "e83c5233ac9bb2103d192a48cab1c6d8544385477b25fe34ae5ed3aee89571db"
+    },
+    {
+      "file": "data/raw/reference_docs/fema/fema_bca_economic-values-green-infrastructure_2025.pdf",
+      "url": "https://www.fema.gov/sites/default/files/documents/fema_bca_economic-values-green-infrastructure_2025.pdf",
+      "publisher_date": "Jul 2022, updated Jul 2025",
+      "downloaded": "2026-11-10",
+      "bytes": 1747361,
+      "sha256": "92391b1dcf943dd5271e48ae1801db402a82a52a87a4be00975337431706bbb8"
+    },
+    {
+      "file": "data/raw/reference_docs/fema/fema_ecosystem-service-value-updates_2022.pdf",
+      "url": "https://www.fema.gov/sites/default/files/documents/fema_ecosystem-service-value-updates_2022.pdf",
+      "publisher_date": "Jun 2022",
+      "downloaded": "2026-11-10",
+      "bytes": 2941129,
+      "sha256": "a2a5e1859718589fcff75fcf09a196caa8fe9c64c62da7c994640bdb637fdba3"
+    },
+    {
+      "file": "data/raw/reference_docs/fema/fema_standard-economic-values-methodology-report_2023.pdf",
+      "url": "https://www.fema.gov/sites/default/files/documents/fema_standard-economic-values-methodology-report_2023.pdf",
+      "publisher_date": "v12.0, May 2023; superseded by v13, not used",
+      "downloaded": "2026-11-10",
+      "bytes": 1120278,
+      "sha256": "b8dcf206ae0b25d2d371ff6d341443f709ad377059d0aaa7b0807449ca564bfd"
+    }
+  ]
+}

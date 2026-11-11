@@ -88,6 +88,15 @@ Modelling Data from Web/data/raw/boundaries/
 Modelling Data from Web/data/raw/social/
 Modelling Data from Web/data/raw/physical/
 Modelling Data from Web/data/raw/fema/nfip_claims_miami_dade.csv
+# Benefit simulator downloads (prompt 27, D-119 onward): tax roll, parcels, NSI, flood maps, policies, FHFA, reference documents
+Modelling Data from Web/data/raw/dor/
+Modelling Data from Web/data/raw/nsi/
+Modelling Data from Web/data/raw/fhfa/
+Modelling Data from Web/data/raw/reference_docs/
+Modelling Data from Web/data/raw/fema/nfhl/
+Modelling Data from Web/data/raw/fema/nfip_policies_miami_dade.*
+Modelling Data from Web/data/processed/benefit/buildings.parquet
+Modelling Data from Web/data/processed/benefit/buildings.csv.gz
 # Analysis outputs, and the processed files that used to live in output/ (kept ignored, as before)
 Modelling Data from Web/outputs/
 Modelling Data from Web/archive/output_part1_tables/

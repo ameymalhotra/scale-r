@@ -30,6 +30,22 @@ NFIP_CLAIMS_CSV = FEMA_RAW_DIR / "nfip_claims_miami_dade.csv"
 HMA_PROJECTS_CSV = FEMA_RAW_DIR / "hma_projects_miami_dade.csv"
 FEMA_DOWNLOAD_LOG = FEMA_RAW_DIR / "download_log.json"
 TRACT_REL_2010_2020 = BOUNDARY_DIR / "rel2020" / "tab20_tract20_tract10_natl.txt"
+# Benefit simulator downloads (prompt 27, D-119 onward)
+NFIP_POLICIES_CSV = FEMA_RAW_DIR / "nfip_policies_miami_dade.csv.gz"
+NFIP_POLICIES_LOG = FEMA_RAW_DIR / "nfip_policies_download_log.json"
+NFHL_DIR = FEMA_RAW_DIR / "nfhl"
+# the flood map in use; to switch to the 19 Feb 2027 maps, download the new county
+# NFHL zip into NFHL_DIR and change this one name (D-123, D-131)
+NFHL_COUNTY_ZIP = NFHL_DIR / "12086C_20260125.zip"
+DOR_DIR = RAW / "dor"                      # Florida DOR tax roll (NAL) and parcel GIS
+NSI_DIR = RAW / "nsi"                      # USACE National Structure Inventory
+NSI_2026_GEOJSON = NSI_DIR / "nsi_2026_api_12086.geojson"   # used (D-130)
+NSI_2022_GPKG_ZIP = NSI_DIR / "nsi_2022_12.gpkg.zip"        # comparison only
+FHFA_DIR = RAW / "fhfa"                    # FHFA tract house price index
+REFERENCE_DOCS_DIR = RAW / "reference_docs"  # FEMA BCA and Hazus documents (PDFs)
+BENEFIT_DOWNLOAD_LOG = RAW / "benefit_download_log.json"
+# NOAA DEM read remotely by HTTP range requests, as the website script does
+NOAA_DEM_URL = "https://coast.noaa.gov/slrdata/DEMs/FL/FL_SE_GCS_3m_NAVDm_v3.tif"
 TRACT_2024_ZIP = BOUNDARY_DIR / "tl_2024_12_tract.zip"
 # kept outside this folder because website and repo-root scripts use them
 NRI_CSV = REPO / "fema_miami_dade_dec_2025.csv"
@@ -45,6 +61,12 @@ EXPOSURE_DIR = PROCESSED / "exposure"
 IMPACT_DIR = PROCESSED / "impact"
 NFIP_TRACT_YEAR_CSV = IMPACT_DIR / "nfip_claims_tract_year.csv"
 HMA_MATCHES_CSV = IMPACT_DIR / "hma_scaler_matches.csv"
+BENEFIT_DIR = PROCESSED / "benefit"
+BUILDINGS_PARQUET = BENEFIT_DIR / "buildings.parquet"
+REFERENCE_DIR = ROOT / "data" / "reference"
+FEMA_STANDARD_VALUES_CSV = REFERENCE_DIR / "fema_standard_values.csv"
+DEPTH_DAMAGE_CSV = REFERENCE_DIR / "depth_damage_curves.csv"
+VERTCON_GRID_CSV = REFERENCE_DIR / "ngvd29_to_navd88_grid.csv"
 
 # results by analysis
 OUTPUTS = ROOT / "outputs"
@@ -57,11 +79,13 @@ OUT_EXPOSURE_B = OUTPUTS / "exposure" / "stage_b"
 OUT_EXPOSURE_CK = OUTPUTS / "exposure" / "checkpoints"
 OUT_ML = OUTPUTS / "ml"
 OUT_IMPACT = OUTPUTS / "impact"
+OUT_BENEFIT = OUTPUTS / "benefit"
 
 # reports written by scripts
 REPORTS = ROOT / "reports"
 REPORTS_ANALYSIS = REPORTS / "analysis"
 REPORTS_IMPACT = REPORTS / "impact"
+REPORTS_BENEFIT = REPORTS / "benefit"
 
 
 def use(*folders):

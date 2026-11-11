@@ -37,7 +37,8 @@ Backfilled on 5 November 2026 from:
 | Analysis methods | D-051 to D-060, D-067 |
 | Project organization | D-061 to D-066, D-068, D-070 |
 | Machine learning | D-071 onward |
-| Impact data (FEMA claims and grants) | D-113 onward |
+| Impact data (FEMA claims and grants) | D-113 to D-118 |
+| Benefit simulator (prompt 27) | D-119 onward |
 
 ---
 
@@ -2559,3 +2560,449 @@ D-113.
 - Evidence: `outputs/impact/nfip_spearman.csv`;
   `outputs/impact/fema_first_look_log.json`.
 - Affects: section 5 of the report.
+
+---
+
+## Benefit simulator (prompt 27)
+
+### D-119. Where the benefit simulator work lives, and how it reaches the raw data
+
+- Date: 10 Nov 2026. Status: Final. Decided by: Amey.
+- What happened: Prompt 27 asked for a new branch `benefit-simulator` from
+  `impact-data`. The main checkout holds uncommitted work on
+  `ml-scenario-module`, and `data/raw/` is git-ignored, so a fresh branch
+  has none of the large inputs.
+- What is wrong: Switching branches in the main checkout would disturb that
+  work, and copying 9 GB of rasters and polygons is wasteful.
+- How we are fixing it:
+  - The branch lives in its own git worktree
+    (`.claude/worktrees/benefit-simulator`), started from `impact-data`
+    (commit 9914caa).
+  - The existing raw inputs (boundaries, social, physical) and earlier
+    outputs (ML, PCA, exposure) are reached through local links to the main
+    checkout. They are read, never written.
+  - Every new download goes into new folders under `data/raw/` that are
+    git-ignored (`.gitignore` lists them).
+  - All new paths are in `scripts/common/paths.py`.
+- Decision: As above.
+- Reason: Keeps both lines of work apart and the repository small.
+- Evidence: `git worktree list`; `.gitignore`; `scripts/common/paths.py`.
+- Affects: every prompt 27 script.
+
+### D-120. NFIP policies: pulled community by community, needed fields only
+
+- Date: 10 Nov 2026. Status: Provisional. Decided by: Amey (proposal; confirm).
+- What happened:
+  - OpenFEMA's current policy dataset is `NfipPolicies` v3 (title "NFIP
+    Redacted Policies", 74.7 million rows nationally, last data refresh
+    9 Sep 2026). `FimaNfipPolicies` returns 404.
+  - The v3 file has no county field. Filters on the start of
+    `censusGeoid` time out.
+- What is wrong: The brief asked for Miami-Dade policies, and the full file
+  is far too large to download.
+- How we are fixing it:
+  - Policies are requested one NFIP community at a time
+    (`nfipRatedCommunityNumber`, an indexed field), for the 37 Miami-Dade
+    community numbers named in the claims file (the county, the old
+    Metropolitan Dade County number and every municipality). The few
+    mis-coded numbers on Miami-Dade claims (Dade City, Monroe, Broward,
+    out-of-state) are left out. The list covers 61,660 of the 61,867 claims
+    with a Miami-Dade block group code.
+  - Rows are then kept only where `censusGeoid` starts with 12086.
+  - Only 26 of the 80 fields are kept: location, policy dates and count,
+    flood zones, occupancy, building type and foundation, elevations,
+    coverage, premium and CRS class.
+  - Each community's saved rows must equal the API count; ids must be
+    unique.
+- Decision: As above.
+- Reason: The only filter the API can run fast enough. The kept fields are
+  what is needed to turn claims into rates per insured building.
+- Evidence: `scripts/benefit/download_policies.py`;
+  `data/raw/fema/nfip_policies_download_log.json`.
+- Affects: Stage 2 calibration (claims per insured home).
+
+### D-121. Tax roll: 2026 final NAL, qualified sales codes 01 and 02 only, no owner data
+
+- Date: 10 Nov 2026. Status: Provisional. Decided by: Amey (proposal; confirm).
+- What happened:
+  - The DOR data portal holds the 2026 final NAL for Miami-Dade (county
+    number 23 in the 2026 User's Guide, page 2), posted 28 Oct 2026.
+  - The file has 939,447 parcels. Its two sale slots hold only sales from
+    2025 and 2026: 106,595 parcels have a first sale, 14,698 a second.
+  - The file includes owner names and mailing addresses.
+- What is wrong: Sale codes need a rule, and personal data should not
+  travel into our tables.
+- How we are fixing it:
+  - Use the 2026 final roll, not the preliminary one.
+  - A sale counts as qualified only with code 01 or 02 (User's Guide,
+    pages 17 to 18: "qualified and included in sales ratio analysis",
+    by deed examination or by documented evidence). Codes 03 to 06 are
+    arm's length but the property changed after the sale, or the sale
+    covered several parcels or crossed a county line, so the price does not
+    match the parcel as described; they are left out. Codes 11 to 43 are
+    disqualified (for example quit claim deeds, bank sales, sales between
+    relatives). 98 and 99 are undecided.
+  - Owner name, owner address and fiduciary fields are never read.
+- Decision: As above.
+- Reason: Codes 01 and 02 are the sales the state itself treats as market
+  sales.
+- Evidence: `data/raw/reference_docs/dor/2026_NAL_SDF_NAP_Users_Guide.pdf`;
+  `scripts/benefit/build_buildings.py` (`NAL_COLS`).
+- Affects: Stage 3. With sales only from 2025 and 2026, the before and
+  after comparison around project dates cannot use this file.
+
+### D-122. Linking buildings, parcels and the tax roll
+
+- Date: 10 Nov 2026. Status: Provisional. Decided by: Amey (proposal; confirm).
+- What happened:
+  - The DOR 2026 parcel file has 596,837 polygons. Condo units have no
+    polygon of their own; the DOR ships a separate Miami-Dade condo unit
+    point file whose `PARENT_FOL` names the building's master parcel.
+  - NSI structures are points.
+- What is wrong: The links need fixed rules, and a parcel can hold several
+  buildings or hundreds of condo units.
+- How we are fixing it:
+  - A tax roll record is placed on its own polygon when the parcel IDs
+    match; a condo unit is placed on its parent folio's polygon; failing
+    that, on the polygon under its unit point.
+  - A building takes the parcel polygon it sits in. If it sits on no
+    parcel (on a road edge, for example), it takes the nearest parcel
+    within 50 ft, flagged; otherwise none.
+  - Tax roll values are summed over each parcel and its condo units.
+  - Where a parcel holds several buildings, its just value is shared out by
+    NSI floor area (`jv_alloc`). The parcel total is kept beside it.
+- Decision: As above.
+- Reason: Uses the state's own unit-to-building link; the floor-area share
+  is the simplest split that keeps totals intact.
+- Evidence: `scripts/benefit/build_buildings.py`;
+  `outputs/benefit/stage1/build_stats.json`.
+- Affects: `buildings.parquet`; Stages 2 to 4.
+
+### D-123. FEMA flood zones: county NFHL file, base flood elevations kept in NGVD29
+
+- Date: 10 Nov 2026. Status: Partly replaced by D-131 (the BFEs are now
+  converted to NAVD88). Decided by: Amey (proposal; confirm).
+- What happened:
+  - The FEMA Map Service Center's Miami-Dade NFHL file is
+    `12086C_20260125.zip` (database revised 26 Jan 2026).
+  - The effective FIRM dates from 11 Sep 2009 (all 251 panels), with 60
+    letters of map revision from 26 Feb 2010 to 26 Jan 2026.
+  - A new FIRM is pending, effective 19 Feb 2027.
+  - Base flood elevations are in feet NGVD29. The DEM is in NAVD88.
+- What is wrong: The two datums differ by about a foot and a half in South
+  Florida, and the exact local shift is not in any file we hold.
+- How we are fixing it:
+  - The table keeps the zone, subtype, SFHA flag and the BFE exactly as
+    published, with its datum in a column.
+  - The NGVD29 to NAVD88 conversion is left to Stage 2, where it will be
+    taken from a cited source and logged.
+  - Where flood polygons overlap, the higher hazard zone is kept.
+- Decision: As above.
+- Reason: Do not change published values silently.
+- Evidence: `data/raw/fema/nfhl/extract/STUDY_INFO.dbf`, `S_FIRM_PAN.dbf`,
+  `S_LOMR.dbf`.
+- Affects: Stage 2 depths for the 1% and 0.2% floods. Results will need a
+  refresh when the 2027 maps take effect.
+
+### D-124. FEMA standard values: latest official documents, page-checked, nothing invented
+
+- Date: 10 Nov 2026. Status: Provisional. Decided by: Amey (proposal; confirm).
+- What happened: The brief asked for FEMA's standard values for
+  displacement, mental stress, lost productivity, loss of function and
+  green infrastructure and ecosystem services, with pages and dollar years.
+- What is wrong:
+  - FEMA's own BCA pages now point to 2024 and 2025 versions of the
+    methodology reports. The older URLs return 404.
+  - The dollar values for mental stress and lost productivity are not
+    printed in any of the FEMA documents. The Help Content describes the
+    method only. State agency slides quote $2,443 and $8,736.
+- How we are fixing it:
+  - Six FEMA documents are saved in `data/raw/reference_docs/fema/`: the
+    Standard Economic Value report v13 (Sep 2024, updated Jul 2025), the
+    flood module report v6, the project configuration report v6, the BCA
+    Toolkit Help Content (28 Aug 2025), the green infrastructure values
+    (Jul 2022, updated Jul 2025) and the ecosystem service value update
+    (Jun 2022).
+  - `build_reference_tables.py` holds each value with a text snippet. It
+    finds the snippet in the PDF and writes the PDF page and printed page
+    itself. A value whose snippet is not on the page stops the script.
+  - Values not printed by FEMA go to `fema_standard_values_missing.csv`.
+    Secondary sources are not used.
+  - Rows that would double count with property values or avoided flood
+    losses are marked (green infrastructure "property value improvement";
+    the aesthetic, recreation and flood reduction parts of the ecosystem
+    values).
+  - Discount rate: FEMA's default for new analyses is 7% (Help Content).
+    3.1% (used in 2023 and 2024) is kept as a sensitivity value.
+- Decision: As above. 175 values, 6 missing items.
+- Reason: Every dollar figure must trace to a page.
+- Evidence: `data/reference/fema_standard_values.csv`,
+  `fema_standard_values_missing.csv`.
+- Affects: Stages 2 and 4. Mental stress and lost productivity cannot be
+  valued until the user supplies an official FEMA source or approves an
+  alternative.
+
+### D-125. Depth-damage curves: the USACE occupancy library that matches NSI codes
+
+- Date: 10 Nov 2026. Status: Provisional. Decided by: Amey (proposal; confirm).
+- What happened: The brief asked for standard FEMA Hazus or USACE curves
+  for the main occupancy and foundation types.
+- What is wrong: The full Hazus and BCA Toolkit curve libraries sit inside
+  the software, not in a downloadable document.
+- How we are fixing it:
+  - Use the occupancy type library USACE ships with its consequence model,
+    go-consequences (`structures/occtypes.json`, pinned at commit
+    dff647c, 27 Dec 2021). It is keyed to the same occupancy codes as the
+    NSI (for example RES1-1SNB, COM1).
+  - Keep the freshwater depth curves (USACE EGM 01-03 for houses,
+    HEC-FIA Galveston curves for other uses) and the saltwater "depth,
+    salinity" curves where USACE supplies them (FEMA coastal and NACCS).
+  - Store mean, standard deviation and a low to high band per depth.
+  - Check: the RES1-1SNB structure and contents curves equal FEMA's printed
+    example DDF (flood module report v6, Table 1, page 12: 13.4% and 8.1%
+    at 0 ft, 23.3% and 13.3% at 1 ft).
+- Decision: As above.
+- Reason: A public, versioned USACE source that lines up with the
+  building inventory.
+- Evidence: `data/reference/depth_damage_curves.csv`;
+  `data/raw/reference_docs/usace/occtypes_commit.txt`.
+- Affects: Stage 2 damage estimates.
+
+### D-126. Building hazard values: DEM ground elevation, surge class, sea level rise flags
+
+- Date: 10 Nov 2026. Status: Provisional. Decided by: Amey (proposal; confirm).
+- What happened: The table needs ground elevation and our hazard values at
+  each building.
+- What is wrong: The NOAA DEM is not stored locally, the surge rasters hold
+  1 ft depth bins, and the sea level rise data are polygons with no depth.
+- How we are fixing it:
+  - **Ground:** the NOAA OCM FL_SE 3 m DEM (NAVD88, metres) is read tile
+    by tile over HTTP, as the website's map script does. Values below
+    -50 m (NOAA's -99 water code) are treated as no ground. Feet are
+    metres divided by 0.3048. NSI's own ground elevation is kept beside it
+    as a check.
+  - **Surge:** the class at the building's pixel, for Categories 1 to 5.
+    Depth is the bin midpoint (class minus 0.5 ft); class 21 ("more than
+    20 ft") is set to 20.5 ft. Off-depth codes (255 on land) count as dry.
+  - **Sea level rise:** 1 if the building point lies in the inundated
+    polygon at 1, 2, 3 or 6 ft, else 0. The "low-lying, not connected"
+    3 ft layer is kept as a separate flag, as in D-036.
+  - **Block group and tract:** a point-in-polygon join to TIGER/Line 2024
+    block groups (2020 geography); nearest block group for points just
+    outside.
+- Decision: As above.
+- Reason: Same sources as the rest of the project; nothing is resampled.
+- Evidence: `scripts/benefit/build_buildings.py`.
+- Affects: Stage 2 depths. Surge depths are screening level (NHC: "not for
+  a parcel level ... assessment").
+
+### D-127. Parquet output needs a package that is not installed
+
+- Date: 10 Nov 2026. Status: Final (approved by the user on 10 Nov 2026;
+  pyarrow 21.0.0 installed in `.venv` only). Decided by: Amey, confirmed by
+  the user.
+- What happened: The brief asks for `buildings.parquet`. Neither `.venv`
+  nor `.venv-ml` has a Parquet engine (pyarrow or fastparquet).
+- What is wrong: Installing a package needs the user's approval.
+- How we are fixing it: Until approved, the script writes the same table
+  as `data/processed/benefit/buildings.csv.gz`. Once pyarrow is installed
+  (pinned version, into the project environment only), a rerun writes the
+  Parquet file from the checkpoints in seconds.
+- Decision: Ask the user. The user approved; pyarrow 21.0.0 (pinned, from
+  a binary wheel) was installed into the project environment `.venv`, and
+  the table is written as Parquet.
+- Reason: Standing rule on installs.
+- Evidence: `outputs/benefit/stage1/build_stats.json` (`parquet_pending`).
+- Affects: the file format only.
+
+### D-128. NSI version: 2022 as the brief says, not the 2026 version the API now serves
+
+- Date: 10 Nov 2026. Status: Replaced by D-130. Decided by: Amey (proposal; confirm).
+- What happened:
+  - USACE released NSI 2026, and its API now serves 2026 data. The 2022
+    version is still offered as state GeoPackages by the download tool
+    (`nsi_2022_12.gpkg.zip`, file dated 30 Sep 2022).
+  - The 2026 API extract for Miami-Dade was downloaded first, before the
+    version was checked.
+- What is wrong: The brief names NSI 2022.
+- How we are fixing it:
+  - The building table uses NSI 2022 (579,117 Miami-Dade structures).
+  - The 2026 extract stays in `data/raw/nsi/` unused. It can be deleted, or
+    used later as a check or an update if the user prefers the newer
+    version.
+  - NSI values are depreciated replacement costs, not market prices.
+- Decision: As above.
+- Reason: Follow the brief; flag the newer version.
+- Evidence: `data/raw/nsi/nsi_2022_12_headers.txt`;
+  USACE NSI technical references, release notes (2026).
+- Affects: all building values and resident counts.
+
+### D-129. FHFA tract index: new file name, 2020 tracts confirmed
+
+- Date: 10 Nov 2026. Status: Final. Decided by: Amey.
+- What happened: The brief's file name `hpi_at_bdl_tract.csv` now returns
+  FHFA's 404 page. FHFA's dataset page lists the census tract index as
+  `hpi_at_tract.csv` (annual, developmental, not seasonally adjusted).
+- What is wrong: The file name changed, and the tract vintage needed
+  checking.
+- How we are fixing it:
+  - Download `hpi_at_tract.csv`, keep the Miami-Dade rows (codes starting
+    12086), and delete the national file after recording its checksum.
+  - Vintage check: all 425 Miami-Dade tract codes are valid 2020 tracts;
+    220 of them exist only in 2020. So the file uses 2020 tracts.
+- Decision: As above.
+- Reason: Same product under its current name.
+- Evidence: `data/raw/fhfa/sha256.txt`.
+- Affects: Stage 3 step 6. Only 425 of 707 tracts have an index, and only
+  222 have a 2025 value.
+
+### D-130. NSI 2026 replaces NSI 2022
+
+- Date: 10 Nov 2026. Status: Final. Decided by: the user (rule: use the
+  latest available data). Replaces D-128.
+- What happened: The user chose NSI 2026, the version the NSI API now
+  serves, over the 2022 version named in the brief.
+- What is wrong: Nothing. The two versions differ, so the change is
+  measured.
+- How we are fixing it:
+  - The building table uses the NSI 2026 API extract for Miami-Dade
+    (627,252 structures).
+  - Comparison with NSI 2022 (579,117 structures), before any recoding:
+    - Structure value $414.1 billion against $243.0 billion; contents
+      $305.4 billion against $176.0 billion.
+    - Night residents 2.88 million against 2.66 million.
+    - Foundations, slab / crawl / basement / pile / pier: 419,223 /
+      121,459 / 56,201 / 15,699 / 13,942 in 2026, against 289,031 /
+      170,575 / 109,704 / 7,589 / 1,833 in 2022.
+    - By 2020 tract (our own point-in-polygon join, because NSI 2022 uses
+      2010 block codes and NSI 2026 uses 2020 codes): Spearman 0.96 for
+      structure counts and 0.77 for structure value.
+    - No structure ID is shared between the versions.
+  - The 2022 run is kept in `outputs/benefit/stage1_nsi2022/` for
+    reference.
+- Decision: As above.
+- Reason: Latest data, newer inputs and better population and value
+  methods (NSI 2026 release notes).
+- Evidence: `scripts/benefit/compare_nsi_versions.py`;
+  `outputs/benefit/stage1/nsi_2022_vs_2026.json`.
+- Affects: every building value and resident count.
+
+### D-131. FEMA base flood elevations converted from NGVD29 to NAVD88 with NOAA NCAT
+
+- Date: 10 Nov 2026. Status: Final. Decided by: the user (method);
+  Amey (grid). Replaces the "convert later" part of D-123.
+- What happened: All 260,450 buildings with a base flood elevation have
+  it in NGVD29 (FIRM effective 11 Sep 2009). The DEM is in NAVD88.
+- What is wrong: The two cannot be compared without a datum shift.
+- How we are fixing it:
+  - NOAA's NGS Coordinate Conversion and Transformation Tool (NCAT, web
+    API, VERTCON 3.0) was asked for the NAVD88 height of an NGVD29 height
+    of 0, on a 0.05 degree grid over the county (323 points).
+  - The shift is interpolated bilinearly to each building and added to
+    the published BFE: `fema_bfe_ft_navd88`.
+  - Shift across the grid: -1.42 to -2.05 ft. At buildings with a BFE:
+    -1.47 to -1.91 ft, median -1.55 ft. NCAT's stated uncertainty is
+    under 1 cm at the test point.
+  - BFEs already in NAVD88 pass through unchanged. So when the new FIRM
+    (effective 19 Feb 2027) is published, the county file is downloaded,
+    `paths.NFHL_COUNTY_ZIP` is changed, and the script reruns.
+- Decision: As above.
+- Reason: NOAA's official conversion, as the user asked.
+- Evidence: `scripts/benefit/fetch_vertcon_grid.py`;
+  `data/reference/ngvd29_to_navd88_grid.csv`;
+  `outputs/benefit/stage1/build_stats.json`.
+- Affects: Stage 2 flood depths for the 1% and 0.2% events.
+
+### D-132. NSI basements recoded to slab
+
+- Date: 10 Nov 2026. Status: Final. Decided by: the user (recode); Amey
+  (first-floor height).
+- What happened: NSI 2026 gives 56,201 Miami-Dade structures a basement
+  foundation and 46,994 a "with basement" occupancy code (RES1-1SWB and
+  similar). Basements are almost absent in Miami-Dade because of the high
+  water table.
+- What is wrong: Basement damage curves and foundation heights would
+  overstate damage.
+- How we are fixing it:
+  - Foundation B becomes S (slab); occupancy codes with "WB" become "NB"
+    (no basement). 56,205 structures change (46,990 have both).
+  - NSI gives all of them a first floor 2.0 ft above ground (one at
+    5.25 ft). A slab house sits lower, so each takes the median height of
+    existing slab buildings of its occupancy type: 0.75 ft (46,994),
+    0.5 ft (7,456) or 0.25 ft (1,755).
+  - The tax roll has no foundation field, so it cannot refine this.
+  - The original NSI values are kept in `nsi_found_type_orig`,
+    `nsi_occtype_orig` and `nsi_found_ht_orig`, with a `basement_recoded`
+    flag.
+- Decision: As above.
+- Reason: Local building practice; keeps damage curves realistic.
+- Evidence: `scripts/benefit/build_buildings.py` (`load_nsi`).
+- Affects: Stage 2 damage curves and first-floor depths.
+
+### D-133. Mental stress and lost productivity: still no FEMA-printed value
+
+- Date: 10 Nov 2026. Status: Final. Decided by: the user (rule); Amey
+  (search).
+- What happened: The user asked to check FEMA's sustainability benefits
+  methodology and current BCA Toolkit documentation, and to add the values
+  only if a FEMA document prints them.
+- What is wrong: None of the FEMA documents still available prints them.
+- How we are fixing it: Checked:
+  - BCA Toolkit Help Content (28 Aug 2025), PDF pages 176 to 177: method
+    only (a standard value times residents not displaced, and times working
+    residents).
+  - Standard Economic Value report v13 (2024, updated 2025) and flood
+    module report v6: not mentioned.
+  - BCA Toolkit 6.0 release notes (Jul 2020) and User Guide (May 2019): not
+    printed.
+  - The 2012 "Final Sustainability Benefits Methodology Report" is not on
+    fema.gov. The FEMA web page that printed "Table 5: BCA Social Benefits
+    Values" returns 404. Two FEMA policy aids return "This file is
+    unpublished".
+  - State agency slides quote $2,443 per person and $8,736 per worker.
+    These are not FEMA documents and are not used.
+- Decision: Both stay in `fema_standard_values_missing.csv`.
+- Reason: The user's rule: only values printed by FEMA, with page and
+  dollar year.
+- Evidence: `data/reference/fema_standard_values_missing.csv`.
+- Affects: Stage 2 people-related losses (displacement can be valued;
+  mental stress and productivity cannot).
+
+### D-134. Value basis of NSI dollars, and why NSI 2026 values are higher
+
+- Date: 11 Nov 2026. Status: Final. Decided by: Amey (from the NSI
+  documentation; the user asked for the check).
+- What happened: NSI 2026 structure value is 70% higher than NSI 2022.
+- What is wrong: Stage 2 damage dollars need a clear value basis and
+  price year.
+- How we are fixing it:
+  - **Basis (NSI technical documentation).**
+    - NSI 2026: `val_struct` is depreciated replacement value; `fullrep`
+      is full replacement cost new ($564.4 billion in Miami-Dade). "All
+      values are reported in August 2025 price levels." Costs are scaled
+      by county construction wages. Depreciation follows tract-based
+      curves (lower, typical or higher maintenance).
+    - NSI 2022: depreciated replacement value at 2021 price levels,
+      depreciated 1% a year for 20 years, then held at 80%.
+    - Contents (2026): depreciated structure value times an occupancy
+      ratio; 0.5 for RES1. The documentation notes that USACE EGM 04-01
+      assumes 1.0 and that users of EGM curves calibrated to structure
+      value should use the EGM ratio. Stage 2 must handle this.
+  - **Where the increase comes from** (total = structures x floor area per
+    structure x value per square foot, shares of the log increase):
+    - All structures (x1.70): more structures 15%, larger floor area per
+      structure 70% (3,405 to 4,934 sq ft), higher value per square foot
+      15% ($123 to $134).
+    - Single-family (RES1, x1.62): more structures 17%, floor area 2%,
+      value per square foot 81% ($106 to $157). For houses the rise is
+      mostly price level (2021 to August 2025) and the new depreciation
+      method.
+  - **Label for Stage 2:** damage dollars are "estimated from our data:
+    NSI 2026 depreciated replacement value, August 2025 dollars".
+- Decision: As above.
+- Reason: Keeps estimated and published dollars apart, and states the
+  price year.
+- Evidence: NSI technical references, technical documentation (2026 and
+  2022 versions);
+  `outputs/benefit/stage1/nsi_2022_vs_2026.json`.
+- Affects: Stage 2 damage and every later dollar figure based on NSI.
