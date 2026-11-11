@@ -12,6 +12,8 @@ Why it is done this way:
 - Only the fields needed to turn claims into rates are kept (the full record
   has 80 fields).
 Each community's saved row count must equal the API count, and ids must be unique.
+Resumable: every page is saved under data/raw/fema/nfip_policies_parts/<community>/
+as soon as it arrives, so a rerun after a failure continues at the next page.
 """
 import csv
 import gzip
@@ -30,6 +32,7 @@ import paths  # noqa: E402
 BASE = "https://www.fema.gov/api/open/v3/NfipPolicies"
 PAGE = 10000
 UA = "SCALE-R research data download (python urllib)"
+PARTS = paths.FEMA_RAW_DIR / "nfip_policies_parts"
 FIELDS = [
     "id", "censusGeoid", "reportedZipCode", "nfipRatedCommunityNumber", "nfipCommunityName",
     "policyEffectiveDate", "policyTerminationDate", "cancellationDateOfFloodPolicy", "policyCount",
@@ -43,15 +46,15 @@ FIELDS = [
 
 def get(url):
     req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "application/json"})
-    for attempt in range(6):
+    for attempt in range(12):
         try:
             with urllib.request.urlopen(req, timeout=300) as r:
                 return json.loads(r.read().decode("utf-8"))
         except Exception as e:  # network hiccup: wait and retry
-            if attempt == 5:
+            if attempt == 11:
                 raise
             print(f"  retry {attempt + 1}: {e}", flush=True)
-            time.sleep(10 * (attempt + 1))
+            time.sleep(min(30 * (attempt + 1), 300))  # FEMA returns 503 for long spells
 
 
 # The 37 NFIP community numbers in Miami-Dade (D-120): the county (current 120635 and
@@ -80,50 +83,85 @@ def community_numbers():
     return MIAMI_DADE_COMMUNITIES
 
 
+def fetch_page(comm, skip):
+    q = {"$filter": f"nfipRatedCommunityNumber eq '{comm}'", "$select": ",".join(FIELDS), "$top": PAGE,
+         "$skip": skip, "$orderby": "id", "$count": "true"}
+    return get(BASE + "?" + urllib.parse.urlencode(q, quote_via=urllib.parse.quote))
+
+
+def download_community(comm):
+    """Fetch one community page by page. Each page is saved as its own file (written to a temporary
+    name, then renamed), with a small JSON of its counts, so a failed run resumes at the next page."""
+    cdir = PARTS / comm
+    cdir.mkdir(parents=True, exist_ok=True)
+    if (cdir / "done.json").exists():
+        return json.loads((cdir / "done.json").read_text())
+    skip = 0
+    while (cdir / f"{skip:09d}.json").exists():
+        skip += PAGE
+    total = rundate = None
+    while True:
+        d = fetch_page(comm, skip)
+        total, rundate = d["metadata"]["count"], d["metadata"]["rundate"]
+        page = d["NfipPolicies"]
+        keep = [r for r in page if (r.get("censusGeoid") or "").startswith("12086")]
+        tmp = cdir / f"{skip:09d}.csv.gz.tmp"
+        with gzip.open(tmp, "wt", newline="") as fh:
+            w = csv.DictWriter(fh, fieldnames=FIELDS, extrasaction="ignore")
+            w.writeheader()
+            w.writerows(keep)
+        tmp.rename(cdir / f"{skip:09d}.csv.gz")
+        (cdir / f"{skip:09d}.json").write_text(json.dumps({"rows": len(page), "kept": len(keep),
+                                                           "ids": [r["id"] for r in page]}))
+        if len(page) < PAGE:
+            break
+        skip += PAGE
+        if (skip // PAGE) % 10 == 0:
+            print(f"  {comm}: {skip:,} of {total:,}", flush=True)
+    pages = sorted(cdir.glob("*.json"))
+    pages = [x for x in pages if x.name != "done.json"]
+    got = sum(json.loads(x.read_text())["rows"] for x in pages)
+    kept = sum(json.loads(x.read_text())["kept"] for x in pages)
+    assert got == total, f"{comm}: got {got} but API count {total}"
+    info = {"api_count": total, "kept_12086": kept, "pages": len(pages), "rundate": rundate}
+    (cdir / "done.json").write_text(json.dumps(info))
+    return info
+
+
 def main():
     out = paths.NFIP_POLICIES_CSV
     out.parent.mkdir(parents=True, exist_ok=True)
     comms = community_numbers()
     print(f"{len(comms)} community numbers: {comms}", flush=True)
     log = {"entity": "NfipPolicies", "version": "v3", "endpoint": BASE, "fields_kept": FIELDS,
-           "started": datetime.now(timezone.utc).isoformat(), "communities": {}}
-    seen, kept, outside = set(), 0, 0
+           "finished": None, "communities": {}}
+    for comm in comms:
+        info = download_community(comm)
+        log["communities"][comm] = info
+        print(f"{comm}: API {info['api_count']}, kept {info['kept_12086']}", flush=True)
+    # assemble: every id once across all communities, rows in community then id order
+    seen, kept = set(), 0
     tmp = out.with_suffix(".tmp.gz")
     with gzip.open(tmp, "wt", newline="") as fh:
-        w = csv.DictWriter(fh, fieldnames=FIELDS, extrasaction="ignore")
+        w = csv.DictWriter(fh, fieldnames=FIELDS)
         w.writeheader()
         for comm in comms:
-            skip, total, got, ckept = 0, None, 0, 0
-            flt = f"nfipRatedCommunityNumber eq '{comm}'"
-            while True:
-                q = {"$filter": flt, "$select": ",".join(FIELDS), "$top": PAGE, "$skip": skip,
-                     "$orderby": "id", "$count": "true"}
-                d = get(BASE + "?" + urllib.parse.urlencode(q, quote_via=urllib.parse.quote))
-                if total is None:
-                    total = d["metadata"]["count"]
-                    rundate = d["metadata"]["rundate"]
-                page = d["NfipPolicies"]
-                for r in page:
-                    assert r["id"] not in seen, f"duplicate id {r['id']}"
-                    seen.add(r["id"])
-                    if (r.get("censusGeoid") or "").startswith("12086"):
+            for meta in sorted((PARTS / comm).glob("0*.json")):
+                ids = json.loads(meta.read_text())["ids"]
+                assert not seen.intersection(ids), f"duplicate ids in {meta}"
+                seen.update(ids)
+                with gzip.open(meta.with_suffix(".csv.gz"), "rt", newline="") as f:
+                    for r in csv.DictReader(f):
                         w.writerow(r)
-                        ckept += 1
-                    else:
-                        outside += 1
-                got += len(page)
-                if len(page) < PAGE:
-                    break
-                skip += PAGE
-            assert got == total, f"{comm}: got {got} but API count {total}"
-            kept += ckept
-            log["communities"][comm] = {"api_count": total, "kept_12086": ckept, "rundate": rundate}
-            print(f"{comm}: API {total}, kept {ckept} (running total {kept})", flush=True)
+                        kept += 1
     tmp.rename(out)
+    total = sum(c["api_count"] for c in log["communities"].values())
     log.update({"finished": datetime.now(timezone.utc).isoformat(), "rows_kept": kept,
-                "rows_outside_12086": outside, "file": str(out.relative_to(paths.ROOT))})
+                "rows_fetched": len(seen), "api_count_total": total,
+                "rows_outside_12086": len(seen) - kept, "file": str(out.relative_to(paths.ROOT))})
+    assert len(seen) == total
     paths.NFIP_POLICIES_LOG.write_text(json.dumps(log, indent=2))
-    print(f"done: kept {kept}, dropped {outside} outside Miami-Dade")
+    print(f"done: kept {kept}, dropped {len(seen) - kept} outside Miami-Dade")
 
 
 if __name__ == "__main__":

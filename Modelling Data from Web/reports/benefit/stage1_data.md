@@ -259,12 +259,14 @@ community at a time, for the 37 Miami-Dade community numbers named in the
 claims data. These cover 61,660 of the 61,867 Miami-Dade claims. Only
 Miami-Dade census codes are kept, and only 26 of 80 fields (D-120).
 
-**Status:** 4 of 37 communities finished (313,233 policy records). About
-2.8 million records remain, 1.88 million of them for unincorporated
-Miami-Dade. FEMA's server is returning frequent "service unavailable"
-errors, so the download is retrying and will take several more hours. The
-file is written only when every community is complete and checked against
-FEMA's counts. It is needed only in Stage 2 (claims per insured building),
+**Status:** not finished. The first run got through 4 of 37 communities
+(313,233 policy records) before FEMA's server returned "service
+unavailable" for long enough to stop it. About 2.8 million records remain,
+1.88 million of them for unincorporated Miami-Dade. The downloader now saves
+every page as it arrives (`data/raw/fema/nfip_policies_parts/`), waits up
+to 5 minutes between retries, and picks up where it stopped when rerun. The
+combined file is written only when every community is complete and checked
+against FEMA's counts. It is needed only in Stage 2 (claims per insured building),
 and its coverage will be reported there.
 
 ## 8. FHFA house price index
