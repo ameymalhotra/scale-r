@@ -253,21 +253,25 @@ one house.
 
 ## 7. Flood insurance policies (in progress)
 
-OpenFEMA's current policy file (`NfipPolicies` v3) has no county field,
-and filtering on the census code times out. So policies are pulled one NFIP
-community at a time, for the 37 Miami-Dade community numbers named in the
-claims data. These cover 61,660 of the 61,867 Miami-Dade claims. Only
-Miami-Dade census codes are kept, and only 26 of 80 fields (D-120).
+OpenFEMA's current policy file (`NfipPolicies` v3) has no county field.
+The first method (one NFIP community at a time, D-120) stopped after 4 of
+37 communities when FEMA's server returned "service unavailable" for hours.
 
-**Status:** not finished. The first run got through 4 of 37 communities
-(313,233 policy records) before FEMA's server returned "service
-unavailable" for long enough to stop it. About 2.8 million records remain,
-1.88 million of them for unincorporated Miami-Dade. The downloader now saves
-every page as it arrives (`data/raw/fema/nfip_policies_parts/`), waits up
-to 5 minutes between retries, and picks up where it stopped when rerun. The
-combined file is written only when every community is complete and checked
-against FEMA's counts. It is needed only in Stage 2 (claims per insured building),
-and its coverage will be reported there.
+**Current method (D-135, the user's settings of 11 November 2026):**
+- Filter `propertyState eq 'FL' and startswith(censusGeoid,'12086')`, so
+  policies are kept by location.
+- Pages of 200,000 rows, the largest that answered reliably in tests (a
+  1,000,000-row page timed out). A failed page is retried at 100,000 and
+  then 50,000 rows; if errors continue, the script stops.
+- No count on each page. The rows saved are counted and checked once
+  against FEMA's total at the end, with every record ID unique.
+- Each page is saved as it arrives, so a rerun resumes.
+- Only 26 of 80 fields are kept (location, dates, flood zone, building type
+  and foundation, elevations, coverage, premium).
+
+**Status:** downloading; the first 200,000-row page arrived in 2 minutes.
+The file is needed only in Stage 2 (claims per insured building), and its
+coverage will be reported there.
 
 ## 8. FHFA house price index
 

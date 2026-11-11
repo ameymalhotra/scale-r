@@ -2591,7 +2591,8 @@ D-113.
 
 ### D-120. NFIP policies: pulled community by community, needed fields only
 
-- Date: 10 Nov 2026. Status: Provisional. Decided by: Amey (proposal; confirm).
+- Date: 10 Nov 2026. Status: Replaced by D-135 (filter and paging); the
+  kept fields still apply. Decided by: Amey (proposal; confirm).
 - What happened:
   - OpenFEMA's current policy dataset is `NfipPolicies` v3 (title "NFIP
     Redacted Policies", 74.7 million rows nationally, last data refresh
@@ -3006,3 +3007,36 @@ D-113.
   2022 versions);
   `outputs/benefit/stage1/nsi_2022_vs_2026.json`.
 - Affects: Stage 2 damage and every later dollar figure based on NSI.
+
+### D-135. NFIP policies: county filter on the census code, large pages, no per-page count
+
+- Date: 11 Nov 2026. Status: Final. Decided by: the user (filter and
+  paging rules); Amey (page sizes). Replaces the filter and paging of D-120.
+- What happened:
+  - The community-by-community download (D-120) stopped after 4 of 37
+    communities because FEMA's API returned 503 errors for hours.
+  - On 11 Nov 2026 the API was answering again, and the user set new rules.
+- What is wrong: The old method was slow (10,000-row pages, a count on every
+  page) and fragile.
+- How we are fixing it:
+  - Filter: `propertyState eq 'FL' and startswith(censusGeoid,'12086')`
+    (v3 policies have no county field). This replaces the list of 37
+    community numbers, so policies are kept by location only, whatever
+    community number they carry.
+  - Page size: the largest that answers reliably. Tests on 11 Nov 2026:
+    250,000 rows (ID only) answered in 77 s; 1,000,000 rows timed out with
+    a 503. With the 26 kept fields, 100,000 rows took 42 s and 200,000 took
+    138 s. Pages are 200,000 rows; a failed page is retried at 100,000 and
+    then 50,000 rows.
+  - No `$count` on the pages. The saved rows are counted, and the API total
+    is asked once at the end; the two must match, and every ID must be
+    unique.
+  - Each page is saved as it arrives, so a rerun resumes.
+  - If 503 errors continue after the retries, the script stops and reports;
+    the user will then download the full Parquet file by hand.
+  - The 26 kept fields are unchanged from D-120.
+- Decision: As above.
+- Reason: The user's settings; fewer, larger requests and no slow count.
+- Evidence: `scripts/benefit/download_policies.py`;
+  `data/raw/fema/nfip_policies_download_log.json` (written when complete).
+- Affects: Stage 2 calibration.
