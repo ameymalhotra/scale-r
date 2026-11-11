@@ -3040,3 +3040,180 @@ D-113.
 - Evidence: `scripts/benefit/download_policies.py`;
   `data/raw/fema/nfip_policies_download_log.json` (written when complete).
 - Affects: Stage 2 calibration.
+
+### D-136. Hurricane frequencies for the surge events
+
+- Date: 11 Nov 2026. Status: Provisional. Decided by: Amey (proposal; confirm).
+- What happened: Stage 2 needs a yearly chance for each surge category. The
+  brief asks for published return periods for Miami-Dade, cited and logged
+  as an assumption.
+- What is wrong: NHC's current return period maps (50 nautical miles of a
+  point, HURISK, data to 2010) give only "any hurricane" and "major
+  hurricane", not each category. Along the Southeast Florida coast the maps
+  show about 6 to 7 years for hurricanes and 14 to 19 years for major
+  hurricanes.
+- How we are fixing it:
+  - Use NOAA Technical Memorandum NWS NHC-6 (Blake, Landsea and Gibney,
+    2011), Table 10, Florida (Southeast) row, strikes 1851 to 2010 by
+    category: 16, 14, 11, 3 and 1 (PDF page 23, printed page 21).
+  - Yearly chance of at least Category k = strikes of Category k or more
+    divided by 160 years: 0.281, 0.181, 0.094, 0.025 and 0.006 (return
+    periods 3.6, 5.5, 10.7, 40 and 160 years).
+  - The script checks the row against the PDF text before writing
+    `data/reference/hurricane_strike_rates.csv`. The NHC maps are kept in
+    `data/raw/reference_docs/nhc/` as a check.
+- Decision: As above, labelled "assumption (published historical
+  frequency)".
+- Reason: The only NOAA table that splits strikes by category for a region
+  that contains Miami-Dade.
+- Evidence: `scripts/benefit/build_hurricane_rates.py`.
+- Affects: surge part of the expected annual damage; see D-142.
+
+### D-137. Turning events into expected annual damage
+
+- Date: 11 Nov 2026. Status: Provisional. Decided by: Amey (proposal; confirm).
+- What happened: There are two hazard families: surge (five categories)
+  and FEMA flood zones (1% and 0.2%). Coastal FEMA base flood elevations
+  already include storm surge.
+- What is wrong: Adding the two families would count the same flood twice.
+- How we are fixing it:
+  - Put all seven events on one probability scale. At each probability,
+    keep the larger damage of the two families (never the sum), and make
+    damage never fall as events get rarer.
+  - Middle estimate: trapezoid rule over the probabilities, plus the
+    rarest event's damage times its probability for the tail.
+  - Low estimate: low curve band and the damage of the more frequent end
+    of each interval. High estimate: high curve band and the rarer end.
+  - FEMA maps print no 0.2% flood elevation, so the 0.2% event uses the 1%
+    depth (a lower bound). Zone A (1,452 buildings, no elevation) and the
+    shaded 0.2% zone X (34,893) get no FEMA depth.
+- Decision: As above.
+- Reason: Avoids double counting and gives an honest range.
+- Evidence: `scripts/benefit/baseline_risk.py` (`ead`).
+- Affects: every EAD figure.
+
+### D-138. Damage curves, water type and the value base
+
+- Date: 11 Nov 2026. Status: Provisional. Decided by: Amey (proposal; confirm).
+- What happened: The USACE library (D-125) has freshwater curves for all
+  types and saltwater curves for houses (RES1) and commercial types only.
+- What is wrong: Each event needs one curve per building and a clear value
+  base (D-134).
+- How we are fixing it:
+  - Surge and FEMA zone VE use saltwater curves where they exist (pier
+    versions for pier foundations); all other cases use freshwater curves.
+  - Contents: the EGM freshwater house curves are scaled to structure
+    value, as the NSI documentation advises, so contents damage uses
+    structure value there; other curves use NSI contents value.
+  - Main value base: NSI depreciated replacement value, August 2025
+    prices. A full replacement cost version is also given.
+  - No damage is counted where the water does not reach the building.
+- Decision: As above.
+- Reason: Follows the curve sources and the NSI documentation.
+- Evidence: `scripts/benefit/baseline_risk.py` (`damage_fractions`).
+- Affects: all damage dollars (labelled "estimated from our data, with
+  standard curves").
+
+### D-139. Displacement, mental stress and lost productivity
+
+- Date: 11 Nov 2026. Status: Provisional. Decided by: Amey (proposal; confirm).
+- What happened: The brief asks for displacement, mental stress and lost
+  productivity, using FEMA standard values.
+- What is wrong: FEMA prints displacement days only for one example (one
+  story, no basement: 45 days per foot, 0 to 5 ft). Mental stress and lost
+  productivity have no FEMA-printed value (D-133).
+- How we are fixing it:
+  - Displacement = FEMA rent per square foot per month x flooded floor area
+    x days, plus FEMA's one-time disruption cost per square foot (2021
+    dollars, by occupancy).
+  - Days: FEMA's example, 45 days per foot of water above the first floor,
+    capped at 225 days at 5 ft, used for all building types (an extension,
+    labelled as such).
+  - Flooded floor area: floor area divided by stories (only the ground
+    floor). Story counts are capped at 60 (NSI has a few impossible
+    values).
+  - Mental stress and lost productivity: not put in dollars. The report
+    gives the people counts they would multiply.
+- Decision: As above, all labelled "assumption (FEMA standard values)".
+- Reason: Uses only values FEMA prints.
+- Evidence: `scripts/benefit/baseline_risk.py` (`displacement_cost`).
+- Affects: Stage 2 people and other losses; Stage 4 avoided losses.
+
+### D-140. Provisional check against NFIP claims per occupied housing unit
+
+- Date: 11 Nov 2026. Status: Provisional. Decided by: the user (use claims
+  per housing unit until the policies arrive); Amey (details).
+- What happened: The policies file is incomplete (D-135). The user asked
+  for a provisional check against claims per housing unit (ACS).
+- What is wrong: No consumer price index is on disk, and it is not in the
+  list of downloads, so claims cannot be inflation-adjusted yet.
+- How we are fixing it:
+  - Observed: NFIP building plus contents payments by 2020 tract, 1978 to
+    2025, averaged per year with weights that halve every 15 years back
+    from 2025. Nominal dollars (not inflation-adjusted).
+  - Denominator: occupied housing units, ACS 2020-2024 table B25003,
+    summed from block groups. Tracts with fewer than 50 units are left out.
+  - Measures: Spearman correlation of modelled EAD per unit and claims per
+    unit (with a bootstrap 95% interval), and the ratio of county totals.
+  - Labelled provisional. It will be redone with the policies file
+    (claims per insured home) and, with the user's approval, a CPI series.
+- Decision: As above. No adjustment is applied.
+- Reason: The user's instruction; the brief says adjust only if clearly
+  justified.
+- Evidence: `outputs/benefit/stage2/summary.json` (`calibration`),
+  `calibration_deciles.csv`.
+- Affects: Stage 2 calibration; see D-142.
+
+### D-141. Sea level rise in Stage 2
+
+- Date: 11 Nov 2026. Status: Provisional. Decided by: Amey (proposal; confirm).
+- What happened: The NOAA sea level rise layers show where land would be
+  under water at high tide, with no depth.
+- What is wrong: They cannot be used as one more flood event with a
+  probability.
+- How we are fixing it:
+  - Future storm risk: 1, 2 and 3 ft are added to the water level of each
+    event (to surge only where the event already floods; to the FEMA flood
+    elevation everywhere), and EAD is recomputed.
+  - Permanent high-tide flooding (1, 2, 3 and 6 ft layers) is reported
+    separately as buildings, value and residents, not as yearly damage.
+- Decision: As above.
+- Reason: Keeps permanent flooding apart from storm risk, so nothing is
+  counted twice.
+- Evidence: `scripts/benefit/baseline_risk.py` (`event_depths`).
+- Affects: Stage 2 scenarios; Stage 4 scenario option.
+
+### D-142. Surge maps give damage far above the claims record: stopped for a decision
+
+- Date: 11 Nov 2026. Status: Open (needs the user's decision). Decided by:
+  the user (pending).
+- What happened:
+  - Modelled EAD (middle) is $7.9 billion a year; $7.9 billion of it comes
+    from surge. NFIP claims average $20 million a year (weighted, nominal).
+    The ratio is about 390 (low to high 200 to 660). FEMA zones alone give
+    $354 million a year, about 17 times the claims.
+  - One Category 5 surge map event damages $132 billion of buildings. In
+    1992 Hurricane Andrew (Category 5, Miami-Dade) produced $138 million of
+    NFIP payments.
+  - Tract ranking agrees only moderately: Spearman 0.44 (95% interval 0.38
+    to 0.50) for all events, 0.49 for FEMA zones alone, 0.41 for surge
+    alone.
+- What is wrong: The NHC surge rasters are "maximum of maximums": for each
+  category, the worst depth any storm of that category could bring at high
+  tide. Any single storm floods only part of that area. Pairing them with
+  the chance that a storm of that category hits anywhere in Southeast
+  Florida overstates yearly damage many times over. Insurance take-up,
+  coverage limits and deductibles explain a factor of a few, not 390.
+- How we are fixing it: Not fixed. Stopped and reported, as the standing
+  rules require. Options for the user:
+  - A (recommended): main EAD from the FEMA 1% and 0.2% floods only (they
+    already include surge on the coast); surge maps kept as worst-case
+    "what if" scenarios with damage per event, not yearly figures.
+  - B: keep both families and scale the surge part to the claims record
+    (a calibration factor of the size above).
+  - C: keep the combined figure as an upper bound, labelled as such.
+- Decision: Pending.
+- Reason: The difference is too large to adjust quietly.
+- Evidence: `outputs/benefit/stage2/summary.json`;
+  `outputs/benefit/stage2/calibration_deciles.csv`.
+- Affects: all Stage 2 results, Stage 4 avoided losses.

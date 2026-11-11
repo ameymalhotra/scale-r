@@ -67,6 +67,11 @@ REFERENCE_DIR = ROOT / "data" / "reference"
 FEMA_STANDARD_VALUES_CSV = REFERENCE_DIR / "fema_standard_values.csv"
 DEPTH_DAMAGE_CSV = REFERENCE_DIR / "depth_damage_curves.csv"
 VERTCON_GRID_CSV = REFERENCE_DIR / "ngvd29_to_navd88_grid.csv"
+HURRICANE_RATES_CSV = REFERENCE_DIR / "hurricane_strike_rates.csv"   # Stage 2 (D-136)
+NHC_DOCS_DIR = RAW / "reference_docs" / "nhc"                       # NHC memo and return period maps
+NFIP_POLICIES_PARQUET_MANUAL = None   # set to the user's full NFIP policies Parquet file when on disk
+EAD_BUILDINGS_PARQUET = BENEFIT_DIR / "ead_buildings.parquet"      # Stage 2 output
+EAD_TRACT_CSV = BENEFIT_DIR / "ead_tract.csv"                      # Stage 2 output
 
 # results by analysis
 OUTPUTS = ROOT / "outputs"
