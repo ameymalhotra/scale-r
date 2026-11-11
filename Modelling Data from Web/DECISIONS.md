@@ -3353,3 +3353,28 @@ D-113.
 - Evidence: `outputs/benefit/stage2/summary.json`
   (`claims_per_unit_zero_vs_positive_ead`).
 - Affects: Stage 2 and Stage 4 interpretation.
+
+### D-148. Stage 2 approved; whole-building damage as the high end; claims-trained model as the planned fix
+
+- Date: 11 Nov 2026. Status: Final. Decided by: the user.
+- What happened: The user approved Stage 2. They asked to keep the
+  floors-reached rule (D-143) and also show the whole-building version.
+- What is wrong: Readers should see both versions for tall buildings, and
+  the missing rain and tidal flooding should be stated clearly.
+- How we are fixing it:
+  - The high end of every Stage 2 damage range now uses the curves' high
+    band and, for apartments, commercial and public buildings, damage to
+    the whole building. The middle and low figures keep the floors-reached
+    rule. Houses (RES1) are unaffected.
+  - County EAD today: low $94 million, middle $174 million, high $523
+    million (it was $263 million). The ratio of the model to claims is now
+    3.0 to 16.8 (middle 5.6).
+  - Added to the limitations: 176 tracts with claims but no modelled
+    damage show that rain and tidal flooding are missing. The planned fix
+    is a flood damage model trained on the claims.
+- Decision: As above.
+- Reason: The user's instructions.
+- Evidence: `scripts/benefit/baseline_risk.py` (`whole_building=(stat ==
+  "high")`); `reports/benefit/stage2_baseline_risk.md`.
+- Affects: Stage 2 ranges; Stage 4 avoided-loss ranges.
+

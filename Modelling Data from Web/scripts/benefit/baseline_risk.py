@@ -341,7 +341,7 @@ def main():
                         res[f"dmg_surge{k}"] = ds + dc          # worst-case scenario damage per event (D-142)
                         res[f"wet_surge{k}"] = dep[f"surge{k}"] > 0
             for key in ["fema1", "fema02"]:
-                ds, dc, din, _ = event_damage(b, dep[key], fema_water, cur, stat)
+                ds, dc, din, _ = event_damage(b, dep[key], fema_water, cur, stat, whole_building=(stat == "high"))   # D-148
                 fv.append(ds + dc)
                 fvs.append(ds)
                 if stat == "mean":

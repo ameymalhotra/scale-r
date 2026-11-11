@@ -6,10 +6,12 @@ Decisions D-136 to D-147 in `DECISIONS.md`.
 ## In short
 
 - **Yearly flood damage to buildings in Miami-Dade, today: about $174
-  million a year** (range $94 million to $263 million). This is the
+  million a year** (range $94 million to $523 million). This is the
   expected annual damage (EAD) from the FEMA 1% and 0.2% annual chance
   floods, for 627,252 buildings. *Estimated from our data, with standard
-  damage curves.*
+  damage curves.* The high end counts damage to the whole of each
+  apartment, commercial and public building, not only the floors the water
+  reaches (section 2, step 3).
 - **Homes account for $92 million** of it, commercial buildings for $64
   million, and industrial and public buildings for the rest.
 - **Sea level rise raises it quickly:** $351 million a year with 1 ft, $634
@@ -78,12 +80,16 @@ apart in every table.
 3. **Tall buildings.** For apartments, commercial and public buildings,
    damage counts only on the floors the water reaches (D-143). Without
    this, a 12-story building with 3 ft of water would lose most of its
-   whole value. With it, the county figure falls from $354 million to $174
-   million. Ground floors often hold more value (lobbies, plant rooms), so
-   this may understate damage in tall buildings.
+   whole value. With it, the middle county figure is $174 million instead
+   of $354 million. Ground floors often hold more value (lobbies, plant
+   rooms), so the whole-building version is shown as the high end of the
+   range (D-148), and readers see both.
 4. **Yearly figure.** EAD = 1% x damage in the 1% flood + the extra
-   damage between the 1% and 0.2% floods + the tail beyond 0.2%. The low
-   and high values use the curves' uncertainty bands (D-137).
+   damage between the 1% and 0.2% floods + the tail beyond 0.2%.
+   - Low: the curves' low uncertainty band.
+   - High: the curves' high band, and, for apartments, commercial and public
+     buildings, damage to the whole building rather than only the floors
+     reached (D-137, D-148).
 5. **Displacement** (D-139, D-145).
    - FEMA rent per square foot and FEMA's one-time moving cost, for the
      flooded floor only.
@@ -117,10 +123,10 @@ already include surge. The surge maps are kept as worst-case scenarios
 
 | Item (per year) | Low | Middle | High | Label |
 |---|---|---|---|---|
-| Buildings and contents, today | $94 million | $174 million | $263 million | estimated from our data |
-| of which homes (residential) | | $92 million | | estimated from our data |
-| of which commercial | | $64 million | | estimated from our data |
-| of which industrial and public | | $18 million | | estimated from our data |
+| Buildings and contents, today | $94 million | $174 million | $523 million | estimated from our data (high: whole-building damage for apartments, commercial and public buildings) |
+| of which homes (residential) | $47 million | $92 million | $223 million | estimated from our data |
+| of which commercial | $36 million | $64 million | $252 million | estimated from our data |
+| of which industrial and public | $10 million | $18 million | $47 million | estimated from our data |
 | Full replacement cost version | | $203 million | | estimated from our data |
 | Displacement | $7 million | $10 million | $13 million | assumption (FEMA standard values, 2021 dollars; single duration for all types) |
 
@@ -153,16 +159,16 @@ Permanent high-tide flooding (NOAA layers), not part of the yearly figure:
 
 | Tract | Place (largest share of buildings) | EAD, middle ($ million) | EAD range ($ million) | EAD per resident ($) | Residents wet in 1% flood | NFIP claims per year, 2025 $ (thousand) | Sited investment per resident ($) |
 |---|---|---|---|---|---|---|---|
-| 12086004602 | Key Biscayne | 5.6 | 2.9 to 8.7 | 1,283 | 4,318 | 1,366 | 6,010 |
-| 12086008000 | Coral Gables | 4.2 | 2.1 to 6.8 | 809 | 3,761 | 1,081 | 7,119 |
-| 12086006802 | Miami | 4.2 | 2.2 to 6.3 | 983 | 2,622 | 782 | 16,137 |
-| 12086011500 | unincorporated | 4.1 | 2.3 to 6.0 | 533 | 2,516 | 102 | 2,100 |
-| 12086004000 | Miami Beach | 3.5 | 1.8 to 5.4 | 371 | 4,942 | 201 | 22,792 |
-| 12086004106 | Miami Beach | 3.1 | 1.6 to 4.8 | 951 | 3,213 | 108 | 40,440 |
-| 12086004102 | Miami Beach | 2.5 | 1.3 to 4.0 | 869 | 2,856 | 99 | 56,144 |
-| 12086009010 | Doral | 2.4 | 1.4 to 3.4 | 189 | 629 | 653 | 12,450 |
-| 12086980500 | unincorporated | 2.4 | 1.3 to 3.4 | 685 | 520 | 34 | 2,840 |
-| 12086003804 | Surfside | 2.2 | 1.2 to 3.4 | 360 | 2,143 | 89 | 17,418 |
+| 12086004602 | Key Biscayne | 5.6 | 2.9 to 10.3 | 1,283 | 4,318 | 1,366 | 6,010 |
+| 12086008000 | Coral Gables | 4.2 | 2.1 to 7.8 | 809 | 3,761 | 1,081 | 7,119 |
+| 12086006802 | Miami | 4.2 | 2.2 to 14.0 | 983 | 2,622 | 782 | 16,137 |
+| 12086011500 | unincorporated | 4.1 | 2.3 to 6.3 | 533 | 2,516 | 102 | 2,100 |
+| 12086004000 | Miami Beach | 3.5 | 1.8 to 8.6 | 371 | 4,942 | 201 | 22,792 |
+| 12086004106 | Miami Beach | 3.1 | 1.6 to 6.9 | 951 | 3,213 | 108 | 40,440 |
+| 12086004102 | Miami Beach | 2.5 | 1.3 to 5.5 | 869 | 2,856 | 99 | 56,144 |
+| 12086009010 | Doral | 2.4 | 1.4 to 4.8 | 189 | 629 | 653 | 12,450 |
+| 12086980500 | unincorporated | 2.4 | 1.3 to 5.2 | 685 | 520 | 34 | 2,840 |
+| 12086003804 | Surfside | 2.2 | 1.2 to 3.9 | 360 | 2,143 | 89 | 17,418 |
 
 ## 4. People at risk
 
@@ -225,7 +231,7 @@ back from 2025 (D-140, D-144).
 | NFIP payments per year, weighted, 2025 dollars | $30.3 million (nominal: $20.2 million) |
 | Spearman, tract EAD per unit vs claims per unit (694 tracts) | 0.49 (95% interval 0.43 to 0.54) |
 | Same, homes only | 0.47 (0.41 to 0.52) |
-| Ratio of totals, model / claims | 5.6 (low to high 3.0 to 8.5) |
+| Ratio of totals, model / claims | 5.6 (low to high 3.0 to 16.8) |
 | Same, homes only | 3.1 |
 | Ratio using only 2000 to 2025, unweighted | 4.9 |
 
@@ -285,9 +291,10 @@ touches, so it is a rough measure (see the investment reports).
 - **Only two flood frequencies.** The yearly figure rests on the FEMA 1% and
   0.2% floods alone (D-147). Frequent small floods, such as heavy rain
   outside the mapped zones, king tides and street flooding, are missing.
-  They cause many small claims: the 176 tracts with no modelled damage still
-  have claims (median $2.54 per unit a year, against $13.32 where the model
-  has damage).
+- **Rain and tidal flooding are missing.** 176 tracts have NFIP claims but
+  no modelled damage (median claims $2.54 per unit a year, against $13.32
+  where the model has damage). The planned fix is a flood damage model
+  trained on the claims themselves (D-148).
 - **The 0.2% flood uses the 1% depth**, a lower bound, because FEMA maps
   print no 0.2% elevation.
 - **The FEMA maps date from 2009.** New maps are pending for 19 Feb 2027,
@@ -295,8 +302,9 @@ touches, so it is a rough measure (see the investment reports).
 - **Ground elevation is bare earth.** Buildings on fill or raised pads may
   be higher than the elevation model shows.
 - **The curves are standard national curves**, not fitted to Miami-Dade.
-- **Tall buildings:** damage is limited to flooded floors (D-143), which
-  may understate damage to ground-floor plant and lobbies.
+- **Tall buildings:** the middle figure limits damage to flooded floors
+  (D-143). The whole-building version is the high end of the range
+  (D-148).
 - **Displacement** uses one FEMA duration for all building types
   (assumption, with a low and high case). Its dollars are in 2021 prices.
 - **Mental stress and lost productivity** are not in dollars (no
