@@ -3128,7 +3128,7 @@ D-113.
     dollars, by occupancy).
   - Days: FEMA's example, 45 days per foot of water above the first floor,
     capped at 225 days at 5 ft, used for all building types (an extension,
-    labelled as such).
+    labelled as such). Low and high cases added in D-145.
   - Flooded floor area: floor area divided by stories (only the ground
     floor). Story counts are capped at 60 (NSI has a few impossible
     values).
@@ -3146,11 +3146,13 @@ D-113.
 - What happened: The policies file is incomplete (D-135). The user asked
   for a provisional check against claims per housing unit (ACS).
 - What is wrong: No consumer price index is on disk, and it is not in the
-  list of downloads, so claims cannot be inflation-adjusted yet.
+  list of downloads, so claims cannot be inflation-adjusted yet. (Update:
+  the user approved CPI-U on 11 Nov 2026; claims are now in 2025 dollars,
+  D-144.)
 - How we are fixing it:
   - Observed: NFIP building plus contents payments by 2020 tract, 1978 to
     2025, averaged per year with weights that halve every 15 years back
-    from 2025. Nominal dollars (not inflation-adjusted).
+    from 2025. Nominal dollars at first; 2025 dollars since D-144.
   - Denominator: occupied housing units, ACS 2020-2024 table B25003,
     summed from block groups. Tracts with fewer than 50 units are left out.
   - Measures: Spearman correlation of modelled EAD per unit and claims per
@@ -3183,10 +3185,10 @@ D-113.
 - Evidence: `scripts/benefit/baseline_risk.py` (`event_depths`).
 - Affects: Stage 2 scenarios; Stage 4 scenario option.
 
-### D-142. Surge maps give damage far above the claims record: stopped for a decision
+### D-142. Surge maps give damage far above the claims record: FEMA zones carry the yearly risk
 
-- Date: 11 Nov 2026. Status: Open (needs the user's decision). Decided by:
-  the user (pending).
+- Date: 11 Nov 2026. Status: Final. Decided by: the user (option A, 11 Nov
+  2026). Replaces the combining rule of D-137 for the main figure.
 - What happened:
   - Modelled EAD (middle) is $7.9 billion a year; $7.9 billion of it comes
     from surge. NFIP claims average $20 million a year (weighted, nominal).
@@ -3212,8 +3214,142 @@ D-113.
   - B: keep both families and scale the surge part to the claims record
     (a calibration factor of the size above).
   - C: keep the combined figure as an upper bound, labelled as such.
-- Decision: Pending.
-- Reason: The difference is too large to adjust quietly.
+- Decision: Option A (the user's choice). The main expected annual damage,
+  displacement and people figures come from the FEMA 1% and 0.2% floods
+  only. The surge maps are reported as worst-case scenarios per event
+  (buildings, residents and damage if that map's flooding happened), with
+  no yearly figure. The combined figure stays in the building file as a
+  reference column only (`ead_combined_ref_*`). No calibration factor is
+  applied.
+- Reason: The difference is too large to adjust quietly; FEMA's coastal
+  flood elevations already include surge.
 - Evidence: `outputs/benefit/stage2/summary.json`;
   `outputs/benefit/stage2/calibration_deciles.csv`.
 - Affects: all Stage 2 results, Stage 4 avoided losses.
+
+### D-143. Multi-story buildings: damage only on the floors the water reaches
+
+- Date: 11 Nov 2026. Status: Provisional. Decided by: Amey (proposal; confirm).
+- What happened: After D-142, half of the yearly damage sat in a few large
+  buildings. The largest, a 12-story commercial building worth $1.1 billion,
+  lost $901 million in the 1% flood from 2.8 ft of water.
+- What is wrong: The commercial, public and apartment curves (HEC-FIA
+  Galveston, NACCS) give a share of the whole building's value. Water 3 ft
+  deep cannot damage the floors above it. Only the house curves (RES1)
+  already depend on the number of stories.
+- How we are fixing it:
+  - For every type except RES1, the curve is applied only to the share of
+    the building on floors the water reaches: 1 + whole multiples of 10 ft
+    of water above the first floor, divided by the number of stories
+    (capped at 60).
+  - Houses (RES1) are unchanged.
+  - The whole-building figure is kept as a reference column
+    (`ead_whole_building_ref_slr0`).
+- Decision: As above.
+- Reason: A physical limit, not a fit to the claims. Ground floors often
+  hold more value (lobbies, plant rooms), so this may understate damage in
+  tall buildings; the report says so.
+- Evidence: `scripts/benefit/baseline_risk.py` (`flooded_share`). Effect:
+  county expected annual damage (middle) falls from $354 million to $174
+  million; the ratio to claims from 17 to 8.4; the tract Spearman moves
+  from 0.49 to 0.50.
+- Affects: all Stage 2 damage dollars; Stage 4 avoided losses.
+
+### D-144. Claims inflation-adjusted to 2025 dollars with CPI-U
+
+- Date: 11 Nov 2026. Status: Final. Decided by: the user (approved the
+  download and the 2025 base); Amey (details).
+- What happened: The brief asks for inflation-adjusted claims. No price
+  index was on disk (D-140).
+- What is wrong: Old claims in old dollars make the gap look larger than
+  it is.
+- How we are fixing it:
+  - Downloaded BLS series CUUR0000SA0 (CPI-U, US city average, all items,
+    not seasonally adjusted) for 1978 to 2025 from the BLS Public Data API
+    v1 (five requests of ten years) into `data/raw/bls/`.
+  - Annual value = mean of the months. October 2025 was not published (the
+    2025 lapse in appropriations), so 2025 uses 11 months.
+  - Each year's payments are multiplied by CPI 2025 / CPI of the loss year
+    (for example 2.29 for 1992 and 1.31 for 2017).
+  - The results match BLS published annual averages (1992: 140.3; 2000:
+    172.2; 2017: 245.1).
+- Decision: As above. Claims are reported in 2025 dollars; NSI values are
+  August 2025 prices, so the two are close in time.
+- Reason: The user's approval; CPI-U is the standard general price index.
+- Evidence: `scripts/benefit/build_cpi.py`; `data/reference/cpi_u_annual.csv`.
+- Affects: Stage 2 calibration (weighted claims rise from $20.2 million to
+  $30.3 million a year).
+
+### D-145. Displacement duration: one assumption, with low and high cases
+
+- Date: 11 Nov 2026. Status: Final. Decided by: the user (asked for the
+  label and a range); Amey (the range).
+- What happened: FEMA prints displacement days for one building type only
+  (D-139), and we apply it to all types.
+- What is wrong: A single duration for every building type is an
+  assumption, and it needs a range.
+- How we are fixing it:
+  - Middle: FEMA's 45 days per foot, capped at 225 days.
+  - Low: half of that (22.5 days per foot). High: one and a half times (67.5
+    days per foot). The one-time cost is the same in all cases.
+  - The 0.5 and 1.5 multipliers are our sensitivity choice, not FEMA
+    values, and the report says so.
+- Decision: As above.
+- Reason: Shows how much the result depends on the assumption, without
+  inventing a FEMA number.
+- Evidence: `scripts/benefit/baseline_risk.py` (`DISP_DAYS_CASES`).
+- Affects: displacement figures in Stage 2 and Stage 4.
+
+### D-146. No scaling to the claims; what the remaining gap is made of
+
+- Date: 11 Nov 2026. Status: Provisional (final check waits for the
+  policies file). Decided by: the user (no scaling; break the gap down);
+  Amey (method).
+- What happened: After D-142, D-143 and D-144, modelled yearly damage is 5.7
+  times NFIP payments (4.0 times for homes only).
+- What is wrong: The gap needs explaining before anything is adjusted.
+- How we are fixing it:
+  - The model is not scaled.
+  - The gap is broken into known factors, each a multiplier on the gap,
+    using county totals in 2025 dollars:
+    1. Homes only (NFIP is mostly homes): factor 0.69.
+    2. Residential claims inside the FEMA 100-year zones only (the model
+       covers only those floods; 10% of residential payments are outside):
+       factor 1.11.
+    3. Replacement cost instead of depreciated value (NFIP pays
+       replacement cost for many homes): factor 1.24.
+    4. Payout caps and deductibles: paid divided by adjusted damage in the
+       18,247 residential claims that record both (54% of paid residential
+       claims): 0.91, factor 0.91.
+    5. Left over: a gap of 4.9, which would mean about 20% of residential
+       flood losses are insured. This is to be measured with the policies
+       file.
+  - Caveat: adjusters record damage to insured items, so step 4 shows the
+    effect of deductibles and limits within coverage, not losses above
+    coverage.
+- Decision: As above.
+- Reason: The user's instruction; a transparent breakdown rather than a
+  fitted factor.
+- Evidence: `scripts/benefit/baseline_risk.py` (`gap_decomposition`);
+  `outputs/benefit/stage2/summary.json` (`gap_decomposition`).
+- Affects: Stage 2 calibration; Stage 4 uses the uncalibrated figures with
+  this note.
+
+### D-147. Limitation: only two flood frequencies
+
+- Date: 11 Nov 2026. Status: Final. Decided by: the user (state it as a
+  limitation).
+- What happened: The yearly figure rests on the FEMA 1% and 0.2% floods only
+  (D-142).
+- What is wrong: Frequent small floods (heavy rain outside the mapped
+  zones, king tides, minor street flooding) are not in the model. They
+  cause many small claims, and the 176 tracts with no modelled damage still
+  have claims (median $2.5 per unit a year versus $13.3 where the model
+  has damage).
+- How we are fixing it: Stated as a limitation in the Stage 2 report. Not
+  modelled in Phase 1.
+- Decision: As above.
+- Reason: The user's instruction.
+- Evidence: `outputs/benefit/stage2/summary.json`
+  (`claims_per_unit_zero_vs_positive_ead`).
+- Affects: Stage 2 and Stage 4 interpretation.

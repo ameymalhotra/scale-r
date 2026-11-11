@@ -30,6 +30,15 @@ FILES = [  # local path (relative to data/raw), URL, publisher's date for the fi
     ("reference_docs/fema/fema_bca_economic-values-green-infrastructure_2025.pdf", FEMA + "fema_bca_economic-values-green-infrastructure_2025.pdf", "Jul 2022, updated Jul 2025"),
     ("reference_docs/fema/fema_ecosystem-service-value-updates_2022.pdf", FEMA + "fema_ecosystem-service-value-updates_2022.pdf", "Jun 2022"),
     ("reference_docs/fema/fema_standard-economic-values-methodology-report_2023.pdf", FEMA + "fema_standard-economic-values-methodology-report_2023.pdf", "v12.0, May 2023; superseded by v13, not used"),
+    # Stage 2
+    ("reference_docs/nhc/nws-nhc-6.pdf", "https://www.nhc.noaa.gov/pdf/nws-nhc-6.pdf", "Aug 2011 (NOAA Tech. Memo. NWS NHC-6)"),
+    ("reference_docs/nhc/return_hurr.jpg", "https://www.nhc.noaa.gov/climo/images/return_hurr.jpg", "HURISK, data to 2010"),
+    ("reference_docs/nhc/return_mjrhurr.jpg", "https://www.nhc.noaa.gov/climo/images/return_mjrhurr.jpg", "HURISK, data to 2010"),
+    ("bls/cpiu_1978_1987.json", "https://api.bls.gov/publicAPI/v1/timeseries/data/ (POST, CUUR0000SA0, 1978 to 1987)", "downloaded 11 Nov 2026"),
+    ("bls/cpiu_1988_1997.json", "https://api.bls.gov/publicAPI/v1/timeseries/data/ (POST, CUUR0000SA0, 1988 to 1997)", "downloaded 11 Nov 2026"),
+    ("bls/cpiu_1998_2007.json", "https://api.bls.gov/publicAPI/v1/timeseries/data/ (POST, CUUR0000SA0, 1998 to 2007)", "downloaded 11 Nov 2026"),
+    ("bls/cpiu_2008_2017.json", "https://api.bls.gov/publicAPI/v1/timeseries/data/ (POST, CUUR0000SA0, 2008 to 2017)", "downloaded 11 Nov 2026"),
+    ("bls/cpiu_2018_2025.json", "https://api.bls.gov/publicAPI/v1/timeseries/data/ (POST, CUUR0000SA0, 2018 to 2025)", "downloaded 11 Nov 2026"),
 ]
 
 

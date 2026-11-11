@@ -136,6 +136,70 @@
       "downloaded": "2026-11-10",
       "bytes": 1120278,
       "sha256": "b8dcf206ae0b25d2d371ff6d341443f709ad377059d0aaa7b0807449ca564bfd"
+    },
+    {
+      "file": "data/raw/reference_docs/nhc/nws-nhc-6.pdf",
+      "url": "https://www.nhc.noaa.gov/pdf/nws-nhc-6.pdf",
+      "publisher_date": "Aug 2011 (NOAA Tech. Memo. NWS NHC-6)",
+      "downloaded": "2026-11-10",
+      "bytes": 6279992,
+      "sha256": "e614fe3d01443069b6dcd719759a09f1df61afbc69a97bbb5d2f3fa71a296df5"
+    },
+    {
+      "file": "data/raw/reference_docs/nhc/return_hurr.jpg",
+      "url": "https://www.nhc.noaa.gov/climo/images/return_hurr.jpg",
+      "publisher_date": "HURISK, data to 2010",
+      "downloaded": "2026-11-10",
+      "bytes": 795875,
+      "sha256": "6c3961499a3d9f7d20d880ea1b7e83092bedc0ac9de77cbf675edbabdfb824ca"
+    },
+    {
+      "file": "data/raw/reference_docs/nhc/return_mjrhurr.jpg",
+      "url": "https://www.nhc.noaa.gov/climo/images/return_mjrhurr.jpg",
+      "publisher_date": "HURISK, data to 2010",
+      "downloaded": "2026-11-10",
+      "bytes": 829654,
+      "sha256": "f7c5d4d057d807ef3b8cc4693a05fdadde381c87cf04bbf8995412c8714cfdd9"
+    },
+    {
+      "file": "data/raw/bls/cpiu_1978_1987.json",
+      "url": "https://api.bls.gov/publicAPI/v1/timeseries/data/ (POST, CUUR0000SA0, 1978 to 1987)",
+      "publisher_date": "downloaded 11 Nov 2026",
+      "downloaded": "2026-11-10",
+      "bytes": 10396,
+      "sha256": "8736e2cdcc9bf9407ecf68626430fda491bdb0762db703c836e11294e1c8aa2a"
+    },
+    {
+      "file": "data/raw/bls/cpiu_1988_1997.json",
+      "url": "https://api.bls.gov/publicAPI/v1/timeseries/data/ (POST, CUUR0000SA0, 1988 to 1997)",
+      "publisher_date": "downloaded 11 Nov 2026",
+      "downloaded": "2026-11-10",
+      "bytes": 10463,
+      "sha256": "b3b16259f9a5664eaa3ef9e39c250584eac12b19754882662d2fa7b18dfcdc8b"
+    },
+    {
+      "file": "data/raw/bls/cpiu_1998_2007.json",
+      "url": "https://api.bls.gov/publicAPI/v1/timeseries/data/ (POST, CUUR0000SA0, 1998 to 2007)",
+      "publisher_date": "downloaded 11 Nov 2026",
+      "downloaded": "2026-11-10",
+      "bytes": 10487,
+      "sha256": "b3b975cd6fb378187899b716f91dc57adc393c301e9396477d7fd95423a67c62"
+    },
+    {
+      "file": "data/raw/bls/cpiu_2008_2017.json",
+      "url": "https://api.bls.gov/publicAPI/v1/timeseries/data/ (POST, CUUR0000SA0, 2008 to 2017)",
+      "publisher_date": "downloaded 11 Nov 2026",
+      "downloaded": "2026-11-10",
+      "bytes": 10703,
+      "sha256": "e918b12e7bd247cc68a5ce619038bd16819c3281d62f7e23bb58c36f0128f6b2"
+    },
+    {
+      "file": "data/raw/bls/cpiu_2018_2025.json",
+      "url": "https://api.bls.gov/publicAPI/v1/timeseries/data/ (POST, CUUR0000SA0, 2018 to 2025)",
+      "publisher_date": "downloaded 11 Nov 2026",
+      "downloaded": "2026-11-10",
+      "bytes": 8657,
+      "sha256": "0a6fa17d83ab4a44ec9a60a3d08cf6ad15fd2b651dc9b12549a73b8d127c3130"
     }
   ]
 }
