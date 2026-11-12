@@ -44,6 +44,14 @@ FILES = [  # local path (relative to data/raw), URL, publisher's date for the fi
     ("mdc_layers/SchoolSite_gdb_p0.geojson", "https://services.arcgis.com/8Pc9XBTAsYuxx9Ny/arcgis/rest/services/SchoolSite_gdb/FeatureServer/0/query?where=1=1&outFields=*&outSR=4326&f=geojson", "downloaded 11 Nov 2026"),
     ("mdc_layers/CountyParkBoundaries_PROS_View_for_ALWAYS_ON_p0.geojson", "https://services.arcgis.com/8Pc9XBTAsYuxx9Ny/arcgis/rest/services/CountyParkBoundaries_PROS_View_for_ALWAYS_ON/FeatureServer/1/query?where=1=1&outFields=*&outSR=4326&f=geojson", "downloaded 11 Nov 2026"),
     ("mdc_layers/MunicipalParkBoundary_gdb_p0.geojson", "https://services.arcgis.com/8Pc9XBTAsYuxx9Ny/arcgis/rest/services/MunicipalParkBoundary_gdb/FeatureServer/0/query?where=1=1&outFields=*&outSR=4326&f=geojson", "downloaded 11 Nov 2026"),
+    # Prompt 28 Part 1 (spec alignment)
+    ("usgs_3dep/tnm_1m_products.json", "https://tnmaccess.nationalmap.gov/api/v1/products?datasets=Digital%20Elevation%20Model%20(DEM)%201%20meter&bbox=-80.88,25.13,-80.11,25.98&max=500&outputFormat=JSON", "tile index; FL_MiamiDade_D23 published 15 Dec 2025"),
+    ("usgs_3dep/metadata/USGS_1M_17_x51y279_FL_MiamiDade_D23.xml", "https://thor-f5.er.usgs.gov/ngtoc/metadata/waf/elevation/1_meter/geotiff/FL_MiamiDade_D23/USGS_1M_17_x51y279_FL_MiamiDade_D23.xml", "lidar 27 Dec 2023 to 29 May 2024"),
+    ("fema/firm_2027/12086C_2027-02-19.zip", "https://msc.fema.gov/portal/downloadProduct?productTypeID=FINAL_PRODUCT&productSubTypeID=FIRM_DB&productID=12086C_2027-02-19", "FIRM database for maps effective 19 Feb 2027 (pending)"),
+    ("fema/firm_2027/12086CV001B.pdf", "https://msc.fema.gov/portal/downloadProduct?productTypeID=FINAL_PRODUCT&productSubTypeID=FIS_REPORT&productID=12086CV001B", "Flood Insurance Study volume 1, effective 19 Feb 2027"),
+    ("millage/2026_adopted_millage_chart.pdf", "https://www.miamidadepa.gov/resources-pa/library/reports/millage/2026-adopted-millage-chart.pdf", "created 13 Oct 2026"),
+    ("millage/2025_Miami-Dade_TACD.pdf", "https://floridarevenue.com/property/dataportal/Documents/PTO%20Data%20Portal/TACD%20History/2025%20Taxing%20Authority%20Code%20Descriptions/2025%20Miami-Dade%20TACD.pdf", "2025 adopted millage, received by DOR 15 Oct 2025"),
+    ("millage/millage_tables.html", "https://www.miamidadepa.gov/pa/millage_tables.asp", "index page of millage charts"),
 ]
 
 

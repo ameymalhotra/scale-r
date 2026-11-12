@@ -46,6 +46,18 @@ REFERENCE_DOCS_DIR = RAW / "reference_docs"  # FEMA BCA and Hazus documents (PDF
 BENEFIT_DOWNLOAD_LOG = RAW / "benefit_download_log.json"
 # NOAA DEM read remotely by HTTP range requests, as the website script does
 NOAA_DEM_URL = "https://coast.noaa.gov/slrdata/DEMs/FL/FL_SE_GCS_3m_NAVDm_v3.tif"
+# USGS 3DEP 1 m DEM (lidar Dec 2023 to May 2024), read remotely tile by tile; tile index from the
+# National Map API (prompt 28 Part 1, D-160)
+USGS_3DEP_DIR = RAW / "usgs_3dep"
+USGS_3DEP_INDEX_JSON = USGS_3DEP_DIR / "tnm_1m_products.json"
+USGS_3DEP_PROJECT = "FL_MiamiDade_D23"
+# FEMA FIRM database for the new maps effective 19 Feb 2027, and its Flood Insurance Study (D-161)
+FIRM_2027_DIR = RAW / "fema" / "firm_2027"
+FIRM_2027_ZIP = FIRM_2027_DIR / "12086C_2027-02-19.zip"
+FIRM_2027_EXTRACT = FIRM_2027_DIR / "extract"
+FIS_2027_VOL1_PDF = FIRM_2027_DIR / "12086CV001B.pdf"
+# Millage rates (prompt 28 Part 1, D-164): Property Appraiser 2026 adopted chart and DOR 2025 adopted file
+MILLAGE_DIR = RAW / "millage"
 TRACT_2024_ZIP = BOUNDARY_DIR / "tl_2024_12_tract.zip"
 # kept outside this folder because website and repo-root scripts use them
 NRI_CSV = REPO / "fema_miami_dade_dec_2025.csv"
@@ -70,6 +82,7 @@ VERTCON_GRID_CSV = REFERENCE_DIR / "ngvd29_to_navd88_grid.csv"
 HURRICANE_RATES_CSV = REFERENCE_DIR / "hurricane_strike_rates.csv"   # Stage 2 (D-136)
 BLS_DIR = RAW / "bls"                                                # CPI-U downloads (D-144)
 CPI_ANNUAL_CSV = REFERENCE_DIR / "cpi_u_annual.csv"                  # Stage 2 (D-144)
+MILLAGE_2026_CSV = REFERENCE_DIR / "millage_2026_by_code.csv"                # prompt 28 (D-164)
 MDC_LAYERS_DIR = RAW / "mdc_layers"                                   # Miami-Dade open data: Metrorail, schools, parks (Stage 3)
 SALES_FEATURES_PARQUET = BENEFIT_DIR / "sales_features.parquet"      # Stage 3 model table
 SALES_FEATURES_CSV = BENEFIT_DIR / "sales_features.csv.gz"           # same, for the ML environment (no pyarrow)

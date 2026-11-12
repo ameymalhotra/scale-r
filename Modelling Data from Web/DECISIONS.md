@@ -3658,3 +3658,160 @@ D-113.
 - Evidence: this entry; the draft note at the top of
   `reports/benefit/stage3_property_model.md`.
 - Affects: Stage 3 (to be redone); Stage 4 property value change.
+
+### D-160. Ground elevation: USGS 3DEP 1 m recommended over the NOAA 3 m DEM (not switched yet)
+
+- Date: 11 Nov 2026. Status: Provisional (waiting for the user). Decided by:
+  Amey (recommendation); the user confirms.
+- What happened: The professor's specification computes depth above the
+  first floor from ground elevation, so the elevation source matters. The
+  USGS 3D Elevation Program has a 1 m bare-earth DEM for Miami-Dade
+  (project FL_MiamiDade_D23, lidar flown 27 Dec 2023 to 29 May 2024,
+  published 15 Dec 2025, 57 tiles, 13.6 GB, NAVD88 metres). Our NOAA DEM is
+  3 m, compiled in 2023 from 2015 and 2018 county lidar (NAVD88 metres,
+  Geoid 12B).
+- What is wrong: Nothing is wrong with the NOAA DEM on average, but it is
+  6 to 9 years older and coarser.
+- How we are fixing it: Compared both at 5,000 buildings (stratified by
+  tract, seed 20261111). 3DEP minus NOAA: median -0.08 ft, middle half
+  -0.25 to +0.12 ft, 3.1% of buildings differ by more than 1 ft and 1.6% by
+  more than 2 ft. The 1 m point value and the 3 x 3 m mean give the same
+  result, so resolution is not the cause; the date of the lidar is.
+  The biggest gaps are new building pads on fill (3DEP up to 6 ft higher in
+  Homestead and Hialeah) and spots where the NOAA DEM is far too high
+  (14 to 19 ft on Key Biscayne, Miami Beach and Miami).
+- Decision: Recommend switching to 3DEP 1 m for Module A. Not switched until
+  the user confirms. The full 13.6 GB set is not downloaded (42 GB free on
+  disk); it is read tile by tile over the web, as the NOAA DEM already is.
+  To check before switching: the geoid model of the 3DEP heights (expected
+  to differ from Geoid 12B by centimetres).
+- Reason: Newer survey that shows current ground, finer cells, one
+  consistent project, same vertical datum. County totals will barely move,
+  but individual buildings, which the what-if tool works on, will.
+- Evidence: `scripts/benefit/compare_dem.py`;
+  `outputs/benefit/spec_alignment/dem_compare.json`, `dem_compare_by_place.csv`.
+- Affects: Module A depth, Module B damage, first-floor elevation.
+
+### D-161. FEMA flood risk products: no depth grids exist; the 2027 FIRM database used instead
+
+- Date: 11 Nov 2026. Status: Provisional. Decided by: Amey.
+- What happened: Searched FEMA's Map Service Center for Miami-Dade
+  (county 12086C and community 120635) for the current maps (effective
+  11 Sep 2009) and the new maps (effective 19 Feb 2027, confirmed by the
+  pending FIRM database and the 8-volume Flood Insurance Study).
+- What is wrong: Neither map set has a Flood Risk Database, depth grids or
+  a Flood Risk Report on the Map Service Center.
+- How we are fixing it: Downloaded the public 2027 FIRM database (199 MB)
+  and Flood Insurance Study volume 1. Unlike the 2009 data we had, they hold
+  water levels for five storm frequencies (10%, 4%, 2%, 1%, 0.2%):
+  - coastal: still-water elevations at 218 transects (ADCIRC and SWAN
+    surge model, 2018);
+  - rainfall and canal flooding: water levels at 1,077 XP-SWMM model nodes
+    (county basin models, 2007).
+- Decision: Treat these as the frequency source for Module A in Part 2,
+  pending the user's confirmation. They are points and transects, not
+  grids, so a method for carrying them to each building is needed (to be
+  proposed in Part 2).
+- Reason: Best public multi-frequency data available now; it replaces the
+  "0.2% equals 1% depth" lower bound (D-137).
+- Evidence: `data/raw/fema/firm_2027/` (gitignored, logged in
+  `benefit_download_log.json`).
+- Affects: Module A, Module B.
+
+### D-162. First-floor elevation estimated for every building
+
+- Date: 11 Nov 2026. Status: Provisional (checked against the user's
+  summary of the specification; the specification file itself is not yet in
+  `docs/`). Decided by: the specification (ground plus typical floor height
+  by building type and year built); Amey (the table).
+- What happened: Module A needs first-floor elevation. No elevation
+  certificates are available yet.
+- What is wrong: Stage 2 used ground plus foundation height only, which
+  ignores flood-zone building rules.
+- How we are fixing it: Columns added to the buildings table:
+  `ffe_ft_navd88`, `ffe_estimated` (1 for all 627,252), `ffe_rule`,
+  `ffe_simple_ft_navd88`, `year_built_used` and its source. Rule:
+  - typical floor height by foundation type, from NSI: slab 0.25 to 0.75 ft,
+    crawlspace and solid wall 2 ft, pier or pile 5.25 to 6.25 ft (6.5 to
+    9 ft in VE);
+  - built after the first flood map (29 Sep 1972) inside zones A, AE, AH,
+    VE: at least the base flood elevation (44 CFR 60.3);
+  - built from 2012 (Florida Building Code 2010 edition): at least the base
+    flood elevation plus 1 ft;
+  - zone AO: ground plus zone depth.
+  Year built is the tax roll value (97%) or the NSI block median. No
+  building dropped; 33 with no ground value get the tract median.
+- Decision: As above. 21,199 buildings are raised to the code level
+  (median 1 ft). Buildings with a floor below the 1% flood level fall from
+  49,766 to 31,019.
+- Reason: Follows the specification and the national floodplain rules.
+  Assumes full compliance with the current base flood elevation, which
+  older maps may not have used.
+- Evidence: `scripts/benefit/build_ffe.py`;
+  `outputs/benefit/spec_alignment/ffe_summary.json`.
+- Affects: Module A, Module B, building elevation projects in Module C.
+
+### D-163. Tax roll fields for Module D tax revenue
+
+- Date: 11 Nov 2026. Status: Final. Decided by: Amey.
+- What happened: Module D needs homestead status, exemptions, assessed and
+  taxable value.
+- What is wrong: Nothing; the 2026 NAL has them.
+- How we are fixing it: Fields:
+  - homestead: `JV_HMSTD`, `AV_HMSTD` and exemption `EXMPT_01`
+    (451,765 parcels, 48%);
+  - assessed value: `AV_SD` (school) and `AV_NSD` (non-school; the 10%
+    non-homestead cap applies here); the Save Our Homes cap shows as
+    just value minus assessed value (median 49% of just value on homestead
+    parcels);
+  - taxable value: `TV_SD`, `TV_NSD`;
+  - other exemptions: `EXMPT_02` to `EXMPT_82`; taxing district:
+    `TAX_AUTH_CD`.
+- Decision: Use these fields in Module D. Only aggregate counts were read;
+  no owner fields.
+- Reason: Official roll, same year as the sales.
+- Evidence: `scripts/benefit/tax_fields_summary.py`.
+- Affects: Module D tax revenue.
+
+### D-164. Millage rates: 2026 adopted, by taxing district code
+
+- Date: 11 Nov 2026. Status: Final. Decided by: Amey.
+- What happened: The tax roll has no millage rates.
+- What is wrong: Nothing.
+- How we are fixing it: Downloaded the Property Appraiser's 2026 adopted
+  millage chart and the DOR 2025 adopted file. Parsed all 38 codes into
+  `data/reference/millage_2026_by_code.csv`. Every row's parts add up to
+  its total; the DOR 2025 totals match the chart's 2025 column exactly; all
+  38 tax roll codes have a rate.
+- Decision: Use the 2026 adopted rates (14.90 to 24.19 mills). The school
+  part (6.623 mills) applies to school taxable value, the rest to
+  non-school taxable value.
+- Reason: Same year as the tax roll; official.
+- Evidence: `scripts/benefit/build_millage.py`; `millage_check.json`.
+- Affects: Module D tax revenue.
+
+### D-165. House features: what is free, what costs money
+
+- Date: 11 Nov 2026. Status: Provisional. Decided by: Amey (nothing bought
+  or downloaded).
+- What happened: The specification's property model needs bedrooms,
+  bathrooms, pool and waterfront.
+- What is wrong: The tax roll has none of them.
+- How we are fixing it:
+  - Free: the county's official "Property Point View" layer
+    (Property Appraiser data on the county open data site, 944,398
+    folios). It has bedrooms, bathrooms, half bathrooms, floors, units,
+    areas, year built and the latest sale date and price (any year). 99.9%
+    of single-family homes and 93% of condos have bedrooms. It also holds
+    owner names and addresses, so only the house fields would be requested.
+  - Pool: no free field. Proxy: the tax roll's special features value
+    (pools, docks, fences together). The Property Appraiser's bulk files
+    cost $50 per file; custom files need a request.
+  - Waterfront: no field; can be derived free from parcel and water
+    polygons we already have.
+- Decision: Recommend the free layer (house fields only) and a
+  derived waterfront flag; ask the user before buying anything.
+- Reason: Free official data covers most needs.
+- Evidence: ArcGIS service `PaGISView_gdb` field list and counts (queried
+  11 Nov 2026).
+- Affects: Module D.

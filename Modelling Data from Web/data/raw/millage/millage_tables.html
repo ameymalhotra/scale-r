@@ -1,0 +1,931 @@
+<!DOCTYPE HTML><html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <title>Taxing Authorities</title>
+      <!--grid-layout--><!--ls:begin[stylesheet]-->
+      <style type="text/css">
+          
+          .iw_container
+          {
+            max-width:800px !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+          }
+          .iw_stretch
+          {
+            min-width: 100% !important;
+          }
+        </style><script type="text/javascript">
+	// script to add keyup event and make escape functional to exit from preview
+	// only if it is a preview environment.
+	var frame = window.frameElement;
+	if (frame && frame.src.indexOf("/iw-preview") != -1) {
+		document.addEventListener("DOMContentLoaded", function () {
+			document.body.addEventListener("keyup", function (event) {
+				var key = event.keyCode;
+				if (key === 27) {
+					frame.parentElement.ownerDocument.dispatchEvent(new KeyboardEvent('keyup', {keyCode: key}));
+				}
+			});
+		});
+	}
+	</script><script type="text/javascript">
+    // A simplified version of AjaxRequest.class.js
+    // So component events doesn't require to add AjaxRequest.class.js as resources
+    // TODO: Keep it in the same files as embedded-layout.page.xml in POC, we can consider to move it to another file or not later
+    // TODO: Need to maintain a dependency to the extenal files it references
+    
+    AjaxCall.METHOD_POST = 'POST';
+    AjaxCall.METHOD_GET  = 'GET';
+    AjaxCall.ACTIVEX_MSXML2_XMLHTTP = 'Msxml2.XMLHTTP';
+    AjaxCall.ACTIVEX_LEGACY_XMLHTTP = 'Microsoft.XMLHTTP';
+    AjaxCall.CONTENT_TYPE_URL_ENCODED = 'application/x-www-form-urlencoded';
+    AjaxCall.CONTENT_TYPE = 'Content-Type';
+    AjaxCall.DELIM_QS = '?';
+    AjaxCall.DELIM_PARAM = '&';
+    AjaxCall.DELIM_KEY_VALUE = '=';
+    AjaxCall.READY_STATE_COMPLETE      = 4;
+    AjaxCall.STATUS_OK        = 200;
+    AjaxCall.STATUS_NOT_FOUND = 404;
+    AjaxCall.ERROR_CREATE_REQUEST = 'Unable to create ActiveX XMLHttpRequest.'
+    AjaxCall.ERROR_REQUEST_STATE = 'Error in XMLHttpRequest [$code/$text]';
+
+    /**
+     * Constructor creates an encapsulated XMLHttpRequest object. Both parameters
+     * to the constructor are optional, and may be configured later.
+     *
+     * @param url             the url to which the request is sent
+     * @param handlerFunction the function to invoke and pass the response
+     *                        xml dom and the response text
+     * @param errorHandlerFunction the function to invoke and pass as argument errorHandlerFunction(request) the entire HTTPXMLRequest instance to
+     *                        when the AJAX request failed, for most cases
+     * @param method          HTTP method: POST or GET
+     * @param isDebugMode     indicator for debug mode
+     */
+    function AjaxCall(url, handlerFunction, errorHandlerFunction, method, isDebugMode)
+    {
+      this.mUrl          = url;
+      this.mHandler      = handlerFunction;
+      this.mErrorHandler = errorHandlerFunction;
+      this.mMethod       = method;
+      this.mDebug        = isDebugMode;
+      
+      this.mMethod = (this.mMethod == null) ? this.mMethod = AjaxCall.METHOD_POST : this.mMethod;
+      this.mDebug = (this.mDebug == null) ? this.mDebug = false : this.mDebug;
+
+      this.mAsynchronous = true;
+
+      this.mContentType = null;
+      this.mRequestBody = null;
+
+      this.mParams = new Array();
+      this.mComponentId = null;
+    }
+
+   /**
+    * Sets a request parameter. The key and value are automatically url-encoded.
+    *
+    * @param key   the request parameter key
+    * @param value the request parameter value
+    * @return a self-reference for method chaining
+    */
+    AjaxCall.prototype.setParameter = function(key, value)
+    {
+      this.mParams[this.mParams.length] = encodeURIComponent(key)
+          + AjaxCall.DELIM_KEY_VALUE + encodeURIComponent(value);
+      return this;
+    }
+
+   /**
+    * Sets a request body
+    *
+    * @param value the request body value
+    * @return a self-reference for method chaining
+    */
+    AjaxCall.prototype.setBody = function(value)
+    {
+      this.mRequestBody = value;
+      return this;
+    }
+
+   /**
+    * Sets a component id
+    *
+    * @param componentId   the component id
+    * @return a self-reference for method chaining
+    */
+    AjaxCall.prototype.setComponentId = function(componentId)
+    {
+      this.mComponentId = componentId;
+      return this;
+    }
+
+    /**
+     * Submits the request to the url using the data configured in the object.
+     */
+    AjaxCall.prototype.submit = function()
+    {
+      var request = null;
+
+      // INSTANTIATE THE XMLHttpRequest
+      if (window.XMLHttpRequest)
+      {
+        request = new XMLHttpRequest();
+      }
+
+      // SET THE READY STATE CHANGE HANDLER
+
+      // cannot reference object member from the anonymous function
+      var handlerFunction  = this.mHandler;
+      var errorHandlerFunction = this.mErrorHandler;
+      var showResponseText = this.mDebug;
+      var componentId  = this.mComponentId;
+      
+      
+      /**
+       * Triggered when there is a handler for the response
+       */
+      var readyStateChangeFunction = function() {
+        if (AjaxCall.READY_STATE_COMPLETE == request.readyState)
+        {
+          if (AjaxCall.STATUS_OK == request.status)
+          {
+            if (showResponseText)
+            {
+              window.open().document.write('<xmp>' + request.responseText + '</xmp>');
+            }
+
+            if (handlerFunction) // only invoke if defined
+            {
+              handlerFunction(request.responseXML, request.responseText, request, componentId);
+            }
+          }
+          else
+          {
+            if(errorHandlerFunction)
+            {
+              errorHandlerFunction(request);
+            }
+            else
+            {
+              alert(AjaxCall.ERROR_REQUEST_STATE
+                .replace(/\$code/, request.status)
+                .replace(/\$text/, request.statusText));
+            }
+          }
+        }
+      }
+
+      // PREPARE THE REQUEST PROPERTIES AND ANY DEFAULTS
+      
+      var url    = this.mUrl;
+      var body   = this.mRequestBody;
+      var type   = this.mContentType;
+      var params = this.mParams.join(AjaxCall.DELIM_PARAM);
+
+      // if no parameters are set, then there is no need to dispatch them
+      if (params.length > 0)
+      {
+        var paramDelim = (0 > url.indexOf("?"))   // if a url already has a query
+                       ? AjaxCall.DELIM_QS     // string delimiter (?), use an
+                       : AjaxCall.DELIM_PARAM  // ampersand (&) instead
+
+        if (body != null)      // User-set request body, all params go in
+        {                      // the query string for both POST and GET.
+          url += paramDelim + params;
+        }
+        else                   // no request body
+        {
+          if (this.mMethod == AjaxCall.METHOD_GET)
+          {
+            url += paramDelim + params;
+          }
+          else
+          {
+            body = params;
+
+            if (type == null)  // assign default if no type is set
+            {
+              type = AjaxCall.CONTENT_TYPE_URL_ENCODED;
+            }
+          }
+        }
+      }
+
+      // SUBMIT THE REQUEST
+      if(this.mAsynchronous)
+      {
+        if(this.mHandler != null || ( this.mHandler == null && this.mDebug == true) ) // no need to fire a handler if it was null in the first place. FF issue.
+        {
+          request.onreadystatechange = readyStateChangeFunction;
+        }
+      }
+
+      request.open(this.mMethod, url, this.mAsynchronous);
+
+      if (type != null)
+      {
+        request.setRequestHeader(AjaxCall.CONTENT_TYPE, type);
+      }
+
+      request.send(body);
+
+      return request;
+    }
+    </script><script type="text/javascript">
+    // Scripts to handle the flow to update components based on the action
+    // TODO: Keep it in the same files as embedded-layout.page.xml in POC, we can consider to move it to another file or not later
+    // TODO: Need to maintain a dependency to the extenal files it references
+
+    const IW_PREVIEW_HOST_NAME = "iw-preview";
+    const INSTRUCTION_TYPE_UPDATE_PAGE_PARAMETER = "update_page_parameter";
+    const INSTRUCTION_TYPE_REFRESH_COMPONENT = "refresh_component";
+    const INSTRUCTION_TYPE_NAVIGATE_TO_PAGE = "navigate_to_page";
+    
+    var invokeActionURL = "/site/pa/page/property-assessments/taxing-authorities/component/$componentId/datum/$datumId/eventAction/$eventActionId/invokeAction.action";
+    var componentRenderURL = "/pa/property-assessments/taxing-authorities/$componentId.async.RENDER";
+    var variantId = "";
+    var siteApplicationType = "java";
+    var updatePageParameterMap = [];
+    var eventTriggerID = "";
+    var eventDataJson;
+    // An array of events that are already executed
+    var eventsExecuted = [];
+
+    //boolean to check if valid json string
+    function parseJSON(str) {
+      try 
+      {
+        var parsedJSON = JSON.parse(str.trim());
+        if (parsedJSON) {
+		      if (typeof parsedJSON === "object") {
+			      return parsedJSON;
+		      }
+        }
+      }
+      catch (e) 
+      {
+        return null;
+      }
+
+      return null;
+    }
+
+    // currently it only support in runtime server
+    // and it always return all componentId from the page
+    // this is called from component, and needs to pass in the 
+    // componentId(it can its id or other component id) and 
+    // datumId (the datum id of a ComponentEventAction datum)
+    function invokeAction(componentId, datumId, eventActionId, eventData) {
+
+      eventDataJson = eventData;
+      // ex: eventTriggerID: 1702053980345:INTERACTION:onClick
+      eventTriggerID = componentId+":"+datumId+":"+eventActionId;
+      //If the Site is .NET type, do not trigger invokeAction call
+      if(siteApplicationType != null && siteApplicationType == "dotnet")
+      {
+        return;
+      }
+      var url = invokeActionURL.replace(/\$componentId/, componentId).replace(/\$datumId/, datumId).replace(/\$eventActionId/, eventActionId);
+      var request = new AjaxCall(url, handleComponentList, handleAjaxError, AjaxCall.METHOD_POST, false);
+      var requestBody = {};
+
+      if(variantId)
+      {
+        request.setParameter("variantId", variantId);
+      }
+
+      if(!eventsExecuted.includes(eventTriggerID))
+      {
+        //flag to tell if we need to evaluate event trigger variants for ComponentEventTrigger datums
+        //We should not be evaluating event trigger variants when an event is invoked for first time
+        requestBody.evaluateEventTrigger = false;
+        eventsExecuted.push(eventTriggerID);
+      }
+
+      var pageParametersMapJson = {};
+      for (var key in updatePageParameterMap ) {
+        pageParametersMapJson[key] = updatePageParameterMap[key];
+      }
+
+      if (eventData) 
+      {
+        requestBody = parseJSON(eventData);
+        if (requestBody !== null) {
+          requestBody.PageParameters = pageParametersMapJson;
+          request.setBody(JSON.stringify(requestBody));
+          request.submit();
+        }
+        else {
+          console.error("Invalid JSON for EventData");
+        }
+      }
+      else {
+        requestBody.EventData = {};
+        requestBody.PageParameters = pageParametersMapJson;
+        request.setBody(JSON.stringify(requestBody));
+        request.submit();
+      }
+
+    }
+    
+    // Handler for the response returned from invokeAction.action Ajax call
+    // retrieve the information from the response and trigger another Ajax call to refresh the component
+    function handleComponentList(xmlDoc, text) {
+      var invokeActionResponse = JSON.parse(text);      
+      
+      if(invokeActionResponse.actionResults && Array.isArray(invokeActionResponse.actionResults)) {
+        var componentIdList = [];
+        
+        for (var actionResult of invokeActionResponse.actionResults ) {
+          if(actionResult.instructionType && actionResult.instructionType === INSTRUCTION_TYPE_UPDATE_PAGE_PARAMETER) {
+            updatePageParameterMap = [];
+            if(actionResult.objects) {
+              var keys = Object.keys(actionResult.objects);
+              if(keys && Array.isArray(keys)) {
+                for (var key of keys ) {
+                  updatePageParameterMap[key] = actionResult.objects[key];
+                }
+              }
+            }
+          } else if(actionResult.instructionType && actionResult.instructionType === INSTRUCTION_TYPE_REFRESH_COMPONENT) {
+            if(actionResult.objects && actionResult.objects.objectIds && Array.isArray(actionResult.objects.objectIds)) {
+              for (var componentId of actionResult.objects.objectIds ) {
+                componentIdList.push(componentId);
+              }
+            }
+          } else if(actionResult.instructionType && actionResult.instructionType === INSTRUCTION_TYPE_NAVIGATE_TO_PAGE) {
+            if(actionResult.objects.objectIds) {
+              // Navigate to the first page from the action results
+              window.location.href = actionResult.objects.objectIds[0];
+            }
+          }
+        }
+        
+        if(componentIdList.length > 0) {
+          for (var componentId of componentIdList ) {
+            var url = componentRenderURL.replace(/\$componentId/, componentId);
+            var request = new AjaxCall(url, handleComponentRefresh, handleAjaxError, AjaxCall.METHOD_GET, false);
+            request.setComponentId(componentId);
+            request.setParameter("eventTriggerID",eventTriggerID);
+            if(eventDataJson)
+            {
+            request.setParameter("eventData",eventDataJson);
+            }
+            if(url.includes(IW_PREVIEW_HOST_NAME)){
+              request.setParameter("variantId", variantId);
+            }
+            for (var key in updatePageParameterMap ) {
+              request.setParameter(key, updatePageParameterMap[key]);
+            }
+        
+            request.submit();
+          }
+        }
+      }
+    }
+    
+    // Handler for the response returned from component .async.render Ajax call
+    // retrieve the response and updated the div containing the componendid
+    function handleComponentRefresh(xmlDoc, text, request, componentId) {
+      var componentElem = document.getElementById("iw_comp" + componentId);      
+      componentElem.innerHTML = text;
+      // explicitly recreate script elements to ensure they are executed
+      const sources = componentElem.querySelectorAll("script");
+      sources.forEach(source => {
+        const target = document.createElement('script');
+        // add contents of element if it exists
+        if(source.innerHTML) target.innerHTML = source.innerHTML;
+        // copy all attributes
+        [...source.attributes].forEach(attr => { target.setAttribute(attr.nodeName ,attr.nodeValue) });
+        source.after(target);
+        // remove original element when done
+        source.remove();
+      });
+    }
+    
+    // Error handler for Ajax call
+    function handleAjaxError(request) {
+      var url = new URL(request.responseURL);
+      
+      // temporary show mssage as the service is not available in iw-preview yet
+      if(url.pathname.includes(IW_PREVIEW_HOST_NAME)){
+        alert("The service is not available in /iw-preview");
+      } else {
+        alert(AjaxCall.ERROR_REQUEST_STATE
+          .replace(/\$code/, request.status)
+          .replace(/\$text/, request.statusText));
+      }      
+    }
+    
+    </script><link rel="stylesheet" type="text/css" href="/iwov-resources/grid/bootstrap/4.6.0/bootstrap-grid.min.css">
+      <link rel="stylesheet" type="text/css" href="/iwov-resources/ui-frameworks/bootstrap/4.6.0/css/bootstrap.min.css">
+      <!--ls:end[stylesheet]--><!--ls:begin[canonical]--><!--ls:end[canonical]--><!--ls:begin[script]--><script type="text/javascript" src="/iwov-resources/scripts/jQuery/jquery.min.js"></script><script type="text/javascript" src="/iwov-resources/ui-frameworks/bootstrap/4.6.0/js/bootstrap.min.js"></script>
+      <!--ls:end[script]--><!--ls:begin[meta-keywords]--><meta name="keywords" content="real estate, real property, property, value, property value, market, tax authorities, taxes, setting taxes, millage rate, property tax rate, millage">
+      <!--ls:end[meta-keywords]--><!--ls:begin[meta-description]-->
+      <meta name="description" content="The Property Appraiser of Miami-Dade County does not determine the amount of taxes you pay. The taxes can increase or decrease depending on tax rates set by the school board, commissioners, cities and other taxing authorities.">
+      <!--ls:end[meta-description]--><!--ls:begin[custom-meta-data]-->
+      <meta name="og:image" content="https://www.miamidadepa.gov/resources-pa/images/og-main.png">
+      <meta name="og:type" content="website">
+      <meta name="Organization" content="org1477063492348510">
+      <meta name="Category" content="home-property">
+      <meta name="ContentType" content="None">
+      <meta name="Audience" content="all-residents">
+      <meta name="Subcategory" content="home-property/property-taxes">
+      <meta name="og:title" content="Taxing Authorities">
+      <meta name="og:url" content="https://www.miamidadepa.gov/pa/property-assessments/taxing-authorities.page">
+      <meta name="og:description" content="The Property Appraiser of Miami-Dade County does not determine the amount of taxes you pay. The taxes can increase or decrease depending on tax rates set by the school board, commissioners, cities and other taxing authorities.">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=2.0">
+      <!--ls:end[custom-meta-data]--><!--ls:begin[meta-vpath]-->
+      <meta name="vpath" content="">
+      <!--ls:end[meta-vpath]--><!--ls:begin[meta-page-locale-name]-->
+      <meta name="page-locale-name" content="">
+      <!--ls:end[meta-page-locale-name]--><!--ls:begin[stylesheet]-->
+      <link rel="stylesheet" href="/resources-pa/css/global-styles.css" type="text/css" data-ocde-desktop_or_tablet_or_phone="show">
+      <!--ls:end[stylesheet]--><!--ls:begin[script]--><script src="/resources-pa/js/popper.min.js" type="text/javascript" data-ocde-desktop_or_tablet_or_phone="show"></script>
+      <!--ls:end[script]--><!--ls:begin[script]--><script src="/resources-pa/js/global-styles.js" type="text/javascript" data-ocde-desktop_or_tablet_or_phone="show"></script>
+      <!--ls:end[script]--><!--ls:begin[head-injection]--><!-- appendToHead -->
+
+<!-- Google Tag Manager -->
+
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+
+})(window,document,'script','dataLayer','GTM-KP6LZQ3W');</script>
+
+<!-- End Google Tag Manager -->
+<!--ls:end[head-injection]--><!--ls:begin[tracker-injection]--><!--ls:end[tracker-injection]--><!--ls:begin[script]--><!--ls:end[script]--><!--ls:begin[script]--><!--ls:end[script]--><script>NS_CSM_td=1804265570;NS_CSM_pd=275116665;NS_CSM_u="/clm10";NS_CSM_col="AAAAAAXQxZadI2lZmpPevBwV5pThZQfYxUhALjTOHq30Fvzij84VKbkC9dSQjo0WD/WtKPQlb3z9pY0LXIH9+eESpGqV";</script><script type="text/javascript">function sendTimingInfoInit(){setTimeout(sendTimingInfo,0)}function sendTimingInfo(){var wp=window.performance;if(wp){var c1,c2,t;c1=wp.timing;if(c1){var cm={};cm.ns=c1.navigationStart;if((t=c1.unloadEventStart)>0)cm.us=t;if((t=c1.unloadEventEnd)>0)cm.ue=t;if((t=c1.redirectStart)>0)cm.rs=t;if((t=c1.redirectEnd)>0)cm.re=t;cm.fs=c1.fetchStart;cm.dls=c1.domainLookupStart;cm.dle=c1.domainLookupEnd;cm.cs=c1.connectStart;cm.ce=c1.connectEnd;if((t=c1.secureConnectionStart)>0)cm.scs=t;cm.rqs=c1.requestStart;cm.rss=c1.responseStart;cm.rse=c1.responseEnd;cm.dl=c1.domLoading;cm.di=c1.domInteractive;cm.dcls=c1.domContentLoadedEventStart;cm.dcle=c1.domContentLoadedEventEnd;cm.dc=c1.domComplete;if((t=c1.loadEventStart)>0)cm.ls=t;if((t=c1.loadEventEnd)>0)cm.le=t;cm.tid=NS_CSM_td;cm.pid=NS_CSM_pd;cm.ac=NS_CSM_col;var xhttp=new XMLHttpRequest();if(xhttp){var JSON=JSON||{};JSON.stringify=JSON.stringify||function(ob){var t=typeof(ob);if(t!="object"||ob===null){if(t=="string")ob='"'+ob+'"';return String(ob);}else{var n,v,json=[],arr=(ob&&ob.constructor==Array);for(n in ob){v=ob[n];t=typeof(v);if(t=="string")v='"'+v+'"';else if(t=="object"&&v!==null)v=JSON.stringify(v);json.push((arr?"":'"'+n+'":')+String(v));}return(arr?"[":"{")+String(json)+(arr?"]":"}");}};xhttp.open("POST",NS_CSM_u,true);xhttp.send(JSON.stringify(cm));}}}}if(window.addEventListener)window.addEventListener("load",sendTimingInfoInit,false);else if(window.attachEvent)window.attachEvent("onload",sendTimingInfoInit);else window.onload=sendTimingInfoInit;</script></head>
+   <body><!--ls:begin[body]-->
+
+      <div class="iw_viewport-wrapper"><div class="iw_component" id="iw_comp1747937909784">
+ <!--ls:begin[component-1747937909784]--><style>#iw_comp1747937909784{}</style><style>
+			:root {
+				/*Setting Primary color for the entire site*/
+			  --color-primary-h: 217; /* Hue        */
+			  --color-primary-s: 80%; /* Saturation */
+			  --color-primary-l: 10%; /* Lightness  */
+
+			  --primary-color: hsl(
+			    var(--color-primary-h),
+			    var(--color-primary-s),
+			    var(--color-primary-l)
+			  );
+
+			  --primary-color-500: hsl(
+			    var(--color-primary-h),
+			    var(--color-primary-s),
+			    calc(var(--color-primary-l) * 0.8)
+			  );
+
+				/*Setting Secondar color for the entire site*/
+			  --color-secondary-h: 213; /* Hue        */
+			  --color-secondary-s: 78%; /* Saturation */
+			  --color-secondary-l: 25%; /* Lightness  */
+
+			  --secondary-color: hsl(
+			    var(--color-secondary-h),
+			    var(--color-secondary-s),
+			    var(--color-secondary-l)
+			  );
+
+			  --secondary-color-500: hsl(
+			    var(--color-secondary-h),
+			    var(--color-secondary-s),
+			    calc(var(--color-secondary-l) * 0.7)
+			  );
+			}
+
+  		
+  		 @media (min-width: 1199px) {
+	  		.mdc-custom__header-layout--logoMiddle .mdc-custom__header-layout__logo--middle {
+	  			order: 5;
+	  		}
+
+	  		.mdc-custom__header-layout--logoMiddle .mdc-custom__main-nav-link:nth-child(n+6) {
+	  			order: 6;
+	  		}
+  		}
+  	</style><script src="https://www.miamidade.gov/resources/global-components/top-navigation/js/top-navigation.js" type="text/javascript"></script><script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script><script type="text/javascript">
+  	
+	    function googleTranslateElementInit() {
+	      new google.translate.TranslateElement({
+	        pageLanguage: 'en',
+	        includedLanguages: 'en,es,fr,ht',
+	        layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+	      }, 'google_translate_element');
+	    }
+    
+  </script><header class="mdc-custom__header"><a class="sr-only sr-only-focusable" href="#main-content">Skip to main content</a><div class="mdc-custom__nav-bottom__header-secondary">
+      <div class="container">
+         <ul class="mdc-custom__nav-bottom__header-secondary-list" role="presentation">
+            <li></li>
+            <li></li>
+         </ul>
+         <ul class="mdc-custom__nav-bottom__header-secondary-icons">
+            <li><img src="/resources-pa/images/icons/info.svg" alt=""><a href="/pa/help.page">Help</a></li>
+         </ul>
+      </div>
+   </div>
+   <div class="mdc-custom__nav-bottom__wrapper">
+      <div class="mdc-custom__nav-bottom__header-container">
+         <div class="container">
+            <div class="mdc-custom__nav-bottom mdc-custom__header-layout--site-name">
+               <div class="mdc-custom__nav-bottom__logo"><a href="/pa/home.page"><img class="mdc-custom__header-logo" alt="Site logo" src="/resources-pa/images/main-pa-logo.png"></a><div class="mdc-custom__header-name__container">
+                     <div class="mdc-custom__header-name__line01">Tomas Regalado</div>
+                     <div class="mdc-custom__header-name__line02">Property Appraiser of Miami-Dade County</div>
+                  </div>
+               </div>
+               <div class="mdc-custom__nav-bottom__item">
+                  <div class="mdc-custom__top-nav-social"><a href="https://www.instagram.com/paofmiamidade/" target="_blank" rel="noopener"><img src="/resources-pa/images/social/white/social-instagram.png" alt="Instagram Icon"></a><a href="https://www.facebook.com/MiamiDadePA" target="_blank" rel="noopener"><img src="/resources-pa/images/social/white/social-facebook.png" alt="Facebook Icon"></a><a href="https://x.com/PAofMiamiDade" target="_blank" rel="noopener"><img src="/resources-pa/images/social/white/social-x.png" alt="X Icon"></a><a href="https://www.youtube.com/@PAofMiamiDade" target="_blank" rel="noopener"><img src="/resources-pa/images/social/white/social-youtube.png" alt="Youtube Icon"></a><a href="https://www.linkedin.com/company/miamidadeopa" target="_blank" rel="noopener"><img src="/resources-pa/images/social/white/social-linkedin.png" alt="Linked In Icon"></a></div>
+                  <div class="mdc-custom__translate-search-wrapper">
+                     <div class="mdc-custom__translate" translate="no"><label for="translate-dropdown" class="sr-only">Select Language:</label><select id="translate-dropdown" class="notranslate">
+                           <option value="en">English</option>
+                           <option value="es">Spanish</option>
+                           <option value="ht">Haitian Creole</option></select><div id="google_translate_element" style="display: none;"></div>
+                     </div>
+                     <div class="mdc-custom__nav-bottom__search"><button class="mdc-custom__header-search" id="search-button" aria-label="Search Property Appraiser website"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18" class="mdc-custom__header-search__svg">
+                              <path d="M13.3266 11.304C14.292 9.96647 14.7189 8.34135 14.5213 6.72495C14.3141 5.03078 13.4368 3.47634 12.0697 2.37088C10.703 1.26574 8.94685 0.689783 7.15266 0.754989C5.35845 0.820196 3.6539 1.52196 2.38076 2.72365C1.10721 3.92572 0.359106 5.53995 0.290772 7.24437C0.222434 8.94886 0.839206 10.6124 2.01352 11.9025C3.18743 13.1921 4.83155 14.0134 6.61556 14.2063C8.32644 14.3912 10.0491 13.9856 11.4669 13.0663L15.5177 16.887C15.5177 16.887 15.5177 16.887 15.5177 16.887C15.7644 17.1198 16.096 17.2482 16.4389 17.2483C16.7819 17.2485 17.1136 17.1202 17.3604 16.8876C17.6077 16.6545 17.7497 16.335 17.7498 15.9986C17.7499 15.6621 17.6082 15.3426 17.3611 15.1093L17.361 15.1093L13.3266 11.304ZM13.0092 7.49815C13.0092 8.18549 12.8657 8.86648 12.5865 9.50238C12.3072 10.1383 11.8974 10.7171 11.3798 11.2054C10.8621 11.6936 10.2468 12.0817 9.56856 12.3466C8.89032 12.6116 8.16293 12.7481 7.42803 12.7481C6.69313 12.7481 5.96574 12.6116 5.2875 12.3466C4.60927 12.0817 3.99394 11.6936 3.47628 11.2054C2.95864 10.7171 2.54887 10.1383 2.26959 9.50238C1.99033 8.86648 1.84682 8.18549 1.84682 7.49815C1.84682 6.11063 2.43106 4.77677 3.47628 3.79093C4.52199 2.80461 5.94324 2.24815 7.42803 2.24815C8.91282 2.24815 10.3341 2.80461 11.3798 3.79093C12.425 4.77677 13.0092 6.11063 13.0092 7.49815Z" stroke-width="0.5"/></svg></button></div>
+                  </div>
+               </div>
+            </div>
+         </div>
+      </div>
+      <div class="mdc-custom__nav-bottom__navigation">
+         <div class="container">
+            <nav class="navbar-light mdc-custom__global-nav" id="mainMenu" aria-label="Main Navigation"><button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarMainMenu" aria-controls="navbarMainMenu" aria-expanded="false" aria-label="Toggle navigation">
+                  <div class="mobile-menu-bars"><span></span><span></span><span></span><div>Menu</div>
+                  </div></button><div class="mdc-custom__global-nav__main collapse navbar-collapse" id="navbarMainMenu">
+                  <ul class="mdc-custom__global-nav__list">
+                     <li class="mdc-custom__mega-container mdc-custom__main-nav-link"><button class="mdc-custom__mega-container__link btn btn-link" data-toggle="collapse" type="button" data-target="#OnlineServicesNav" aria-expanded="false" aria-controls="OnlineServicesNav">Online Services<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" class="mdc-custom__global-nav__arrow">
+                              <path d="M207.029 381.476L12.686 187.132c-9.373-9.373-9.373-24.569 0-33.941l22.667-22.667c9.357-9.357 24.522-9.375 33.901-.04L224 284.505l154.745-154.021c9.379-9.335 24.544-9.317 33.901.04l22.667 22.667c9.373 9.373 9.373 24.569 0 33.941L240.971 381.476c-9.373 9.372-24.569 9.372-33.942 0z"/></svg></button><ul class="row collapse" id="OnlineServicesNav">
+                           <li class="mdc-custom__mega-container__child  "><a href="/pa/online-services.page">
+                                 <h2 class="mdc-custom__mega-container__title">Online Services</h2></a><div class="mdc-custom__mega-container__description"><p>Access online data, tools and applications that help gain insight on your property.</p></div>
+                              <ul class="mdc-custom__mega-container__list">
+                                 <li class="mdc-custom__mega-container__item"><a href="/pa/real-estate/property-search.page">
+                                       <h3 class="mdc-custom__mega-container__item__title">Property Search</h3></a><div class="mdc-custom__mega-container__item__description">Search Miami-Dade County properties and review key characteristics.</div>
+                                 </li>
+                                 <li class="mdc-custom__mega-container__item"><a href="https://apps.miamidadepa.gov/ComparableSales/index.html#/" target="_blank">
+                                       <h3 class="mdc-custom__mega-container__item__title">Comparable Sales</h3></a><div class="mdc-custom__mega-container__item__description">View comparable property sales in your neighborhood, locate information and access
+                                       interactive maps of real estate sales.</div>
+                                 </li>
+                                 <li class="mdc-custom__mega-container__item"><a href="https://apps.miamidadepa.gov/PAOnlineTools/Taxes/TaxEstimator.aspx" target="_blank">
+                                       <h3 class="mdc-custom__mega-container__item__title">Property Tax Estimator</h3></a><div class="mdc-custom__mega-container__item__description">Estimate your property taxes based on the information you provide.</div>
+                                 </li>
+                                 <li class="mdc-custom__mega-container__item"><a href="https://apps.miamidadepa.gov/PAOnlineTools/Taxes/TaxComparison.aspx" target="_blank">
+                                       <h3 class="mdc-custom__mega-container__item__title">Tax Comparison</h3></a><div class="mdc-custom__mega-container__item__description">Compare the market and assessed value of your home and see a comparison of taxable
+                                       values and property taxes.</div>
+                                 </li>
+                                 <li class="mdc-custom__mega-container__item"><a href="https://apps.miamidadepa.gov/TaxVisualizer/Tax.html" target="_blank">
+                                       <h3 class="mdc-custom__mega-container__item__title">Tax Visualizer</h3></a><div class="mdc-custom__mega-container__item__description">See how property taxes are distributed across taxing authorities and compare millage
+                                       rates with other jurisdictions.</div>
+                                 </li>
+                                 <li class="mdc-custom__mega-container__item"><a href="https://apps.miamidadepa.gov/PAOnlineTools/TrimPdf/Mainmenu.aspx" target="_blank">
+                                       <h3 class="mdc-custom__mega-container__item__title">TRIM Notice</h3></a><div class="mdc-custom__mega-container__item__description">View your TRIM Notice for an estimate of your taxes based on proposed tax rates, property
+                                       values and applied exemptions.</div>
+                                 </li>
+                                 <li class="mdc-custom__mega-container__item"><a href="https://apps.miamidadepa.gov/PA.OnlineExemptions/inquire" target="_blank">
+                                       <h3 class="mdc-custom__mega-container__item__title">Exemption Application Status</h3></a><div class="mdc-custom__mega-container__item__description">See if your exemption application has been received and check the status of your exemption/benefits.</div>
+                                 </li>
+                                 <li class="mdc-custom__mega-container__item"><a href="https://apps.miamidadepa.gov/HomesteadFraud/" target="_blank">
+                                       <h3 class="mdc-custom__mega-container__item__title">Homestead Exemption Fraud</h3></a><div class="mdc-custom__mega-container__item__description">If a person is claiming a Homestead Exemption on a property that is rented or not
+                                       the permanent residence of the owner, tell us about it.</div>
+                                 </li>
+                              </ul><a class="btn btn-light mdc-custom__mega-container__button" href="/pa/online-services.page">Access all Online Services</a></li>
+                        </ul>
+                     </li>
+                     <li class="mdc-custom__mega-container mdc-custom__main-nav-link"><button class="mdc-custom__mega-container__link btn btn-link" data-toggle="collapse" type="button" data-target="#ExemptionsBenefitsNav" aria-expanded="false" aria-controls="ExemptionsBenefitsNav">Exemptions &amp; Benefits<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" class="mdc-custom__global-nav__arrow">
+                              <path d="M207.029 381.476L12.686 187.132c-9.373-9.373-9.373-24.569 0-33.941l22.667-22.667c9.357-9.357 24.522-9.375 33.901-.04L224 284.505l154.745-154.021c9.379-9.335 24.544-9.317 33.901.04l22.667 22.667c9.373 9.373 9.373 24.569 0 33.941L240.971 381.476c-9.373 9.372-24.569 9.372-33.942 0z"/></svg></button><ul class="row collapse" id="ExemptionsBenefitsNav">
+                           <li class="mdc-custom__mega-container__child  "><a href="/pa/exemption/home.page">
+                                 <h2 class="mdc-custom__mega-container__title">Exemptions &amp; Benefits</h2></a><div class="mdc-custom__mega-container__description"><p>Miami-Dade County property owners &ndash; in particular, permanent residents of a primary home &ndash; are eligible for various types of property tax exemptions. See the list of available exemptions and application requirements <a href="https://www.miamidadepa.gov/resources-pa/library/guidelines/exemption-requirements.pdf" target="_blank" rel="noopener">Property Tax Exemption Guidelines</a>.</p></div>
+                              <ul class="mdc-custom__mega-container__list">
+                                 <li class="mdc-custom__mega-container__item"><a href="/pa/exemption/property-tax.page">
+                                       <h3 class="mdc-custom__mega-container__item__title">Property Tax Exemptions</h3></a><div class="mdc-custom__mega-container__item__description">Read about the homestead exemption for permanent owners of a primary residence, as
+                                       well as exemptions for seniors, disabled persons, widow/widowers, deployed military
+                                       personnel and eligible institutions.</div>
+                                 </li>
+                                 <li class="mdc-custom__mega-container__item"><a href="https://apps.miamidadepa.gov/PA.OnlineExemptions/Account/Login?ReturnUrl=%2FPA.OnlineExemptions">
+                                       <h3 class="mdc-custom__mega-container__item__title">Apply Online for Homestead Exemption and Additional Tax Benefits</h3></a><div class="mdc-custom__mega-container__item__description">Homeowners can apply online for Florida’s Homestead Exemption, Senior Exemption, Homestead
+                                       Assessment Difference (Portability), Widow/Widower Exemption, Totally and Permanently
+                                       Disabled Veteran Exemption, Surviving Spouse of a Totally and Permanently Disabled
+                                       Veteran Exemption, and Veteran's Disability Exemption.</div>
+                                 </li>
+                                 <li class="mdc-custom__mega-container__item"><a href="/pa/benefit/assessment-reductions.page">
+                                       <h3 class="mdc-custom__mega-container__item__title">Assessment Reductions</h3></a><div class="mdc-custom__mega-container__item__description">Various benefits and reductions are available for property owners, including Save
+                                       Our Homes, which caps annual property value increases, and Portability, which allows
+                                       homeowners to transfer savings to a new homesteaded property.</div>
+                                 </li>
+                                 <li class="mdc-custom__mega-container__item"><a href="/pa/benefit/land-use.page">
+                                       <h3 class="mdc-custom__mega-container__item__title">Land Use Benefits</h3></a><div class="mdc-custom__mega-container__item__description">Owners of certain types of property, such as agricultural and environmentally endangered
+                                       lands, or historic and working waterfront properties, can apply for property tax exemptions
+                                       or assessment reductions.</div>
+                                 </li>
+                              </ul><a class="btn btn-light mdc-custom__mega-container__button" href="/pa/exemption/home.page">Access all Exemptions &amp; Benefits</a></li>
+                        </ul>
+                     </li>
+                     <li class="mdc-custom__mega-container mdc-custom__main-nav-link"><button class="mdc-custom__mega-container__link btn btn-link" data-toggle="collapse" type="button" data-target="#PropertyAssessmentsNav" aria-expanded="false" aria-controls="PropertyAssessmentsNav">Property Assessments<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" class="mdc-custom__global-nav__arrow">
+                              <path d="M207.029 381.476L12.686 187.132c-9.373-9.373-9.373-24.569 0-33.941l22.667-22.667c9.357-9.357 24.522-9.375 33.901-.04L224 284.505l154.745-154.021c9.379-9.335 24.544-9.317 33.901.04l22.667 22.667c9.373 9.373 9.373 24.569 0 33.941L240.971 381.476c-9.373 9.372-24.569 9.372-33.942 0z"/></svg></button><ul class="row collapse" id="PropertyAssessmentsNav">
+                           <li class="mdc-custom__mega-container__child  "><a href="/pa/property-assessments/home.page">
+                                 <h2 class="mdc-custom__mega-container__title">Property Assessments</h2></a><div class="mdc-custom__mega-container__description"><p>Every year, the Property Appraiser of Miami-Dade County sends property owners information about their property value, exemption status and more.</p></div>
+                              <ul class="mdc-custom__mega-container__list">
+                                 <li class="mdc-custom__mega-container__item"><a href="/pa/property-assessments/tax-roll-administration.page">
+                                       <h3 class="mdc-custom__mega-container__item__title">Tax Roll Administration</h3></a><div class="mdc-custom__mega-container__item__description">Read initial and final confirmations of tax roll certifications.</div>
+                                 </li>
+                                 <li class="mdc-custom__mega-container__item"><a href="/pa/property-assessments/trim-notice.page">
+                                       <h3 class="mdc-custom__mega-container__item__title">TRIM Notice</h3></a><div class="mdc-custom__mega-container__item__description">The Notice of Proposed Property Taxes, or TRIM Notice, reflects what your property
+                                       taxes are likely to be on your November property tax bill.</div>
+                                 </li>
+                                 <li class="mdc-custom__mega-container__item"><a href="/pa/property-assessments/taxing-authorities.page">
+                                       <h3 class="mdc-custom__mega-container__item__title">Taxing Authorities</h3></a><div class="mdc-custom__mega-container__item__description">Various taxing authorities – including Miami-Dade County, the School Board, municipalities
+                                       and other agencies – use the Property Appraiser of Miami-Dade County's taxable value
+                                       to determine the taxes they levy.</div>
+                                 </li>
+                                 <li class="mdc-custom__mega-container__item"><a href="/pa/property-assessments/non-ad-valorem.page">
+                                       <h3 class="mdc-custom__mega-container__item__title">Non-Ad Valorem Assessments</h3></a><div class="mdc-custom__mega-container__item__description">A non-ad valorem assessment is a special assessment or service charge that is not
+                                       based on the value of the property. Examples of districts that issue non-ad valorem
+                                       assessments are Community Development Districts, Special Assessment Districts and
+                                       PACE Districts.</div>
+                                 </li>
+                                 <li class="mdc-custom__mega-container__item"><a href="/pa/property-assessments/property-taxes-pay.page">
+                                       <h3 class="mdc-custom__mega-container__item__title">Pay Your Property Taxes</h3></a><div class="mdc-custom__mega-container__item__description">Every November, property tax bills are mailed. Payments are handled through the Tax
+                                       Collector.</div>
+                                 </li>
+                                 <li class="mdc-custom__mega-container__item"><a href="/pa/property-assessments/appeal.page">
+                                       <h3 class="mdc-custom__mega-container__item__title">Understanding Your Assessment</h3></a><div class="mdc-custom__mega-container__item__description">Each August, we mail TRIM Notices to property owners. If you have questions about
+                                       your assessment or exemptions, our staff is here to help—especially during the interview
+                                       period that follows but you're welcome to contact us any time.</div>
+                                 </li>
+                                 <li class="mdc-custom__mega-container__item"><a href="/pa/property-assessments/purchase-taxes-disclosure.page">
+                                       <h3 class="mdc-custom__mega-container__item__title">Property Purchasing Tax Disclosure</h3></a><div class="mdc-custom__mega-container__item__description">Read the Disclosure Law in the Florida Statutes on disclosure of ad valorem taxes
+                                       to a prospective purchaser.</div>
+                                 </li>
+                              </ul><a class="btn btn-light mdc-custom__mega-container__button" href="/pa/property-assessments/home.page">Access all Property Assessments</a></li>
+                        </ul>
+                     </li>
+                     <li class="mdc-custom__mega-container mdc-custom__main-nav-link"><button class="mdc-custom__mega-container__link btn btn-link" data-toggle="collapse" type="button" data-target="#RealEstateNav" aria-expanded="false" aria-controls="RealEstateNav">Real Estate<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" class="mdc-custom__global-nav__arrow">
+                              <path d="M207.029 381.476L12.686 187.132c-9.373-9.373-9.373-24.569 0-33.941l22.667-22.667c9.357-9.357 24.522-9.375 33.901-.04L224 284.505l154.745-154.021c9.379-9.335 24.544-9.317 33.901.04l22.667 22.667c9.373 9.373 9.373 24.569 0 33.941L240.971 381.476c-9.373 9.372-24.569 9.372-33.942 0z"/></svg></button><ul class="row collapse" id="RealEstateNav">
+                           <li class="mdc-custom__mega-container__child  "><a href="/pa/real-estate/home.page">
+                                 <h2 class="mdc-custom__mega-container__title">Real Estate</h2></a><div class="mdc-custom__mega-container__description"><p>Get information about a property's characteristics, as well as what affects a property's value.</p></div>
+                              <ul class="mdc-custom__mega-container__list">
+                                 <li class="mdc-custom__mega-container__item"><a href="/pa/real-estate/property-search.page">
+                                       <h3 class="mdc-custom__mega-container__item__title">Property Search</h3></a><div class="mdc-custom__mega-container__item__description">The Property Search application allows users to search Miami-Dade County properties
+                                       and review key characteristics.</div>
+                                 </li>
+                                 <li class="mdc-custom__mega-container__item"><a href="/pa/real-estate/property-information-change.page">
+                                       <h3 class="mdc-custom__mega-container__item__title">Changing Your Property Information</h3></a><div class="mdc-custom__mega-container__item__description">Find ways to request changes to your property's information.</div>
+                                 </li>
+                                 <li class="mdc-custom__mega-container__item"><a href="/pa/real-estate/folio-numbers.page">
+                                       <h3 class="mdc-custom__mega-container__item__title">Folio Numbers</h3></a><div class="mdc-custom__mega-container__item__description">The 13-digit folio number represents a unique number associated to a property.</div>
+                                 </li>
+                                 <li class="mdc-custom__mega-container__item"><a href="/pa/real-estate/building-recertification.page">
+                                       <h3 class="mdc-custom__mega-container__item__title">Building Recertification</h3></a><div class="mdc-custom__mega-container__item__description">Read about requirements for milestone inspections of condominium and cooperative association
+                                       buildings that are three stories and taller. </div>
+                                 </li>
+                                 <li class="mdc-custom__mega-container__item"><a href="/pa/real-estate/multiple-parcel-buildings.page">
+                                       <h3 class="mdc-custom__mega-container__item__title">Multiple Parcel Buildings</h3></a><div class="mdc-custom__mega-container__item__description">Multiple parcel buildings can have a separate property tax folio for each portion
+                                       of a building that is separately owned, with some exceptions.</div>
+                                 </li>
+                                 <li class="mdc-custom__mega-container__item"><a href="/pa/real-estate/land-splits-groupings.page">
+                                       <h3 class="mdc-custom__mega-container__item__title">Land Splits or Groupings</h3></a><div class="mdc-custom__mega-container__item__description">You may request to group or split folios for tax roll purposes only.</div>
+                                 </li>
+                                 <li class="mdc-custom__mega-container__item"><a href="/pa/real-estate/property-value.page">
+                                       <h3 class="mdc-custom__mega-container__item__title">Property Value</h3></a><div class="mdc-custom__mega-container__item__description">Read about the three types of value associated with each property: market, assessed
+                                       and taxable value.</div>
+                                 </li>
+                                 <li class="mdc-custom__mega-container__item"><a href="/pa/real-estate/property-adjusted-square-feet.page">
+                                       <h3 class="mdc-custom__mega-container__item__title">Adjusted Square Feet</h3></a><div class="mdc-custom__mega-container__item__description">The Office uses the adjusted square feet of a building to determine the value of your
+                                       property, not square feet, which is typically less.</div>
+                                 </li>
+                                 <li class="mdc-custom__mega-container__item"><a href="/pa/real-estate/property-physical-inspections.page">
+                                       <h3 class="mdc-custom__mega-container__item__title">Physical Inspections</h3></a><div class="mdc-custom__mega-container__item__description">Periodically, Office field staff will visit your property to conduct a physical inspection,
+                                       mostly limited to the exterior of the property.</div>
+                                 </li>
+                                 <li class="mdc-custom__mega-container__item"><a href="/pa/real-estate/property-real.page">
+                                       <h3 class="mdc-custom__mega-container__item__title">Real Property</h3></a><div class="mdc-custom__mega-container__item__description">Real Property is defined as land, buildings and all other permanent improvements on
+                                       the land.</div>
+                                 </li>
+                              </ul><a class="btn btn-light mdc-custom__mega-container__button" href="/pa/real-estate/home.page">Access all Real Estate</a></li>
+                        </ul>
+                     </li>
+                     <li class="mdc-custom__mega-container mdc-custom__main-nav-link"><button class="mdc-custom__mega-container__link btn btn-link" data-toggle="collapse" type="button" data-target="#TangiblePersonalPropertyNav" aria-expanded="false" aria-controls="TangiblePersonalPropertyNav">Tangible Personal Property <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" class="mdc-custom__global-nav__arrow">
+                              <path d="M207.029 381.476L12.686 187.132c-9.373-9.373-9.373-24.569 0-33.941l22.667-22.667c9.357-9.357 24.522-9.375 33.901-.04L224 284.505l154.745-154.021c9.379-9.335 24.544-9.317 33.901.04l22.667 22.667c9.373 9.373 9.373 24.569 0 33.941L240.971 381.476c-9.373 9.372-24.569 9.372-33.942 0z"/></svg></button><ul class="row collapse" id="TangiblePersonalPropertyNav">
+                           <li class="mdc-custom__mega-container__child  "><a href="/pa/tangible-property/home.page">
+                                 <h2 class="mdc-custom__mega-container__title">Tangible Personal Property</h2></a><div class="mdc-custom__mega-container__description"><p>Tangible Personal Property consists of all goods, chattels and other articles of value capable of manual possession, whose chief value is intrinsic to the article itself, in a place of business.</p></div>
+                              <ul class="mdc-custom__mega-container__list">
+                                 <li class="mdc-custom__mega-container__item"><a href="/pa/tangible-property/filing.page">
+                                       <h3 class="mdc-custom__mega-container__item__title">Filing Your Return</h3></a><div class="mdc-custom__mega-container__item__description">Anyone who owns Tangible Personal Property on January 1st must file a TPP return by
+                                       April 1st of each year.</div>
+                                 </li>
+                                 <li class="mdc-custom__mega-container__item"><a href="/pa/tangible-property/guidelines.page">
+                                       <h3 class="mdc-custom__mega-container__item__title">Guidelines</h3></a><div class="mdc-custom__mega-container__item__description">Get guidelines on requirements to file a Tangible Personal Property Return.</div>
+                                 </li>
+                                 <li class="mdc-custom__mega-container__item"><a href="/pa/tangible-property/exemptions.page">
+                                       <h3 class="mdc-custom__mega-container__item__title">Exemptions</h3></a><div class="mdc-custom__mega-container__item__description">An exemption will be applied to the first $25,000 in value for Tangible Personal Property.
+                                       Institutional properties may be eligible for additional exemptions.</div>
+                                 </li>
+                                 <li class="mdc-custom__mega-container__item"><a href="/pa/property-assessments/appeal-tangible-personal-property.page">
+                                       <h3 class="mdc-custom__mega-container__item__title">Understanding Your TPP Assessment</h3></a><div class="mdc-custom__mega-container__item__description">Before filing your petition form, we encourage you to talk to or visit the Property
+                                       Appraiser first, before the deadline on your Notice, for a review of your folio and
+                                       an explanation of the assessment.</div>
+                                 </li>
+                              </ul><a class="btn btn-light mdc-custom__mega-container__button" href="/pa/tangible-property/home.page">Access all Tangible Personal Property</a></li>
+                        </ul>
+                     </li>
+                     <li class="mdc-custom__link-container mdc-custom__main-nav-link" tabindex="0"><a class="mdc-custom__link-container__link" href="/pa/forms.page">Forms</a></li>
+                     <li class="mdc-custom__mega-container mdc-custom__main-nav-link"><button class="mdc-custom__mega-container__link btn btn-link" data-toggle="collapse" type="button" data-target="#AboutUsNav" aria-expanded="false" aria-controls="AboutUsNav">About Us<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" class="mdc-custom__global-nav__arrow">
+                              <path d="M207.029 381.476L12.686 187.132c-9.373-9.373-9.373-24.569 0-33.941l22.667-22.667c9.357-9.357 24.522-9.375 33.901-.04L224 284.505l154.745-154.021c9.379-9.335 24.544-9.317 33.901.04l22.667 22.667c9.373 9.373 9.373 24.569 0 33.941L240.971 381.476c-9.373 9.372-24.569 9.372-33.942 0z"/></svg></button><ul class="row collapse" id="AboutUsNav">
+                           <li class="mdc-custom__mega-container__child  "><a href="/pa/about/home.page">
+                                 <h2 class="mdc-custom__mega-container__title">About Us</h2></a><div class="mdc-custom__mega-container__description"><p>Read about other aspects of the Property Appraiser of Miami-Dade County, including the latest news, commonly-used terms, forms and reports, and about Property Appraiser Tomas Regalado.</p></div>
+                              <ul class="mdc-custom__mega-container__list">
+                                 <li class="mdc-custom__mega-container__item"><a href="/pa/about/biography.page">
+                                       <h3 class="mdc-custom__mega-container__item__title">About Tomas Regalado</h3></a><div class="mdc-custom__mega-container__item__description">A brief biography of Tomas Regalado, Property Appraiser of Miami-Dade County.</div>
+                                 </li>
+                                 <li class="mdc-custom__mega-container__item"><a href="/pa/about/about-property-appraisers-office.page">
+                                       <h3 class="mdc-custom__mega-container__item__title">About the Property Appraiser</h3></a><div class="mdc-custom__mega-container__item__description">A brief description of the duties of the Property Appraiser of Miami-Dade County and
+                                       mission statement.</div>
+                                 </li>
+                                 <li class="mdc-custom__mega-container__item"><a href="/pa/about/news-events.page">
+                                       <h3 class="mdc-custom__mega-container__item__title">News &amp; Events</h3></a><div class="mdc-custom__mega-container__item__description">The latest news and consumer notices, as well as ways to connect with the Property
+                                       Appraiser of Miami-Dade County on social media.</div>
+                                 </li>
+                                 <li class="mdc-custom__mega-container__item"><a href="/pa/about/glossary.page">
+                                       <h3 class="mdc-custom__mega-container__item__title">Glossary of Terms</h3></a><div class="mdc-custom__mega-container__item__description">Read about abbreviations, acronyms and definitions used by the office.</div>
+                                 </li>
+                                 <li class="mdc-custom__mega-container__item"><a href="https://www.miamidadepa.gov/resources-pa/library/2026-27-budget-summary.pdf" target="_blank">
+                                       <h3 class="mdc-custom__mega-container__item__title">Budget</h3></a><div class="mdc-custom__mega-container__item__description">Read details of the latest approved office budget.</div>
+                                 </li>
+                                 <li class="mdc-custom__mega-container__item"><a href="/pa/about/property-bill-of-rights.page">
+                                       <h3 class="mdc-custom__mega-container__item__title">Property Owner Bill of Rights</h3></a><div class="mdc-custom__mega-container__item__description">The Property Owner Bill of Rights, passed in 2019, does not represent all of your
+                                       rights under Florida law regarding your property and should not be viewed as a comprehensive
+                                       guide to property rights.</div>
+                                 </li>
+                                 <li class="mdc-custom__mega-container__item"><a href="/pa/about/career-opportunities.page">
+                                       <h3 class="mdc-custom__mega-container__item__title">Careers</h3></a><div class="mdc-custom__mega-container__item__description">Join our talented team and advance your career with mentorship and skills development
+                                       at the Property Appraiser of Miami-Dade County's Office.</div>
+                                 </li>
+                              </ul><a class="btn btn-light mdc-custom__mega-container__button" href="/pa/about/home.page">Access all About Us</a></li>
+                        </ul>
+                     </li>
+                     <li class="mdc-custom__link-container mdc-custom__main-nav-link" tabindex="0"><a class="mdc-custom__link-container__link" href="/pa/contact/home.page">Contact Us</a></li>
+                     <li class="mdc-custom__global-nav__social"><a href="https://www.instagram.com/paofmiamidade/" target="_blank" rel="noopener"><img src="/resources-pa/images/social/white/social-instagram.png" alt="Instagram Icon"></a><a href="https://www.facebook.com/MiamiDadePA" target="_blank" rel="noopener"><img src="/resources-pa/images/social/white/social-facebook.png" alt="Facebook Icon"></a><a href="https://x.com/PAofMiamiDade" target="_blank" rel="noopener"><img src="/resources-pa/images/social/white/social-x.png" alt="X Icon"></a><a href="https://www.youtube.com/@PAofMiamiDade" target="_blank" rel="noopener"><img src="/resources-pa/images/social/white/social-youtube.png" alt="Youtube Icon"></a><a href="https://www.linkedin.com/company/miamidadeopa" target="_blank" rel="noopener"><img src="/resources-pa/images/social/white/social-linkedin.png" alt="Linked In Icon"></a></li>
+                  </ul>
+               </div>
+            </nav>
+         </div>
+      </div>
+   </div>
+   <div class="mdc-custom_fullscreen-search-overlay" id="mdc-custom_search-overlay"><button class="btn mdc-custom_fullscreen-close" id="mdc-custom_fullscreen-close-button"><svg xmlns="http://www.w3.org/2000/svg" height="1.5em" viewBox="0 0 384 512">
+            <path d="M342.6 150.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L192 210.7 86.6 105.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L146.7 256 41.4 361.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L192 301.3 297.4 406.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L237.3 256 342.6 150.6z"/></svg></button><div class="mdc-custom_fullscreen-search-wrapper">
+         <form method="get" class="mdc-custom_fullscreen-searchform" onsubmit="return q.value!=''" action="/pa/property-assessments/taxing-authorities.pagesubmit=true&amp;componentID=1747937909784"><input type="text" value="" class="mdc-custom_fullscreen-search-input" name="q" placeholder="Search..."><input value="" type="submit" class="mdc-custom_fullscreen_submit"><svg xmlns="http://www.w3.org/2000/svg" height="1.5em" viewBox="0 0 18 18" fill="none" class="mdc-custom_fullscreen-search-icon">
+               <path d="M13.3266 11.304C14.292 9.96647 14.7189 8.34135 14.5213 6.72495C14.3141 5.03078 13.4368 3.47634 12.0697 2.37088C10.703 1.26574 8.94685 0.689783 7.15266 0.754989C5.35845 0.820196 3.6539 1.52196 2.38076 2.72365C1.10721 3.92572 0.359106 5.53995 0.290772 7.24437C0.222434 8.94886 0.839206 10.6124 2.01352 11.9025C3.18743 13.1921 4.83155 14.0134 6.61556 14.2063C8.32644 14.3912 10.0491 13.9856 11.4669 13.0663L15.5177 16.887C15.5177 16.887 15.5177 16.887 15.5177 16.887C15.7644 17.1198 16.096 17.2482 16.4389 17.2483C16.7819 17.2485 17.1136 17.1202 17.3604 16.8876C17.6077 16.6545 17.7497 16.335 17.7498 15.9986C17.7499 15.6621 17.6082 15.3426 17.3611 15.1093L17.361 15.1093L13.3266 11.304ZM13.0092 7.49815C13.0092 8.18549 12.8657 8.86648 12.5865 9.50238C12.3072 10.1383 11.8974 10.7171 11.3798 11.2054C10.8621 11.6936 10.2468 12.0817 9.56856 12.3466C8.89032 12.6116 8.16293 12.7481 7.42803 12.7481C6.69313 12.7481 5.96574 12.6116 5.2875 12.3466C4.60927 12.0817 3.99394 11.6936 3.47628 11.2054C2.95864 10.7171 2.54887 10.1383 2.26959 9.50238C1.99033 8.86648 1.84682 8.18549 1.84682 7.49815C1.84682 6.11063 2.43106 4.77677 3.47628 3.79093C4.52199 2.80461 5.94324 2.24815 7.42803 2.24815C8.91282 2.24815 10.3341 2.80461 11.3798 3.79093C12.425 4.77677 13.0092 6.11063 13.0092 7.49815Z" fill="white" stroke="white" stroke-width="0.5"/></svg></form>
+      </div>
+   </div>
+</header><!--ls:end[component-1747937909784]-->
+</div>
+<div class="iw_component" id="iw_comp1733856973808">
+ <!--ls:begin[component-1733856973808]--><style>#iw_comp1733856973808{}</style><nav class="container mdc-custom__breadcrumbs" aria-label="Breadcrumb"><span class="iw-breadcrumb-node"><a href="/pa/home.page">Home</a></span><span class="iw-breadcrumb-separator">&nbsp;>&nbsp;</span><span class="iw-breadcrumb-node"><a href="/pa/property-assessments/home.page">Property Assessments</a></span><span class="iw-breadcrumb-separator">&nbsp;>&nbsp;</span><span class="iw-breadcrumb-node">Taxing Authorities</span></nav><!--ls:end[component-1733856973808]-->
+</div>
+<main class="mdc-custom__main-content" id="main-content">
+ <div class="container">
+  <div class="row">
+   <div class="col-lg-3">
+    <div class="iw_placeholder" id="iw_placeholder1725383987646">
+     <div class="iw_component" id="iw_comp1733856973790">
+      <!--ls:begin[component-1733856973790]--><style>#iw_comp1733856973790{}</style><div class="mdc-custom__side-container">
+   <aside class="mdc-custom__side-nav"><a href="/pa/property-assessments/home.page">
+         <h2 class="mdc-custom__side-title">Property Assessments</h2></a><ul class="list-group list-group-flush">
+         <li><a href="/pa/property-assessments/tax-roll-administration.page"><span>Tax Roll Administration</span></a></li>
+         <li><a href="/pa/property-assessments/trim-notice.page"><span>TRIM Notice</span></a></li>
+         <li><a href="/pa/property-assessments/taxing-authorities.page"><span>Taxing Authorities</span></a></li>
+         <li><a href="/pa/property-assessments/non-ad-valorem.page"><span>Non Ad-Valorem Assessments</span></a></li>
+         <li><a href="/pa/property-assessments/property-taxes-pay.page"><span>Paying Your Real Estate Taxes</span></a></li>
+         <li><a href="/pa/property-assessments/appeal.page"><span>Understanding Your Assessment</span></a></li>
+         <li><a href="/pa/property-assessments/purchase-taxes-disclosure.page"><span>Property Purchasing Tax Disclosure</span></a></li>
+      </ul><script src="https://www.miamidade.gov/resources/global-components/side-navigation/js/side-navigation.js" type="text/javascript"></script></aside>
+</div><!--ls:end[component-1733856973790]-->
+     </div>
+    </div>
+    <div class="iw_component" id="iw_comp1722252332514">
+     <!--ls:begin[component-1722252332514]--><style>#iw_comp1722252332514{}</style><div class="mdc-custom__side-container"></div><!--ls:end[component-1722252332514]-->
+    </div>
+    <div class="iw_placeholder" id="iw_placeholder1725383987647"></div>
+   </div>
+   <div class="col-md mdc-custom-order-1-mobile">
+    <div class="iw_placeholder" id="iw_placeholder1722252332515">
+     <div class="iw_component" id="iw_comp1733856976312">
+      <!--ls:begin[component-1733856976312]--><style>#iw_comp1733856976312{}</style><div>
+   <div class="container">
+      <div class="mdc-custom__content__container">
+         <h1 class="mdc-custom__content__title">Taxing Authorities</h1>
+         <div class="mdc-custom__content__description"><p>The Property Appraiser of Miami-Dade County does not determine the amount of taxes you pay. The taxes can increase or decrease depending on tax rates set by the school board, commissioners, cities and other taxing authorities.</p>
+<p>Miami-Dade County issues the Notice, but many taxing authorities collect taxes against property such as the School Board, Cities, South Florida Water Management District, Children's Trust, Florida Inland Navigational District, Everglades project, etc.</p>
+<p>In addition, Miami-Dade County provides services such as Sheriff, Fire Rescue and Library to name a few. The <a href="https://www3.dadeschools.net/SchoolBoard/information" target="_blank" rel="noopener">School Board of Miami-Dade County</a> collects property taxes to run school operations.</p>
+<p>The Property Appraiser does not set tax rates. However, the taxing authorities use the Property Appraiser's taxable value to determine the taxes they levy.</p></div>
+      </div>
+      <div class="mdc-custom__content__item">
+         <h2 class="mdc-custom__content__item-title" id="BudgetHearings">Budget Hearings</h2>
+         <div class="mdc-custom__content__item-description"><p>Before taxing authorities can levy taxes against your property they are required to have budget hearing that are open to the public. The dates, times and locations for all <a href="https://www.miamidade.gov/global/management/budget/home.page" target="_blank" rel="noopener">Miami-Dade County budget hearings</a> are listed on the Notice.</p>
+<p>Municipalities hold their own budget hearings as well.</p>
+<ul>
+<li><a href="/resources-pa/library/taxing-authority-budget-hearings.pdf" target="_blank" rel="noopener">Taxing Authority Budget Hearings</a></li>
+</ul></div>
+      </div>
+   </div>
+</div><!--ls:end[component-1733856976312]-->
+     </div>
+     <div class="iw_component" id="iw_comp1739156973426">
+      <!--ls:begin[component-1739156973426]--><style>#iw_comp1739156973426{}</style><div>
+   <div class="container">
+      <div class="mdc-custom__content__container">
+         <h2 class="mdc-custom__content__sub-title">Millage Rates</h2>
+         <div class="mdc-custom__content__description"><p>See annual millage (property tax) rates for each Miami-Dade municipality, as well School Board, Countywide and other tax assessing districts.<br><br></p><ul><li><a href="/resources-pa/library/reports/millage/2026-adopted-millage-chart.pdf" target="_blank" data-mce-href="/resources-pa/library/reports/millage/2026-adopted-millage-chart.pdf" rel="noopener">2026 Adopted Millage Rate Table</a>&nbsp;</li></ul></div>
+      </div>
+   </div>
+</div><!--ls:end[component-1739156973426]-->
+     </div>
+     <div class="iw_component" id="iw_comp1775246363847">
+      <!--ls:begin[component-1775246363847]--><style>#iw_comp1775246363847{}</style><div>
+   <div class="container">
+      <div class="mdc-custom__content__container">
+         <h2 class="mdc-custom__content__sub-title">Millage Rate Archives</h2>
+      </div>
+   </div>
+</div><!--ls:end[component-1775246363847]-->
+     </div>
+     <div class="iw_component" id="iw_comp1739156977669">
+      <!--ls:begin[component-1739156977669]--><style>#iw_comp1739156977669{}</style><div>
+   <div class="container">
+      <div class="mdc-custom__spacing mdc-custom__accordion">
+         <div class="mdc-custom__accordion-container">
+            <div class="card">
+               <div class="mdc-custom__accordion__header card-header" id="headingMillageratessince1">
+                  <div class="m-0 mdc-custom__accordion__title" id="Millageratessince"><button class="btn collapsed" data-toggle="collapse" data-target="#collapseMillageratessince1" aria-expanded="false" aria-controls="collapseMillageratessince1">Millage rates since 2000
+                        <div class="mdc-custom__accordion__icon"></div></button></div>
+               </div>
+               <div id="collapseMillageratessince1" class="collapse " aria-labelledby="headingMillageratessince1">
+                  <div class="mdc-custom__accordion__body card-body"><ul><li><a data-mce-href="/resources-pa/library/reports/millage/2026-adopted-millage-chart.pdf" href="/resources-pa/library/reports/millage/2026-adopted-millage-chart.pdf" target="_blank" rel="noopener" data-mce-selected="inline-boundary">2026</a></li><li><a href="/resources-pa/library/reports/millage/2025-adopted-millage-chart.pdf" target="_blank" rel="noopener" data-mce-href="/resources-pa/library/reports/millage/2025-adopted-millage-chart.pdf">2025</a></li><li><a href="/resources-pa/library/reports/millage/2024-adopted-millage-chart.pdf" target="_blank" rel="noopener" data-mce-href="/resources-pa/library/reports/millage/2024-adopted-millage-chart.pdf">2024</a></li><li><a href="/resources-pa/library/reports/millage/2023-adopted-millage-chart.pdf" target="_blank" rel="noopener" data-mce-href="/resources-pa/library/reports/millage/2023-adopted-millage-chart.pdf">2023</a></li><li><a href="/resources-pa/library/reports/millage/2022-adopted-millage-chart.pdf" target="_blank" rel="noopener" data-mce-href="/resources-pa/library/reports/millage/2022-adopted-millage-chart.pdf">2022</a></li><li><a href="/resources-pa/library/reports/millage/2021-adopted-millage-chart.pdf" target="_blank" rel="noopener" data-mce-href="/resources-pa/library/reports/millage/2021-adopted-millage-chart.pdf">2021</a></li><li><a href="/resources-pa/library/reports/millage/2020-adopted-millage-chart.pdf" target="_blank" rel="noopener" data-mce-href="/resources-pa/library/reports/millage/2020-adopted-millage-chart.pdf">2020</a></li><li><a href="/resources-pa/library/reports/millage/2019-adopted-millage-chart.pdf" target="_blank" rel="noopener" data-mce-href="/resources-pa/library/reports/millage/2019-adopted-millage-chart.pdf">2019</a></li><li><a href="/resources-pa/library/reports/millage/2018-adopted-millage-chart.pdf" target="_blank" rel="noopener" data-mce-href="/resources-pa/library/reports/millage/2018-adopted-millage-chart.pdf">2018</a></li><li><a href="/resources-pa/library/reports/millage/2017-proposed-millage-chart.pdf" target="_blank" rel="noopener" data-mce-href="/resources-pa/library/reports/millage/2017-proposed-millage-chart.pdf">2017</a></li><li><a href="/resources-pa/library/reports/millage/2016-proposed-millage-chart.pdf" target="_blank" rel="noopener" data-mce-href="/resources-pa/library/reports/millage/2016-proposed-millage-chart.pdf">2016</a></li><li><a href="/resources-pa/library/reports/millage/2015-adopted-millage-chart.pdf" target="_blank" rel="noopener" data-mce-href="/resources-pa/library/reports/millage/2015-adopted-millage-chart.pdf">2015</a></li><li><a href="/resources-pa/library/reports/millage/2014-adopted-millage-chart.pdf" target="_blank" rel="noopener" data-mce-href="/resources-pa/library/reports/millage/2014-adopted-millage-chart.pdf">2014</a></li><li><a href="/resources-pa/library/reports/millage/2013-adopted-millage-chart.pdf" target="_blank" rel="noopener" data-mce-href="/resources-pa/library/reports/millage/2013-adopted-millage-chart.pdf">2013</a></li><li><a href="/resources-pa/library/reports/millage/2012-Adopted-Millage-Chart.pdf" target="_blank" rel="noopener" data-mce-href="/resources-pa/library/reports/millage/2012-Adopted-Millage-Chart.pdf">2012</a></li><li><a href="/resources-pa/library/reports/millage/2011-adopted-millage-chart.pdf" target="_blank" rel="noopener" data-mce-href="/resources-pa/library/reports/millage/2011-adopted-millage-chart.pdf">2011</a></li><li><a href="/resources-pa/library/reports/millage/2010-adopted-millage-chart.pdf" target="_blank" rel="noopener" data-mce-href="/resources-pa/library/reports/millage/2010-adopted-millage-chart.pdf">2010</a></li><li><a href="/resources-pa/library/reports/millage/2009-adopted-millage-chart.pdf" target="_blank" rel="noopener" data-mce-href="/resources-pa/library/reports/millage/2009-adopted-millage-chart.pdf">2009</a></li><li><a href="/resources-pa/library/reports/millage/2008-adopted-millage-chart.pdf" target="_blank" rel="noopener" data-mce-href="/resources-pa/library/reports/millage/2008-adopted-millage-chart.pdf">2008</a></li><li><a href="/resources-pa/library/reports/millage/2007-adopted-millage-chart.pdf" target="_blank" rel="noopener" data-mce-href="/resources-pa/library/reports/millage/2007-adopted-millage-chart.pdf">2007</a></li><li><a href="/resources-pa/library/reports/millage/2006-adopted-millage-chart.pdf" target="_blank" rel="noopener" data-mce-href="/resources-pa/library/reports/millage/2006-adopted-millage-chart.pdf">2006</a></li><li><div><a href="/resources-pa/library/reports/millage/2005-adopted-millage-chart.pdf" target="_blank" rel="noopener" data-mce-href="/resources-pa/library/reports/millage/2005-adopted-millage-chart.pdf">2005</a></div></li><li><a href="/resources-pa/library/reports/millage/2004-adopted-millage-chart.pdf" target="_blank" rel="noopener" data-mce-href="/resources-pa/library/reports/millage/2004-adopted-millage-chart.pdf">2004</a></li><li><a href="/resources-pa/library/reports/millage/2003-adopted-millage-chart.pdf" target="_blank" rel="noopener" data-mce-href="/resources-pa/library/reports/millage/2003-adopted-millage-chart.pdf">2003</a></li><li><a href="/resources-pa/library/reports/millage/2002-adopted-millage-chart.pdf" target="_blank" rel="noopener" data-mce-href="/resources-pa/library/reports/millage/2002-adopted-millage-chart.pdf">2002</a></li><li><a href="/resources-pa/library/reports/millage/2001-adopted-millage-chart.pdf" target="_blank" rel="noopener" data-mce-href="/resources-pa/library/reports/millage/2001-adopted-millage-chart.pdf">2001</a></li><li><a href="/resources-pa/library/reports/millage/2000-adopted-millage-chart.pdf" target="_blank" rel="noopener" data-mce-href="/resources-pa/library/reports/millage/2000-adopted-millage-chart.pdf">2000</a></li></ul></div>
+               </div>
+            </div>
+         </div>
+      </div>
+   </div>
+</div><!--ls:end[component-1739156977669]-->
+     </div>
+    </div>
+   </div>
+  </div>
+ </div>
+</main>
+<footer class="mdc-custom__footer">
+ <div class="iw_component" id="iw_comp1722252332516">
+  <!--ls:begin[component-1722252332516]--><style>#iw_comp1722252332516{}</style><!--Top Hello World!--><div class="mdc-custom__footer__main">
+   <div class="container">
+      <div class="mdc-custom__footer__container">
+         <div class="mdc-custom__footer__item">
+            <div class="mdc-custom__footer__text"><p><img src="/resources-pa/images/main-pa-logo.png" width="951" height="1103" alt="Footer Logo" /></p>
+<p>&copy;<span id="copyrightYear"></span>Property Appraiser of Miami-Dade County. All rights reserved.</p></div>
+         </div>
+         <div class="mdc-custom__footer__item">
+            <h2 class="mdc-custom__footer__title">Help & Support</h2>
+            <ul>
+               <li><a href="/pa/privacy-and-security.page">Privacy Statement</a></li>
+               <li><a href="/pa/disclaimer.page">Disclaimer</a></li>
+               <li><a href="/pa/ada-notice.page">Accessibility</a></li>
+            </ul>
+         </div>
+         <div class="mdc-custom__footer__item">
+            <h2 class="mdc-custom__footer__title">Key Services</h2>
+            <ul>
+               <li><a href="/pa/real-estate/property-search.page">Property Search</a></li>
+               <li><a href="/pa/exemption/homestead.page">Homestead Exemption</a></li>
+               <li><a href="/pa/benefit/save-our-homes.page">Save Our Homes</a></li>
+               <li><a href="/pa/real-estate/property-information-change.page">Changing Your Property Information</a></li>
+               <li><a href="/pa/forms.page">Common Forms</a></li>
+            </ul>
+         </div>
+         <div class="mdc-custom__footer__item">
+            <h2 class="mdc-custom__footer__title">Connect with Us</h2>
+            <ul>
+               <li><a href="/pa/about/news-events.page">News & Events</a></li>
+               <li><a href="/pa/contact/home.page">Contact Us</a></li>
+               <li><a href="/pa/contact/public-records-requests.page">Public Records Requests</a></li>
+               <li><a href="/pa/about/career-opportunities.page">Careers</a></li>
+            </ul>
+         </div>
+      </div>
+   </div>
+</div><div class="mdc-custom__copyright">
+   <div class="container">
+      <div class="mdc-custom__copyright__container">
+         <div class="mdc-custom__copyright__text"><span id="copyrightYear">©</span>Under Florida law, e-mail addresses are public records. If you do not want your e-mail address released in response to a public records request, do not send electronic mail to this entity. Instead, contact this office by phone or in writing.</div><script type="text/javascript">
+			  			document.getElementById('copyrightYear').innerHTML += ' ' + new Date().getFullYear() + ' ';
+			  		</script><a href="/pa/home.page"><img alt="Footer County Logo" class="mdc-custom__footer__logo" src="https://www.miamidade.gov/resources/global/images/md-logo-color.png"></a></div>
+   </div>
+</div><!--Bottom Hello World!--><!--ls:end[component-1722252332516]-->
+ </div>
+</footer></div><!--ls:end[body]--><!--ls:begin[page_track]--><!--ls:end[page_track]--></body>
+</html>
