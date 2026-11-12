@@ -200,6 +200,38 @@
       "downloaded": "2026-11-10",
       "bytes": 8657,
       "sha256": "0a6fa17d83ab4a44ec9a60a3d08cf6ad15fd2b651dc9b12549a73b8d127c3130"
+    },
+    {
+      "file": "data/raw/mdc_layers/MetroRailStations_gdb_p0.geojson",
+      "url": "https://services.arcgis.com/8Pc9XBTAsYuxx9Ny/arcgis/rest/services/MetroRailStations_gdb/FeatureServer/0/query?where=1=1&outFields=*&outSR=4326&f=geojson",
+      "publisher_date": "downloaded 11 Nov 2026",
+      "downloaded": "2026-11-10",
+      "bytes": 8658,
+      "sha256": "4bd80a327e4846adca9e4532c4dc39fb4520af70477e57d1a9a4ed405e3185d9"
+    },
+    {
+      "file": "data/raw/mdc_layers/SchoolSite_gdb_p0.geojson",
+      "url": "https://services.arcgis.com/8Pc9XBTAsYuxx9Ny/arcgis/rest/services/SchoolSite_gdb/FeatureServer/0/query?where=1=1&outFields=*&outSR=4326&f=geojson",
+      "publisher_date": "downloaded 11 Nov 2026",
+      "downloaded": "2026-11-10",
+      "bytes": 291161,
+      "sha256": "3cd05994baa4ac16a0cf14f7031c6a44fe27aea564522eda81febdd525aaaa90"
+    },
+    {
+      "file": "data/raw/mdc_layers/CountyParkBoundaries_PROS_View_for_ALWAYS_ON_p0.geojson",
+      "url": "https://services.arcgis.com/8Pc9XBTAsYuxx9Ny/arcgis/rest/services/CountyParkBoundaries_PROS_View_for_ALWAYS_ON/FeatureServer/1/query?where=1=1&outFields=*&outSR=4326&f=geojson",
+      "publisher_date": "downloaded 11 Nov 2026",
+      "downloaded": "2026-11-10",
+      "bytes": 1053270,
+      "sha256": "7de70998c99b82539fd5df5eec1ed02aa3ee28ecc6cb993e05fd2acd2aa300e1"
+    },
+    {
+      "file": "data/raw/mdc_layers/MunicipalParkBoundary_gdb_p0.geojson",
+      "url": "https://services.arcgis.com/8Pc9XBTAsYuxx9Ny/arcgis/rest/services/MunicipalParkBoundary_gdb/FeatureServer/0/query?where=1=1&outFields=*&outSR=4326&f=geojson",
+      "publisher_date": "downloaded 11 Nov 2026",
+      "downloaded": "2026-11-10",
+      "bytes": 1261033,
+      "sha256": "9b0e04e1e37db8cec94f5b820cb89cfd5a0de63c8ae2f074cc912f2c198343b2"
     }
   ]
 }

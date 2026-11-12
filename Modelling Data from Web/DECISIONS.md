@@ -3378,3 +3378,263 @@ D-113.
   "high")`); `reports/benefit/stage2_baseline_risk.md`.
 - Affects: Stage 2 ranges; Stage 4 avoided-loss ranges.
 
+
+### D-149. Stage 3 sales: which sales, where they sit, and gaps filled
+
+- Date: 11 Nov 2026. Status: Provisional. Decided by: Amey (proposal; confirm).
+- What happened: The 2026 NAL holds two recent sales per parcel, all from
+  2025 and 2026.
+- What is wrong: The model needs one clean row per sale with a location and
+  features.
+- How we are fixing it:
+  - Keep sale 1 and sale 2 when qualified (codes 01 and 02, D-121) and
+    improved (VI_CD = I), for single-family homes (DOR_UC 001) and condo
+    units (004). This gives 18,128 single-family and 23,770 condo sales.
+  - Drop the lowest and highest 0.5% of prices in each group (single-family
+    $225,000 to $17.97 million kept; condo $104,761 to $10.95 million), and
+    rows with no living area or year built.
+  - Location: a point inside the parcel the record sits on (condo units
+    take their building's parcel, Stage 1). 580 sales could not be placed.
+  - Final table: 40,901 sales (17,935 single-family, 22,966 condo).
+  - 3,702 sales sit on parcels with no NSI building. They take flood zone,
+    ground elevation, sea level rise and surge values from the nearest
+    building (median 50 m away).
+  - 8,357 sales are in block groups with no published family income. They
+    take the tract average of its block groups (then the county median),
+    and a flag marks them.
+  - Block group median home value is not used: it is close to the outcome
+    itself (leakage).
+- Decision: As above.
+- Reason: Uses only qualified market sales and keeps every gap visible.
+- Evidence: `scripts/benefit/build_sales_features.py`;
+  `outputs/benefit/stage3/build_log.json`.
+- Affects: all Stage 3 models; Stage 4 property value change.
+
+### D-150. Access layers: Miami-Dade open data for rail, schools and parks
+
+- Date: 11 Nov 2026. Status: Provisional. Decided by: Amey (proposal; confirm).
+- What happened: The brief asks for distance to the coast, downtown,
+  Metrorail stations, major parks and schools, using "public layers we have
+  or can get". The TIGER landmark files on disk have no Metrorail stations,
+  5 schools and 16 parks.
+- What is wrong: The layers on disk are too thin.
+- How we are fixing it:
+  - Downloaded four layers from Miami-Dade County's open data portal
+    (ArcGIS Online, publisher MDPublisher) on 11 Nov 2026, saved in
+    `data/raw/mdc_layers/`:
+    - Metrorail Station (23 stations);
+    - Public School (451 sites);
+    - County Park Boundary (309);
+    - Municipal Park Boundary (563).
+  - Major park: a park polygon of at least 10 acres (210 parks).
+  - Downtown: the Government Center Metrorail station.
+  - Coast: Census TIGER 2024 area water for bays, sounds and the ocean
+    (MTFCC H2051 and H2053), already on disk.
+- Decision: As above.
+- Reason: Official county layers; the brief allows getting public layers.
+- Evidence: `scripts/benefit/build_sales_features.py` (`access`).
+- Affects: Stage 3 access features.
+
+### D-151. Projects used for proximity: completed and ongoing, at a real place
+
+- Date: 11 Nov 2026. Status: Provisional. Decided by: the user (completed
+  and ongoing only); Amey (location rule).
+- What happened: The SCALE-R database has 1,664 projects. Each has one
+  point, but for municipality-wide and county-wide projects that point is
+  only a stand-in for the whole area.
+- What is wrong: Distance to a stand-in point says nothing about
+  proximity.
+- How we are fixing it:
+  - Keep projects with status Completed or Ongoing.
+  - Keep spatial resolution Parcel, Corridor or Neighborhood only.
+  - Result: 969 projects (gray 800, hybrid 118, green 36, blue 15).
+  - For each sale and each type: distance to the nearest project, and the
+    number and dollars of projects within 500 m and 1 km.
+- Decision: As above.
+- Reason: Proximity only means something for projects tied to a place.
+- Evidence: `outputs/benefit/stage3/projects_used.csv`.
+- Affects: Stage 3 project features; Stage 4 uses the same rule.
+
+### D-152. Stage 3 models and tests
+
+- Date: 11 Nov 2026. Status: Provisional. Decided by: Amey (proposal; confirm).
+- What happened: The brief asks for OLS, MGWR and XGBoost, with spatial
+  cross-validation as the main test and residual Moran's I.
+- What is wrong: The setup needs fixing before the results are read.
+- How we are fixing it:
+  - Separate models for single-family homes and condos. Outcome: log sale
+    price (main) and log just value (check).
+  - Features:
+    - structure: log living area, log lot size (single-family only), age
+      and age squared;
+    - month of sale;
+    - eight block group ACS and vulnerability measures;
+    - access: log distances to the coast, downtown, Metrorail, major parks
+      and schools;
+    - hazard: FEMA 100-year zone, ground elevation, sea level rise 3 and
+      6 ft, Category 3 surge depth, Landsat surface temperature, and tract
+      NFIP claims per unit;
+    - projects (main): for each type, a flag for a project within 500 m
+      and a flag for 500 m to 1 km.
+  - OLS standard errors are clustered by tract.
+  - Spatial cross-validation: the 10 tract folds from the ML work. Nested
+    baselines: month mean only; plus structure; plus neighbourhood, access
+    and hazard; plus projects.
+  - XGBoost: same features (plus distance, count and dollar versions of
+    the project features), same folds, fixed seed 20261111, xgboost 3.4.1
+    in `.venv-ml`.
+  - Residual Moran's I: 8 nearest neighbours, one value per location
+    (condo units in one building share a point), 199 permutations.
+- Decision: As above.
+- Reason: Follows the brief and the project's ML practice.
+- Evidence: `scripts/benefit/stage3_common.py`, `stage3_models.py`,
+  `stage3_xgb.py`.
+- Affects: Stage 3 results.
+
+### D-153. MGWR: how the sample is drawn and what goes in
+
+- Date: 11 Nov 2026. Status: Provisional. Decided by: the user (explain
+  the sample; check two samples); Amey (details).
+- What happened: MGWR cannot run on 18,000 sales in reasonable time.
+- What is wrong: The sample and covariates must be stated and stable.
+- How we are fixing it:
+  - Single-family sales only. 2,000 sales drawn stratified by tract: each
+    tract gives in proportion to its share of sales (at least one where it
+    has any). Two samples, seeds 101 and 202.
+  - The outcome is log price with month effects removed. All variables
+    are standardised.
+  - Covariates (final): log living area, log lot, age, log distance to the
+    coast, ground elevation, and log distance (50 m to 5 km) to the nearest
+    gray, hybrid and green project. The local intercept takes up
+    neighbourhood price levels.
+  - Left out: yes/no flags, which made local fits singular in a first
+    attempt (stopped); the flood-zone flag, for the same reason; and blue
+    projects, which are too few in a 2,000-sale sample.
+  - Stability: bandwidths, coefficient spreads and the share of locally
+    significant estimates are compared across the two samples, and local
+    estimates are compared tract by tract where both samples have sales.
+  - Two earlier full runs failed on inference. Their outputs are kept in
+    `outputs/benefit/stage3/mgwr_first_run/` and `mgwr_second_run/`.
+    - Run 1 also had distance to downtown and income, with no minimum
+      bandwidth. Downtown shrank to 44 neighbours.
+    - Run 2 set a minimum of 200 neighbours.
+    - In both, the local standard errors were missing in one sample and
+      enormous in the other, so no significance could be read.
+    - A test on synthetic data showed the package works. The cause is local
+      collinearity: with all covariates at 200 neighbours, the median local
+      condition number was 48, and 61% of locations were above 30.
+  - Final setup: distance to downtown and income dropped, and a minimum
+    bandwidth of 500 neighbours (a quarter of the sample). Median local
+    condition number 6.4; 2% of locations above 30.
+  - In the final run the standard errors were finite but still enormous
+    (median in the hundreds of thousands on standardised variables), so
+    MGWR's own local significance tests cannot be used. Tests on synthetic
+    data with UTM-sized coordinates gave correct standard errors, and the
+    cause in our data was not found in reasonable time.
+  - Therefore:
+    - MGWR is used only to show how effects vary across the county;
+    - that variation is tested by agreement between the two independent
+      samples (tract Spearman 0.77 to 0.99);
+    - all confidence intervals come from the OLS models;
+    - the `sig_*` and `se_*` columns in the MGWR output files are not to
+      be used.
+  - Package: mgwr 2.2.1 (with spglm 1.1.0 and spreg 1.9.2), installed in
+    `.venv` with the user's approval (D-158).
+- Decision: As above.
+- Reason: The user's instructions; a stable, documented sample.
+- Evidence: `scripts/benefit/stage3_mgwr.py`.
+- Affects: Stage 3 local results.
+
+### D-154. When a project effect is "indicative" and when it is too uncertain
+
+- Date: 11 Nov 2026. Status: Provisional. Decided by: the user (say where
+  estimates are too uncertain); Amey (the rule).
+- What happened: The brief asks for the value of being near each project
+  type with intervals, and the user asked to say where estimates are too
+  uncertain to use.
+- What is wrong: A first rule (interval excludes zero in the main model)
+  passed estimates that collapse once properties are compared within the
+  same area.
+- How we are fixing it: An effect is "indicative" only if all of these
+  hold; otherwise it is "too uncertain to use":
+  - at least 300 sales fall in the distance band;
+  - the main model, the within-tract model and the within-block-group
+    model give the same sign;
+  - at least two of those three 95% intervals exclude zero.
+- Decision: As above.
+- Reason: Projects are not placed at random. An effect that only shows up
+  without area controls is likely to be about the place, not the project.
+- Evidence: `outputs/benefit/stage3/ols_project_effects.csv` (`verdict`).
+- Affects: Stage 3 report; Stage 4 property value change (only indicative
+  effects, with ranges).
+
+### D-155. Bias checks, and why the before-and-after test cannot be done
+
+- Date: 11 Nov 2026. Status: Final. Decided by: the user.
+- What happened: All qualified sales in the 2026 NAL are from 2025 and
+  2026.
+- What is wrong: There are no sales from before most projects' document
+  year, so the before-and-after comparison in the brief cannot be made.
+- How we are fixing it:
+  - Before-and-after: not done, stated plainly in the report.
+  - Run instead:
+    - (B) tract fixed effects: properties compared only with others in the
+      same tract;
+    - (C) block group fixed effects: the same within the block group;
+    - (D) distance, count and dollar versions of the project features;
+    - (E) just value as the outcome.
+  - The report shows how much each estimate moves.
+- Decision: As above.
+- Reason: The user's instruction; the data allow nothing else.
+- Evidence: `outputs/benefit/stage3/ols_project_effects.csv`.
+- Affects: Stage 3 report.
+
+### D-156. FHFA tract index check
+
+- Date: 11 Nov 2026. Status: Provisional. Decided by: Amey (proposal; confirm).
+- What happened: The brief asks whether tracts with more projects saw
+  faster value growth than similar tracts.
+- What is wrong: The FHFA index has only 236 tracts with a 2024 value, and
+  most projects were reported from 2020 on.
+- How we are fixing it:
+  - Outcome: index growth 2019 to 2024.
+  - Projects: log(1 + number) of completed and ongoing projects in the
+    tract (same rule as D-151), all types together and by type.
+  - Controls ("similar tracts"): 2014 to 2019 growth, median family income,
+    distance to the coast, and the share of buildings in the FEMA 100-year
+    zone.
+  - Robust standard errors. 223 tracts have all values.
+- Decision: As above.
+- Reason: The simplest fair comparison the data allow.
+- Evidence: `scripts/benefit/stage3_models.py` (`fhfa_check`).
+- Affects: Stage 3 report.
+
+### D-157. Stage 3 MGWR uses log distance; Stage 4 recomputes value with distance
+
+- Date: 11 Nov 2026. Status: Provisional. Decided by: Amey (proposal; confirm).
+- What happened: Stage 4 recomputes each parcel's value with a new
+  project's distance.
+- What is wrong: The yes/no band features cannot express a small change in
+  distance, and MGWR needs continuous inputs.
+- How we are fixing it: The OLS distance version (check D) and the MGWR
+  log-distance coefficients are kept for Stage 4. Only effects rated
+  indicative under D-154 will be used there, with their ranges.
+- Decision: As above.
+- Reason: Matches what Stage 4 must compute.
+- Evidence: `outputs/benefit/stage3/ols_project_effects.csv` (spec D);
+  `mgwr_seed*.csv`.
+- Affects: Stage 4.
+
+### D-158. mgwr package installed in the project environment
+
+- Date: 11 Nov 2026. Status: Final. Decided by: the user (approved the
+  install in `.venv` only).
+- What happened: MGWR needs the `mgwr` package, which was not installed in
+  either environment.
+- What is wrong: Nothing may be installed without approval.
+- How we are fixing it: `pip install mgwr==2.2.1` into the repository's
+  `.venv` (not system-wide). It brought spglm 1.1.0 and spreg 1.9.2.
+- Decision: As above.
+- Reason: The user's approval.
+- Evidence: this entry; `.venv` package list.
+- Affects: `scripts/benefit/stage3_mgwr.py`.

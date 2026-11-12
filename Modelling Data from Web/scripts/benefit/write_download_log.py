@@ -39,6 +39,11 @@ FILES = [  # local path (relative to data/raw), URL, publisher's date for the fi
     ("bls/cpiu_1998_2007.json", "https://api.bls.gov/publicAPI/v1/timeseries/data/ (POST, CUUR0000SA0, 1998 to 2007)", "downloaded 11 Nov 2026"),
     ("bls/cpiu_2008_2017.json", "https://api.bls.gov/publicAPI/v1/timeseries/data/ (POST, CUUR0000SA0, 2008 to 2017)", "downloaded 11 Nov 2026"),
     ("bls/cpiu_2018_2025.json", "https://api.bls.gov/publicAPI/v1/timeseries/data/ (POST, CUUR0000SA0, 2018 to 2025)", "downloaded 11 Nov 2026"),
+    # Stage 3: Miami-Dade County open data (publisher MDPublisher), GeoJSON query of all features
+    ("mdc_layers/MetroRailStations_gdb_p0.geojson", "https://services.arcgis.com/8Pc9XBTAsYuxx9Ny/arcgis/rest/services/MetroRailStations_gdb/FeatureServer/0/query?where=1=1&outFields=*&outSR=4326&f=geojson", "downloaded 11 Nov 2026"),
+    ("mdc_layers/SchoolSite_gdb_p0.geojson", "https://services.arcgis.com/8Pc9XBTAsYuxx9Ny/arcgis/rest/services/SchoolSite_gdb/FeatureServer/0/query?where=1=1&outFields=*&outSR=4326&f=geojson", "downloaded 11 Nov 2026"),
+    ("mdc_layers/CountyParkBoundaries_PROS_View_for_ALWAYS_ON_p0.geojson", "https://services.arcgis.com/8Pc9XBTAsYuxx9Ny/arcgis/rest/services/CountyParkBoundaries_PROS_View_for_ALWAYS_ON/FeatureServer/1/query?where=1=1&outFields=*&outSR=4326&f=geojson", "downloaded 11 Nov 2026"),
+    ("mdc_layers/MunicipalParkBoundary_gdb_p0.geojson", "https://services.arcgis.com/8Pc9XBTAsYuxx9Ny/arcgis/rest/services/MunicipalParkBoundary_gdb/FeatureServer/0/query?where=1=1&outFields=*&outSR=4326&f=geojson", "downloaded 11 Nov 2026"),
 ]
 
 
