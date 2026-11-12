@@ -1,0 +1,60 @@
+{
+  "_about": "Settings for the four-module flood what-if model (prompt 28 Part 2). Paths are names of variables in scripts/common/paths.py. To add a storm frequency or a rainfall depth grid, add an entry to `events` and, for a grid, a `sources` entry of type `raster` pointing at the file; nothing else needs to change.",
+  "events": [
+    {"name": "p10",  "annual_chance": 0.10,  "return_period_years": 10},
+    {"name": "p04",  "annual_chance": 0.04,  "return_period_years": 25},
+    {"name": "p02",  "annual_chance": 0.02,  "return_period_years": 50},
+    {"name": "p01",  "annual_chance": 0.01,  "return_period_years": 100},
+    {"name": "p002", "annual_chance": 0.002, "return_period_years": 500}
+  ],
+  "sources": {
+    "coastal": {
+      "type": "fema_transects",
+      "kind": "coastal",
+      "zone_sources": ["STUDY5", "STUDY6", "STUDY7"],
+      "method": "nearest",
+      "events": ["p10", "p04", "p02", "p01", "p002"],
+      "water": "salt",
+      "note": "FEMA 2027 coastal study, still-water elevations at 218 transects (D-161, D-170)"
+    },
+    "rain": {
+      "type": "fema_nodes",
+      "kind": "rain",
+      "method": "subbasin",
+      "events": ["p10", "p04", "p02", "p01", "p002"],
+      "water": "fresh",
+      "note": "FEMA 2027 XP-SWMM nodes, C-8 and C-9 basins only (D-161, D-170)"
+    },
+    "map": {
+      "type": "fema_zone_bfe",
+      "kind": "rain",
+      "events": ["p01"],
+      "rare_event_copy": {"p002": "p01"},
+      "water": "fresh",
+      "note": "FEMA 2027 map base flood elevation where no multi-frequency levels exist; 0.2% uses the 1% level as a lower bound (D-137, D-171)"
+    }
+  },
+  "comparison_sources": {
+    "map2009": {"type": "buildings_column", "column": "fema_bfe_ft_navd88", "events": ["p01"], "rare_event_copy": {"p002": "p01"},
+                "note": "2009 effective maps, comparison only (D-167)"}
+  },
+  "cap_to_fema_extent": true,
+  "sea_level_rise_ft": [0, 1, 2, 3],
+  "sea_level_rise_applies_to": ["coastal"],
+  "eyd": {
+    "rule": "trapezoid between the events, loss 0 at the most frequent storm with no damage (spec Module B)",
+    "rare_tail": "reported separately: loss of the 0.2% event x 0.002"
+  },
+  "range": {
+    "curve_band": {"low": "low", "mid": "mean", "high": "high"},
+    "whole_building_high": true,
+    "ffe_shift_estimated_ft": {"low": 1.0, "mid": 0.0, "high": -1.0}
+  },
+  "projects": {
+    "seawall": {"max_distance_to_shore_m": 2000, "snap_tolerance_m": 5},
+    "elevation": {"default_raise_ft": 3.0},
+    "pump_drainage": {"status": "placeholder", "needs": "rainfall depth grids and drainage basin polygons countywide", "default_reduction_ft": 0.5, "events_up_to": "p04"},
+    "buyout": {"status": "placeholder"},
+    "green_stormwater": {"status": "placeholder", "needs": "rainfall depth grids and sub-basin polygons"}
+  }
+}

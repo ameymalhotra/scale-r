@@ -3,10 +3,15 @@
 Benefit simulator. 11 Nov 2026. Branch `benefit-simulator`.
 Decisions D-160 to D-165 in `DECISIONS.md`.
 
-Note: the specification file (`docs/SCALE-R_Flood_What-If_Spec.docx`) was not
-attached, so it is not saved yet. This part follows the summary in the prompt.
-The checklist below should be checked against the full document once it is in
-`docs/`.
+Note (updated during Part 2): the specification is now saved at
+`docs/SCALE-R_Flood_What-If_Spec.docx`. The section "Checked against the
+specification" at the end lists where it differs from this part.
+
+**Correction (Part 2).** The rainfall and canal water levels in the 2027 FEMA
+database cover only the **C-8 and C-9 basins** in the north of the county
+(Biscayne Canal and Snake Creek), not the whole county. Elsewhere, inland
+flood zones carry over the 2009 study and give only the 1% flood level.
+The sections below are corrected.
 
 ## Sources
 
@@ -37,7 +42,8 @@ The checklist below should be checked against the full document once it is in
   does, however, give **water levels for all five storm frequencies (10%, 4%,
   2%, 1%, 0.2%)**:
   - for coastal storm surge, at 218 shoreline transects;
-  - for rainfall and canal flooding, at 1,077 model points.
+  - for rainfall and canal flooding, at 1,077 model points, but only in the
+    C-8 and C-9 basins in the north of the county.
   This is downloaded and is the best frequency source we have.
 - **First-floor elevation** is now estimated for all 627,252 buildings and
   flagged `ffe_estimated = 1`. Building rules for newer homes in flood zones
@@ -114,7 +120,7 @@ Miami-Dade, none are published.
 | Flood source | Storm frequencies | Where | Model |
 |---|---|---|---|
 | Coastal surge (Atlantic and Biscayne Bay) | 10%, 4%, 2%, 1%, 0.2% | 218 shoreline transects, whole coast | ADCIRC + SWAN surge and wave model, 2018 |
-| Rainfall and canal flooding | 10%, 4%, 2%, 1%, 0.2% | 1,077 points along canals and basins | XP-SWMM county basin models, 2007 |
+| Rainfall and canal flooding | 10%, 4%, 2%, 1%, 0.2% | 1,077 points in the C-8 and C-9 basins only (north county) | XP-SWMM county basin models, 2007 |
 | 1% flood elevations on the map | 1% | AE, AH and VE zones | as above |
 
 Typical coastal still-water levels across the 218 transects (median, ft
@@ -232,7 +238,7 @@ only the house fields. Nothing has been bought or downloaded.
 | A | First-floor elevation | Got now (estimated for all buildings) | NSI + building rules |
 | A | Elevation certificates | Still need (requested) | County / NFIP |
 | A | Coastal flood levels, several frequencies | Got now (5 frequencies, 218 transects) | FEMA FIRM database 2027 |
-| A | Rainfall and canal flood levels, several frequencies | Got now in part (5 frequencies at 1,077 points); gridded rainfall model outputs still need (requested) | FEMA FIRM database 2027 |
+| A | Rainfall and canal flood levels, several frequencies | Got now in part (5 frequencies at 1,077 points, C-8 and C-9 basins only); countywide rainfall model outputs still need (requested) | FEMA FIRM database 2027 |
 | A | FEMA depth grids / Flood Risk Database | Still need (not published for Miami-Dade) | FEMA Map Service Center |
 | A | Surge worst cases | Have | NHC SLOSH MOM |
 | A | Sea level rise | Have | NOAA SLR |
@@ -273,3 +279,38 @@ only the house fields. Nothing has been bought or downloaded.
   the NFIP policies file arrive.
 - The 2027 FEMA water levels are at points and transects, not grids. How
   they are spread to buildings is a modelling choice for Part 2.
+
+## Checked against the specification (added in Part 2)
+
+The specification is now saved as `docs/SCALE-R_Flood_What-If_Spec.docx`.
+
+**Floor-height rule.** It matches. The specification says to estimate a
+missing floor elevation as ground plus a typical floor height for the
+building type and year built, flag it `ffe_estimated = 1`, and drop no
+building. That is what was built. In Part 2:
+- the county-wide 1972 date was replaced by each community's first flood
+  map date (D-168);
+- ground now comes from USGS 3DEP (D-166).
+
+**Checklist differences:**
+
+| Item | Specification says | Part 1 said | Note |
+|---|---|---|---|
+| ~3 million NFIP policies | Have (SCALE-R database) | Still need (download incomplete) | The local download is incomplete; the database copy may exist elsewhere |
+| SCALE-R project records with dates and costs | Have | Real project dates still need | The prompt says project dates are still being requested |
+| Depth grids, 4 to 5 frequencies | Need (FEMA or county/SFWMD model outputs) | FEMA has none; 2027 levels at points | Coastal is countywide; rainfall covers C-8 and C-9 only |
+| First-floor elevation and foundation type | Need (elevation certificates; NSI) | Estimated; certificates still need | Foundation type comes from NSI |
+| Ground elevation | Need (USGS 3DEP or county lidar) | Got now (USGS 3DEP) | Switched in Part 2 |
+| Depth-damage curves | Need (Hazus or USACE) | Have (USACE) | Already in use since Stage 2 |
+| Drainage basins, canals, pumps, outfalls | Need (SFWMD; county) | Basin names only | 2027 database has C-8/C-9 subbasins only |
+| Millage, exemptions, assessment caps | Need (Property Appraiser) | Got now | Millage, exemptions and caps are in hand |
+| Project lifespan and maintenance cost | Need (project documents, engineering defaults) | Have (FEMA standard values) | FEMA standard values are defaults; project documents still needed |
+| Bedrooms, bathrooms, pool, waterfront | Used in Module D | Bedrooms and bathrooms free; pool paid; waterfront derivable | Bedrooms and bathrooms downloaded in Part 2 (D-169) |
+
+**Other points from the specification for later parts:**
+- Water levels should be sampled at the building footprint centroid; we
+  use the NSI building point, which is usually inside the footprint.
+- The low and high range should be wider for estimated floors; Part 2 does
+  this (D-171).
+- Sales should cover the last 3 to 5 years, which the free county layer
+  helps with.

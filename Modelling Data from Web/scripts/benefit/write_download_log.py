@@ -52,6 +52,10 @@ FILES = [  # local path (relative to data/raw), URL, publisher's date for the fi
     ("millage/2026_adopted_millage_chart.pdf", "https://www.miamidadepa.gov/resources-pa/library/reports/millage/2026-adopted-millage-chart.pdf", "created 13 Oct 2026"),
     ("millage/2025_Miami-Dade_TACD.pdf", "https://floridarevenue.com/property/dataportal/Documents/PTO%20Data%20Portal/TACD%20History/2025%20Taxing%20Authority%20Code%20Descriptions/2025%20Miami-Dade%20TACD.pdf", "2025 adopted millage, received by DOR 15 Oct 2025"),
     ("millage/millage_tables.html", "https://www.miamidadepa.gov/pa/millage_tables.asp", "index page of millage charts"),
+    # Prompt 28 Part 2
+    ("usgs_3dep/metadata/USGS_FL_MiamiDade_1_D23_Final_DEM_Report.txt", "https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/metadata/FL_MiamiDade_D23/FL_MiamiDade_1_D23/reports/USGS_FL_MiamiDade_1_D23_Final_DEM_Report.txt", "USGS final DEM report (datum check)"),
+    ("usgs_3dep/metadata/FL_MiamiDade_D23_Digital_Elevation_Model.xml", "https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/metadata/FL_MiamiDade_D23/FL_MiamiDade_1_D23/reports/vendor_provided_xml/FL_MiamiDade_D23_Digital_Elevation_Model.xml", "vendor metadata: NAVD88 (GEOID18)"),
+    ("fema/community_status/csb_miami_dade.json", "https://www.fema.gov/api/open/v1/NfipCommunityStatusBook?$filter=state eq 'FL' and substringof('MIAMI-DADE',county)&$top=1000&$format=json", "OpenFEMA, refreshed 25 Aug 2026"),
 ]
 
 

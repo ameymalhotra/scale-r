@@ -3815,3 +3815,189 @@ D-113.
 - Evidence: ArcGIS service `PaGISView_gdb` field list and counts (queried
   11 Nov 2026).
 - Affects: Module D.
+
+### D-166. Ground elevation switched to USGS 3DEP 1 m
+
+- Date: 11 Nov 2026. Status: Final. Decided by: the user (switch after
+  confirming the datum); Amey (method).
+- What happened: The user approved D-160's recommendation, on condition
+  that the vertical datum and geoid were confirmed first.
+- What is wrong: Nothing. The datum is confirmed from the USGS final DEM
+  report and the vendor metadata: NAVD88 (GEOID18), NAD83(2011), 10 cm
+  RMSEz accuracy class. The NOAA DEM is NAVD88 (Geoid 12B); the median
+  difference of -0.07 ft fits a geoid and survey-date difference.
+- How we are fixing it: Sampled the 1 m cell under each of the 627,252
+  buildings (5,578 blocks read over the web, 22 minutes). 626,519 from the
+  1 m cell, 1 from the 3 x 3 m mean, 732 (water or gaps) keep the NOAA
+  value, 3 with neither get the tract median. `ground_elev_ft_navd88` is
+  now 3DEP; `ground_elev_ft_noaa` keeps the old value; `ground_source`
+  says which.
+- Decision: As above. First-floor elevations were rebuilt on the new
+  ground. 3,345 post-2012 homes now need the code raise, down from 8,073,
+  because 3DEP shows their lots already raised on fill.
+- Reason: User approval; newer and finer survey.
+- Evidence: `scripts/benefit/sample_3dep.py`, `ground_3dep_summary.json`;
+  `data/raw/usgs_3dep/metadata/`.
+- Affects: Modules A and B; first-floor elevation.
+
+### D-167. FEMA 2027 map database is the main water-level source; 2009 maps for comparison
+
+- Date: 11 Nov 2026. Status: Final. Decided by: the user.
+- What happened: The user chose the 2027 FEMA database (5 frequencies,
+  coastal and rainfall/canal) as the main source for Module A, with the
+  2009 effective maps kept as a comparison.
+- What is wrong: The rainfall and canal levels cover only the C-8 and C-9
+  basins in the north of the county (75,117 buildings after the extent cap).
+  Part 1 did not say so clearly; the Part 1 report is corrected. Elsewhere,
+  inland 1% zones (mostly AH zones carried over from the 2009 study) have
+  only a 1% level.
+- How we are fixing it:
+  - coastal levels countywide (5 frequencies);
+  - rainfall and canal levels in C-8 and C-9 (5 frequencies);
+  - elsewhere, the 2027 map's 1% flood elevation (68,031 buildings), with
+    the 0.2% storm using the 1% level (lower bound, as D-137) and no damage
+    assumed for the more frequent storms, which have no data there.
+  - 2009 maps run through the same Modules A and B as a comparison.
+- Decision: As above. Only the source data changed; it does not undo the
+  user's decision.
+- Reason: The user's decision; best public data available.
+- Evidence: `module_config.json` (`sources`, `comparison_sources`);
+  `water_level_methods.json`.
+- Affects: Modules A and B.
+
+### D-168. First-floor rule uses each community's initial FIRM date
+
+- Date: 11 Nov 2026. Status: Final. Decided by: the user.
+- What happened: The user asked to replace the county-wide 1972 date with
+  each community's initial FIRM date from FEMA's NFIP Community Status
+  Book (OpenFEMA).
+- What is wrong: Nothing. All 35 Miami-Dade communities have an initial
+  FIRM date of 29 Sep 1972; newer cities kept the county's date.
+- How we are fixing it: Each building is placed in its NFIP community
+  (2027 FIRM database polygons, 35 communities) and given that community's
+  date (`nfip_cid`, `initial_firm_date`).
+- Decision: As above. No floor changes in Miami-Dade, but the rule now
+  follows the data.
+- Reason: The user's instruction.
+- Evidence: `data/raw/fema/community_status/csb_miami_dade.json`;
+  `scripts/benefit/build_ffe.py`.
+- Affects: First-floor elevation.
+
+### D-169. House features downloaded without personal fields; pool data optional
+
+- Date: 11 Nov 2026. Status: Final. Decided by: the user.
+- What happened: The user approved downloading the county Property Point
+  View layer, keeping only parcel ID, bedrooms, bathrooms, living area,
+  sale price, sale date and qualification code.
+- What is wrong: The layer has no qualification code.
+- How we are fixing it:
+  - only the kept fields are requested from the server, so owner names,
+    addresses and coordinates are never sent, held or written; the script
+    stops if any other field arrives;
+  - 944,398 parcels in 29 seconds; 796,786 with bedrooms;
+  - qualification code taken from the 2026 tax roll where the same sale is
+    there (100,669 sales from 2021 on, all 2025 and 2026);
+  - the layer gives each parcel's latest sale only. From 2021 to 2024 that
+    adds 92,084 single-family and 115,821 condo latest sales, without a
+    qualification code. The free DOR sales data files for earlier roll
+    years have the codes; not downloaded (not named).
+  - paid pool data skipped; logged as optional.
+- Decision: As above.
+- Reason: The user's instruction and privacy.
+- Evidence: `scripts/benefit/download_pa_features.py`;
+  `pa_features_summary.json`; `data/processed/benefit/pa_features.parquet`
+  (gitignored).
+- Affects: Module D.
+
+### D-170. How FEMA 2027 water levels are carried to buildings
+
+- Date: 11 Nov 2026. Status: Provisional (recommended; the user asked for a
+  recommendation before use). Decided by: Amey.
+- What happened: The 2027 levels are at 218 coastal transects and 1,077
+  canal model nodes, not grids.
+- What is wrong: A method is needed to give each building a level.
+- How we are fixing it: Compared methods against the 2027 base flood
+  elevation of the zone each building sits in, and against FEMA's mapped
+  flood extent:
+  - coastal, nearest transect: 82% of buildings within 1 ft of the zone's
+    1% elevation; 7.6% of minimal-hazard buildings wrongly below the 1%
+    level;
+  - coastal, interpolation along the shoreline: 77% within 1 ft; 10.2%
+    wrongly wet;
+  - rainfall, the node of the building's own subbasin: 100% within 0.5 ft;
+  - rainfall, nearest node: 96.5%; 3-node average: 97%.
+  Filling the land to the water level also wet buildings FEMA maps as
+  outside the floodplain (45,000 in the 0.2% zone at 1%; 30,000 outside
+  both zones at 0.2%). So each storm's levels are limited to FEMA's mapped
+  extent: the 1% zone for the 1% storm and more frequent ones, and the 1%
+  plus 0.2% zones for the 0.2% storm. With sea level rise, NOAA's
+  inundation area for that rise is added to the extent; this adds only 75
+  to 6,720 buildings, so most future spread beyond today's floodplain is
+  not captured.
+- Decision: Coastal: nearest transect. Rainfall: own subbasin node. Extent
+  cap on. The coastal levels are still water and leave out wave height,
+  which the coastal base flood elevations include.
+- Reason: Best agreement with FEMA's own mapped elevations and extent.
+- Evidence: `scripts/benefit/compare_water_levels.py`,
+  `water_level_methods.json`; `module_a_summary.json`.
+- Affects: Modules A, B and C.
+
+### D-171. Module B expected yearly damage: rule and range
+
+- Date: 11 Nov 2026. Status: Provisional. Decided by: the specification
+  (formula); Amey (range, tail).
+- What happened: The specification gives
+  EYD = sum 0.5 x (L_i + L_i+1) x (p_i - p_i+1), with loss 0 at the most
+  frequent storm that causes no damage.
+- What is wrong: The formula stops at the rarest storm; the specification
+  also asks for a wider range where the floor is estimated.
+- How we are fixing it:
+  - EYD as written, over 10%, 4%, 2%, 1% and 0.2%; rarer storms never do
+    less damage at a building; the part beyond 0.2% (loss x 0.002) is
+    reported separately;
+  - low: low curve band, estimated floors 1 ft higher;
+  - high: high curve band, whole-building damage for non-house buildings
+    (D-148), estimated floors 1 ft lower;
+  - mid: mean curve; floors-reached rule kept (D-143);
+  - displacement reported separately.
+- Decision: As above. County EYD: $318M low, $701M mid, $1,925M high a
+  year, plus $153M beyond the 0.2% storm. That is four times the Stage 2
+  figure ($174M). The rise comes from:
+  - the 2027 maps' higher and wider 1% levels;
+  - real 0.2% levels, where Stage 2 copied the 1% depth;
+  - three more frequent storms.
+  The provisional claims ratio for all buildings rises to 27.9 (Stage 2:
+  5.6), and for residential buildings to 16.9 (Stage 2: 3.1). Tract rank
+  agreement falls to 0.35 (Stage 2: 0.49). Not tuned; final calibration
+  waits for the policies file.
+- Reason: Follows the specification.
+- Evidence: `scripts/benefit/module_b_eyd.py`; `module_b_summary.json`,
+  `module_b_breakdown.json`.
+- Affects: Module C, benefit per dollar.
+
+### D-172. Module C: seawall and building elevation; building ID is fd_id
+
+- Date: 11 Nov 2026. Status: Provisional. Decided by: the specification;
+  Amey (the "behind the alignment" rule).
+- What happened: The specification asks for seawall and building
+  elevation first, each returning results in seconds.
+- What is wrong: "Behind the alignment" needs a working rule. Also the
+  `bid` column is not unique (47,994 blank, 105,275 repeated).
+- How we are fixing it:
+  - seawall: a building is behind the wall if the straight line from it to
+    its nearest point on the coastal shoreline (the FEMA transect baseline)
+    crosses the wall (5 m tolerance), it is within 2 km of the shoreline,
+    and its ground is below the crest. For those buildings, coastal water is
+    removed for every storm whose coastal level (with sea level rise) is
+    below the crest. Overtopping storms keep their full depth. Rainfall is
+    unchanged. Water going round the ends is not stopped;
+  - building elevation: the first floor of the selected buildings is
+    raised by X ft;
+  - only affected buildings are recomputed: 0.02 to 0.07 seconds per
+    scenario, after a 0.2 second model load;
+  - pumps and drainage, buyout and green stormwater are placeholders;
+  - every module table is keyed by `fd_id`, which is unique.
+- Decision: As above.
+- Reason: The specification; a rule that is simple to explain.
+- Evidence: `scripts/benefit/module_c_projects.py`; `module_c_examples.json`.
+- Affects: Module C; Module D will read the change in EYD.

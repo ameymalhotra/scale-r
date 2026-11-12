@@ -288,6 +288,30 @@
       "downloaded": "2026-11-10",
       "bytes": 78923,
       "sha256": "f7b7f928cb099ac6b988bb374f11b37672a90e60af34f0e329e662f1defaecf6"
+    },
+    {
+      "file": "data/raw/usgs_3dep/metadata/USGS_FL_MiamiDade_1_D23_Final_DEM_Report.txt",
+      "url": "https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/metadata/FL_MiamiDade_D23/FL_MiamiDade_1_D23/reports/USGS_FL_MiamiDade_1_D23_Final_DEM_Report.txt",
+      "publisher_date": "USGS final DEM report (datum check)",
+      "downloaded": "2026-11-10",
+      "bytes": 171019,
+      "sha256": "f1b684cb33fbc4a26d67fffb3645db23686225064e47cc3a40a8f3842c48c68c"
+    },
+    {
+      "file": "data/raw/usgs_3dep/metadata/FL_MiamiDade_D23_Digital_Elevation_Model.xml",
+      "url": "https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/metadata/FL_MiamiDade_D23/FL_MiamiDade_1_D23/reports/vendor_provided_xml/FL_MiamiDade_D23_Digital_Elevation_Model.xml",
+      "publisher_date": "vendor metadata: NAVD88 (GEOID18)",
+      "downloaded": "2026-11-10",
+      "bytes": 8954,
+      "sha256": "0b0642a53f389226fa02c7b4c98e6a12dca2ea4e7997c95da292e02e82bf4968"
+    },
+    {
+      "file": "data/raw/fema/community_status/csb_miami_dade.json",
+      "url": "https://www.fema.gov/api/open/v1/NfipCommunityStatusBook?$filter=state eq 'FL' and substringof('MIAMI-DADE',county)&$top=1000&$format=json",
+      "publisher_date": "OpenFEMA, refreshed 25 Aug 2026",
+      "downloaded": "2026-11-10",
+      "bytes": 20976,
+      "sha256": "992dcc30ae3ed9c82c253cafe373a471a96404074bf482c902ed49a7630579e8"
     }
   ]
 }

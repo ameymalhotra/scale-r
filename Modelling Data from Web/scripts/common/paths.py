@@ -89,6 +89,12 @@ SALES_FEATURES_CSV = BENEFIT_DIR / "sales_features.csv.gz"           # same, for
 NHC_DOCS_DIR = RAW / "reference_docs" / "nhc"                       # NHC memo and return period maps
 NFIP_POLICIES_PARQUET_MANUAL = None   # set to the user's full NFIP policies Parquet file when on disk
 EAD_BUILDINGS_PARQUET = BENEFIT_DIR / "ead_buildings.parquet"      # Stage 2 output
+GROUND_3DEP_PARQUET = BENEFIT_DIR / "ground_3dep.parquet"          # prompt 28 Part 2 (D-166)
+PA_FEATURES_PARQUET = BENEFIT_DIR / "pa_features.parquet"          # house features, no personal fields (D-169)
+FEMA2027_ZONES_PARQUET = BENEFIT_DIR / "fema2027_zones.parquet"    # 2027 flood zone per building (D-170)
+MODULE_A_PARQUET = BENEFIT_DIR / "module_a_depth.parquet"         # spec Module A output
+MODULE_B_PARQUET = BENEFIT_DIR / "module_b_eyd.parquet"           # spec Module B output
+COMMUNITY_STATUS_JSON = FEMA_RAW_DIR / "community_status" / "csb_miami_dade.json"   # D-168
 EAD_TRACT_CSV = BENEFIT_DIR / "ead_tract.csv"                      # Stage 2 output
 
 # results by analysis

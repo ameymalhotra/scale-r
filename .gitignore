@@ -117,3 +117,8 @@ Modelling Data from Web/output/
 Modelling Data from Web/data/raw/fema/firm_2027/12086C_2027-02-19.zip
 Modelling Data from Web/data/raw/fema/firm_2027/extract/
 Modelling Data from Web/data/raw/fema/firm_2027/12086CV001B.pdf
+Modelling Data from Web/data/processed/benefit/pa_features.parquet
+Modelling Data from Web/data/processed/benefit/ground_3dep.parquet
+Modelling Data from Web/data/processed/benefit/fema2027_zones.parquet
+Modelling Data from Web/data/processed/benefit/module_a_depth.parquet
+Modelling Data from Web/data/processed/benefit/module_b_eyd.parquet

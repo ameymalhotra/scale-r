@@ -1,4 +1,4 @@
-"""Estimated first-floor elevation for every building (prompt 28 Part 1, D-162).
+"""Estimated first-floor elevation for every building (prompt 28 Part 1, D-162; updated Part 2, D-166, D-168).
 
     /Users/.../Climate-Resilience---Miami-Dade/.venv/bin/python -I scripts/benefit/build_ffe.py
 
@@ -26,9 +26,18 @@ building type and year built.
    The base flood elevation is the one on the current effective map (2009,
    converted to NAVD88 in Stage 1). Buildings built under earlier maps may have
    used a different base flood elevation; this is an assumption.
+Part 2 updates:
+- first flood map date per community (D-168): each building is placed in
+  its NFIP community (2027 FIRM database S_Pol_Ar) and given that
+  community's initial FIRM date from FEMA's NFIP Community Status Book
+  (OpenFEMA). In Miami-Dade all 35 communities have 29 Sep 1972 (newer
+  cities kept the county's date), so the result is unchanged; the rule
+  will pick up any future difference.
+- ground elevation (D-166): USGS 3DEP 1 m (NAVD88, GEOID18) replaces the
+  NOAA 3 m DEM. The NOAA value is kept in ground_elev_ft_noaa.
 Year built: the parcel's actual year built from the tax roll; NSI's block
-median where the parcel value is missing. Ground elevation: NOAA DEM (Stage 1);
-the 33 buildings with no DEM value get their tract median (flagged).
+median where the parcel value is missing. Buildings with no ground value get
+their tract median (flagged).
 Adds columns to data/processed/benefit/buildings.parquet (no building dropped)
 and writes outputs/benefit/spec_alignment/ffe_summary.json.
 """
@@ -43,11 +52,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "common"))
 import paths  # noqa: E402
 
 OUT = paths.OUT_BENEFIT / "spec_alignment"
-INITIAL_FIRM_YEAR = 1972          # all communities: 29 Sep 1972 (L_Comm_Info, FIRM database 2027)
 FREEBOARD_FROM_YEAR = 2012        # Florida Building Code 2010 edition effective 15 Mar 2012: BFE + 1 ft
 FREEBOARD_FT = 1.0
 SFHA_BFE_ZONES = ["A", "AE", "AH", "VE"]
-NEW_COLS = ["year_built_used", "year_built_source", "ground_elev_filled", "ffe_simple_ft_navd88",
+NEW_COLS = ["nfip_cid", "initial_firm_date", "ground_source", "year_built_used", "year_built_source", "ground_elev_filled", "ffe_simple_ft_navd88",
             "ffe_ft_navd88", "ffe_rule", "ffe_estimated", "ffe_above_ground_ft"]
 
 
@@ -56,6 +64,30 @@ def main():
     b = pd.read_parquet(paths.BUILDINGS_PARQUET)
     b = b.drop(columns=[c for c in NEW_COLS if c in b.columns])
     n0 = len(b)
+
+    # ground elevation: 3DEP 1 m, NOAA kept alongside (D-166)
+    if "ground_elev_ft_noaa" not in b.columns:
+        b["ground_elev_ft_noaa"] = b.ground_elev_ft_navd88
+    if paths.GROUND_3DEP_PARQUET.exists():
+        g3 = pd.read_parquet(paths.GROUND_3DEP_PARQUET)
+        if "fd_id" not in g3.columns:                       # first run wrote rows in the buildings order
+            assert len(g3) == n0 and (g3.bid.to_numpy() == b.bid.to_numpy()).all()
+            g3["fd_id"] = b.fd_id.to_numpy()
+        g3 = g3.set_index("fd_id")
+        b["ground_elev_ft_navd88"] = b.fd_id.map(g3.ground_elev_ft_3dep).to_numpy()
+        b["ground_source"] = b.fd_id.map(g3.ground_source).fillna("noaa_3m_fallback").to_numpy()
+    else:
+        b["ground_source"] = "noaa_3m"
+
+    # NFIP community and its initial FIRM date (D-168)
+    import geopandas as gpd
+    pol = gpd.read_file(paths.FIRM_2027_EXTRACT / "S_Pol_Ar.shp")[["CID", "geometry"]]
+    pts = gpd.GeoDataFrame({"i": np.arange(n0)}, geometry=gpd.points_from_xy(b.lon, b.lat), crs="EPSG:4269").to_crs(pol.crs)
+    j = gpd.sjoin(pts, pol, how="left", predicate="within").drop_duplicates("i").sort_values("i")
+    csb = pd.DataFrame(json.loads(paths.COMMUNITY_STATUS_JSON.read_text())["NfipCommunityStatusBook"])
+    firm = pd.to_datetime(csb.set_index("communityIdNumber").initialFloodInsuranceRateMap).dt.tz_localize(None)
+    b["nfip_cid"] = j.CID.fillna("120635").to_numpy()          # outside every polygon: unincorporated county
+    b["initial_firm_date"] = b.nfip_cid.map(firm).fillna(firm["120635"]).to_numpy()
 
     yb = b.act_yr_blt.where(b.act_yr_blt.between(1800, 2026))
     b["year_built_source"] = np.where(yb.notna(), "tax_roll_parcel", "nsi_block_median")
@@ -70,7 +102,7 @@ def main():
     b["ffe_simple_ft_navd88"] = base                     # the Stage 2 assumption (foundation height only)
     zone = b.fema_zone.fillna("X")
     bfe = b.fema_bfe_ft_navd88
-    post = b.year_built_used > INITIAL_FIRM_YEAR
+    post = b.year_built_used > b.initial_firm_date.dt.year
     fb = np.where(b.year_built_used >= FREEBOARD_FROM_YEAR, FREEBOARD_FT, 0.0)
     req = pd.Series(np.nan, index=b.index)
     m_bfe = post & zone.isin(SFHA_BFE_ZONES) & bfe.notna()
@@ -90,6 +122,9 @@ def main():
     raised = b.ffe_ft_navd88 - b.ffe_simple_ft_navd88
     sfha = zone.isin(SFHA_BFE_ZONES + ["AO"])
     R = {"buildings": n0, "ffe_estimated_share": 1.0,
+         "ground_source": b.ground_source.value_counts().to_dict(),
+         "communities": int(b.nfip_cid.nunique()),
+         "initial_firm_dates": b.initial_firm_date.dt.strftime("%Y-%m-%d").value_counts().to_dict(),
          "year_built_source": b.year_built_source.value_counts().to_dict(),
          "ground_elev_filled": int(b.ground_elev_filled.sum()),
          "rule_counts": b.ffe_rule.value_counts().to_dict(),

@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata>
+	<idinfo>
+		<citation>
+			<citeinfo>
+				<origin>Digital Aerial Solutions, LLC</origin>
+				<pubdate>Unpublished Material</pubdate>
+				<title>Digital Elevation Model, FL_MiamiDade_D23</title>
+				<geoform>GeoTiff</geoform>
+				<pubinfo>
+					<pubplace>None Available</pubplace>
+					<publish>None Available</publish>
+				</pubinfo>
+			</citeinfo>
+		</citation>
+		<descript>
+			<abstract>The Digital Elevation Model dataset consists of tiled LiDAR DEM Images. Each file contains a Raster Image of the Digital Elevation Model. The Geographical Extent of this dataset extends to the entirety of the  FL_MiamiDade_D23 boundary in the State Plane Florida approximately 1169 square miles of the AOIs.</abstract>
+			<purpose>The USGS contracted Digital Aerial Solutions, LLC to obtain professional services related to the planning, acquisition and development of Light Detection and Ranging (Lidar) data and derivative products. The task order is for a QL1 Lidar survey to be collected over Miami Dadecounty. The deliverable products would be used by the USGS to support State of Florida and the 3DEP mission.</purpose>
+			<supplinf>All Lidar data and associated products were acquired, calibrated, and used in the creation of Lidar derived products by Digital Aerial Solutions, LLC to meet U.S. Geological Survey (USGS) - National Geospatial Program (NGP) Lidar Base Specification v2022 rev. A 
+			Raster File Type = GeoTIFF
+			Bit Depth/Pixel Type = 32-bit float
+			Raster Cell Size = 2.0 feet
+			Interpolation or Resampling Technique = Bilinear  Interpolation
+			Required Vertical Accuracy = 19.6 cm NVA</supplinf>
+		</descript>
+		<timeperd>
+			<timeinfo>
+				<rngdates>
+					<begdate>20240121</begdate>
+					<enddate>20240222</enddate>
+				</rngdates>
+			</timeinfo>
+			<current>ground condition</current>
+		</timeperd>
+		<status>
+			<progress>Complete</progress>
+			<update>As needed</update>
+		</status>
+		<spdom>
+			<bounding>
+				<westbc>-80.883374</westbc>
+				<eastbc>-80.116573</eastbc>
+				<northbc>26.025797</northbc>
+				<southbc>25.128304</southbc>
+			</bounding>
+			<lboundng>
+				<leftbc>694750.107878</leftbc>
+				<rightbc>946278.659610</rightbc>
+				<topbc>615083.952944</topbc>
+				<bottombc>289829.508638</bottombc>
+			</lboundng>
+		</spdom>
+		<keywords>
+			<theme>
+				<themekt>None</themekt>
+				<themekey>Elevation Data</themekey>
+				<themekey>Lidar</themekey>
+				<themekey>DEM</themekey>
+			</theme>
+			<place>
+				<placekt>None</placekt>
+				<placekey>Miami Dade</placekey>
+				<placekey>FL</placekey>
+			</place>
+		</keywords>
+		<accconst>No restrictions apply to this data.The data represented is the result of data collection and processing per contract specifications and indicates the general existing conditions at the time of the data collection. As such, it is only valid for its intended use, content, time, and accuracy specifications. The user is responsible for the results of any application of the data for other than its intended purpose.</accconst>
+		<useconst>None. However, users should be aware that temporal changes may have occurred since this data set was collected and that some parts of these data may no longer represent actual surface conditions. Users should not use these data for critical applications without a full awareness of the limitations of the data. Acknowledgment of the US Geological Survey would be appreciated for products derived from these data.The data represented is the result of data collection and processing per contract specifications and indicates the general existing conditions at the time of the data collection. As such, it is only valid for its intended use, content, time, and accuracy specifications. The user is responsible for the results of any application of the data for other than its intended purpose..</useconst>
+		<native>Inertial Explorer ver: 8.9; GeoCue Ver: 2020.1.22.1; Microstation CONNECT 10.12.00.40 ;TerraScan v021.034; LP360 ver: 2021.1.47.0; ArcMap ver: 10.7; Global Mapper ver: 18.1</native>
+	</idinfo>
+	<dataqual>
+		<logic>Aerial LiDAR data covers the entire 1169 square miles Area of Interest intended for this project.All LiDAR Point Cloud tiles show no edge artifacts or mismatches from tile to tile. Void areas (i.e., areas outside the project boundary but within the tiling scheme) are coded using a unique “NODATA” value. This value is identified in the appropriate location within the file header. Data cover the entire area specified for this project.</logic>
+		<complete>The RAW LAS data files included all data points collected. No points have been removed or excluded. A visual qualitative assessment was performed to ensure data completeness. No void areas or missing data exist. The RAW point cloud is of good quality and data passes Fundamental Vertical Accuracy specifications. Void areas (i.e., areas outside the project boundary but within the tiling scheme) are coded using a unique “NODATA” value. This value is identified in the appropriate location within the file header.</complete>
+		<posacc>
+			<horizpa>
+				<horizpar>None</horizpar>
+				<qhorizpa>
+					<horizpav>0</horizpav>
+					<horizpae>None</horizpae>
+				</qhorizpa>
+			</horizpa>
+			<vertacc>
+				<vertaccr>"This data set was produced to meet ASPRS Positional Accuracy Standard for Digital Geospatial Data (2014) for a 10-cm RMSEz Vertical Accuracy Class."</vertaccr>
+				<qvertpa>
+					<vertaccv>0</vertaccv>
+					<vertacce>None</vertacce>
+				</qvertpa>
+				<qvertpa>
+					<vertaccv>0</vertaccv>
+					<vertacce>None</vertacce>
+				</qvertpa>
+			</vertacc>
+		</posacc>
+		<lineage>
+			<procstep>
+				<procdesc>Bare-Earth DEM Creation: Bare-Earth Digital Elevation Models (DEMs) were derived using the bare-earth (ground) LiDAR points, all DEMs were created with a grid spacing of 2.0 feet. The DEMs were cut to tiles of 5,000 feet X 5,000 feet index.</procdesc>
+				<procdate>20240910</procdate>
+			</procstep>
+		</lineage>
+	</dataqual>
+	<spdoinfo>
+		<direct>Raster</direct>
+		<rastinfo>
+			<rasttype>Pixel</rasttype>
+			<rowcount>2500</rowcount>
+			<colcount>2500</colcount>
+		</rastinfo>
+	</spdoinfo>
+	<spref>
+		<horizsys>
+			<planar>
+				<gridsys>
+					<gridsysn>State Plane Coordinate System 1983</gridsysn>
+					<utm>
+						<utmzone>17N</utmzone>
+						<transmer>
+							<sfctrmer>0.99960000</sfctrmer>
+							<longcm>-87.00000000</longcm>
+							<latprjo>0.000000000</latprjo>
+							<feast>500000.000000000</feast>
+							<fnorth>0.000000000</fnorth>
+						</transmer>
+					</utm>
+				</gridsys>
+				<planci>
+					<plance>Coordinate Pair</plance>
+					<coordrep>
+						<absres>2.0</absres>
+						<ordres>2.0</ordres>
+					</coordrep>
+					<plandu>US survey feet</plandu>
+				</planci>
+			</planar>
+			<geodetic>
+				<horizdn>NAD83, National Reference System 2011</horizdn>
+				<ellips>Geodetic Reference System 80</ellips>
+				<semiaxis>6378137.000000</semiaxis>
+				<denflat>298.255822101</denflat>
+			</geodetic>
+		</horizsys>
+		<vertdef>
+			<altsys>
+				<altdatum>North American Vertical Datum of 1988 (Geoid18)</altdatum>
+				<altres>2</altres>
+				<altunits>feet</altunits>
+				<altenc>Explicit elevation coordinate included with horizontal coordinates</altenc>
+			</altsys>
+		</vertdef>
+	</spref>
+	<eainfo>
+		<overview>
+			<eaover>None</eaover>
+			<eadetcit>None</eadetcit>
+		</overview>
+	</eainfo>
+	<distinfo>
+		<distrib>
+			<cntinfo>
+				<cntorgp>
+					<cntorg>None</cntorg>
+					<cntper>None</cntper>
+				</cntorgp>
+				<cntpos>None</cntpos>
+				<cntaddr>
+					<addrtype>None</addrtype>
+					<address>None</address>
+					<city>None</city>
+					<state>None</state>
+					<postal>None</postal>
+					<country>None</country>
+				</cntaddr>
+				<cntvoice>None</cntvoice>
+				<cntfax>None</cntfax>
+				<cntemail>None</cntemail>
+				<hours>None</hours>
+				<cntinst>None</cntinst>
+			</cntinfo>
+		</distrib>
+		<resdesc>None</resdesc>
+		<distliab>None</distliab>
+	</distinfo>
+	<metainfo>
+		<metd>20250109</metd>
+		<metc>
+			<cntinfo>
+				<cntorgp>
+					<cntorg>Digital Aerial Solutions, LLC</cntorg>
+				</cntorgp>
+				<cntaddr>
+					<addrtype>mailing and physical address</addrtype>
+					<address>4027 Crescent Park Drive</address>
+					<city>Riverview</city>
+					<state>FL</state>
+					<postal>33578</postal>
+					<country>United States</country>
+				</cntaddr>
+				<cntvoice>813-628-0788</cntvoice>
+			</cntinfo>
+		</metc>
+		<metstdn>FGDC Content Standards for Digital Geospatial Metadata</metstdn>
+		<metstdv>FGDC-STD-001-1998</metstdv>
+		<metac>None</metac>
+		<metuc>None</metuc>
+		<metsi>
+			<metscs>None</metscs>
+			<metsc>Unclassified</metsc>
+			<metshd>None</metshd>
+		</metsi>
+		<metextns>
+			<onlink>None</onlink>
+			<metprof>None</metprof>
+		</metextns>
+	</metainfo>
+</metadata>
