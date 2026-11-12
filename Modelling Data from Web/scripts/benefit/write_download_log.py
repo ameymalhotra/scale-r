@@ -56,6 +56,7 @@ FILES = [  # local path (relative to data/raw), URL, publisher's date for the fi
     ("usgs_3dep/metadata/USGS_FL_MiamiDade_1_D23_Final_DEM_Report.txt", "https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/metadata/FL_MiamiDade_D23/FL_MiamiDade_1_D23/reports/USGS_FL_MiamiDade_1_D23_Final_DEM_Report.txt", "USGS final DEM report (datum check)"),
     ("usgs_3dep/metadata/FL_MiamiDade_D23_Digital_Elevation_Model.xml", "https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/metadata/FL_MiamiDade_D23/FL_MiamiDade_1_D23/reports/vendor_provided_xml/FL_MiamiDade_D23_Digital_Elevation_Model.xml", "vendor metadata: NAVD88 (GEOID18)"),
     ("fema/community_status/csb_miami_dade.json", "https://www.fema.gov/api/open/v1/NfipCommunityStatusBook?$filter=state eq 'FL' and substringof('MIAMI-DADE',county)&$top=1000&$format=json", "OpenFEMA, refreshed 25 Aug 2026"),
+    ("dor/Dade_23_Final_SDF_2026.zip", f"{DOR}/Tax%20Roll%20Data%20Files/SDF/2026F/Dade%2023%20Final%20SDF%202026.zip", "CSV inside dated 16 Oct 2026; sales 2025 and 2026"),
 ]
 
 

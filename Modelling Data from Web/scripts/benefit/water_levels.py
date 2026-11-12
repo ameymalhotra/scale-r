@@ -141,3 +141,58 @@ def points(df):
     from pyproj import Transformer
     e, n = Transformer.from_crs("EPSG:4269", CRS, always_xy=True).transform(df.lon.values, df.lat.values)
     return np.array([Point(a, b) for a, b in zip(e, n)], dtype=object), e, n
+
+
+WAVE_FACTOR = 1.55   # FEMA depth-limited breaking wave: crest = still water + 0.55 x still-water depth (D-173)
+
+
+def coastal_anchored(pts, t, z, ground, ext, anchor_sources=("STUDY5", "STUDY6")):
+    """Coastal levels anchored to FEMA's mapped 1% elevation at each building (D-173).
+
+    1. Still-water 1% anchor at the building:
+       - AE, AH (coastal or combined study without canal model): the zone's base flood elevation
+         (in Miami-Dade these are within about 0.3 ft of the transect still water, so the wave part is small);
+       - VE: the wave crest is removed with FEMA's depth-limited rule, still water = (BFE + 0.55 G) / 1.55;
+       - AO: ground + zone depth;
+       - 0.2% zone (shaded X): the base flood elevation of the nearest coastal AE zone (no 1% level of its own;
+         the extent cap keeps it dry for the 1% and more frequent storms);
+       - anything else in the coastal study (zone A, combined zones of the C-8 and C-9 canal study): the
+         nearest-transect still water (D-170), anchor not available.
+    2. Each storm = anchor + (transect level for that storm - transect 1% level), from the nearest transect.
+    3. VE only: waves added back, level = G + 1.55 x (still water - G) where still water is above ground.
+    Returns levels (n x events) and the anchor type per building.
+    """
+    near = coastal_nearest(pts, t)
+    delta = near[EV].to_numpy() - near[["p01"]].to_numpy()
+    zone = z.zone27.fillna("").to_numpy()
+    sub = z.zone27_subtype.fillna("").to_numpy()
+    src = z.zone27_source.fillna("").to_numpy()
+    bfe = z.bfe27_ft.to_numpy(float)
+    ao = z.ao_depth27_ft.to_numpy(float)
+    g = np.asarray(ground, float)
+    own = np.isin(src, anchor_sources)
+    anchor = np.full(len(z), np.nan)
+    kind = np.full(len(z), "transect", dtype=object)
+    m = own & np.isin(zone, ["AE", "AH"]) & np.isfinite(bfe)
+    anchor[m], kind[m] = bfe[m], "bfe"
+    m = own & (zone == "VE") & np.isfinite(bfe)
+    anchor[m], kind[m] = (bfe[m] + (WAVE_FACTOR - 1) * g[m]) / WAVE_FACTOR, "ve_bfe_minus_wave"
+    m = own & (zone == "AO") & np.isfinite(ao)
+    anchor[m], kind[m] = g[m] + ao[m], "ao_depth"
+    x02 = own & (zone == "X") & np.char.startswith(sub.astype(str), "0.2 PCT")
+    if x02.any():
+        poly = read(ext, "S_Fld_Haz_Ar")
+        poly = poly[(poly.FLD_ZONE == "AE") & poly.SOURCE_CIT.isin(list(anchor_sources)) & (poly.STATIC_BFE > -9000)]
+        tree = STRtree(poly.geometry.values)
+        idx = tree.query_nearest(pts[x02], all_matches=False)
+        order = np.argsort(idx[0])
+        anchor[np.flatnonzero(x02)] = poly.STATIC_BFE.to_numpy()[idx[1][order]]
+        kind[x02] = "nearest_ae_bfe"
+    sw = np.where(np.isfinite(anchor)[:, None], anchor[:, None] + delta, near[EV].to_numpy())
+    ve = kind == "ve_bfe_minus_wave"
+    out = sw.copy()
+    out[ve] = np.where(sw[ve] > g[ve, None], g[ve, None] + WAVE_FACTOR * (sw[ve] - g[ve, None]), sw[ve])
+    o = pd.DataFrame(out, columns=EV)
+    o["anchor_kind"] = kind
+    o["tsct_dist_m"] = near.tsct_dist_m.to_numpy()
+    return o

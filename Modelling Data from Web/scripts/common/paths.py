@@ -91,6 +91,7 @@ NFIP_POLICIES_PARQUET_MANUAL = None   # set to the user's full NFIP policies Par
 EAD_BUILDINGS_PARQUET = BENEFIT_DIR / "ead_buildings.parquet"      # Stage 2 output
 GROUND_3DEP_PARQUET = BENEFIT_DIR / "ground_3dep.parquet"          # prompt 28 Part 2 (D-166)
 PA_FEATURES_PARQUET = BENEFIT_DIR / "pa_features.parquet"          # house features, no personal fields (D-169)
+SDF_SALES_PARQUET = BENEFIT_DIR / "sdf_sales.parquet"              # DOR sales file, non-personal fields (D-176)
 FEMA2027_ZONES_PARQUET = BENEFIT_DIR / "fema2027_zones.parquet"    # 2027 flood zone per building (D-170)
 MODULE_A_PARQUET = BENEFIT_DIR / "module_a_depth.parquet"         # spec Module A output
 MODULE_B_PARQUET = BENEFIT_DIR / "module_b_eyd.parquet"           # spec Module B output

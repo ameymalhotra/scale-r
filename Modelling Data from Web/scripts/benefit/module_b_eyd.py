@@ -46,7 +46,7 @@ EVENTS = [e["name"] for e in CONFIG["events"]]
 P = np.array([e["annual_chance"] for e in CONFIG["events"]])
 assert (np.diff(P) < 0).all(), "events must run from most frequent to rarest"
 MAIN = list(CONFIG["sources"])
-COASTAL = [k for k, v in CONFIG["sources"].items() if v["kind"] == "coastal"]
+COASTAL = [k for k, v in {**CONFIG["sources"], **CONFIG["comparison_sources"]}.items() if v["kind"] == "coastal"]
 CASES = {"low": ("low", False, CONFIG["range"]["ffe_shift_estimated_ft"]["low"]),
          "mid": ("mean", False, 0.0),
          "high": ("high", CONFIG["range"]["whole_building_high"], CONFIG["range"]["ffe_shift_estimated_ft"]["high"])}
@@ -153,8 +153,12 @@ def main():
         r = compute(A, cur, cases=("mid",), slr=float(s))
         R[f"eyd_mid_slr{s}"] = r.eyd_mid.to_numpy()
         R[f"eyd_tail_mid_slr{s}"] = r.eyd_tail_mid.to_numpy()
-    for name in CONFIG["comparison_sources"]:
-        r = compute(A, cur, cases=("mid",), sources=[name])
+    for name, cfg in CONFIG["comparison_sources"].items():
+        r = compute(A, cur, cases=("low", "mid", "high"), sources=[name] + cfg.get("with", []))
+        R[f"eyd_low_{name}"] = r.eyd_low.to_numpy()
+        R[f"eyd_high_{name}"] = r.eyd_high.to_numpy()
+        R[f"eyd_tail_low_{name}"] = r.eyd_tail_low.to_numpy()
+        R[f"eyd_tail_high_{name}"] = r.eyd_tail_high.to_numpy()
         R[f"eyd_mid_{name}"] = r.eyd_mid.to_numpy()
         R[f"eyd_tail_mid_{name}"] = r.eyd_tail_mid.to_numpy()
     # displacement (FEMA standard values, 2021 dollars), mid case, separate from EYD
@@ -181,6 +185,7 @@ def main():
     S = {"buildings": len(R), "seconds": round(time.time() - t0),
          "eyd_million": {c: tot(c) for c in ["eyd_low", "eyd_mid", "eyd_high", "eyd_tail_mid", "eyd_mid_slr1",
                                              "eyd_mid_slr2", "eyd_mid_slr3", "eyd_mid_map2009", "eyd_tail_mid_map2009",
+                                             "eyd_mid_coastal_transect", "eyd_tail_mid_coastal_transect",
                                              "disp_mid"]},
          "eyd_residential_mid_million": round(float(R.loc[R.residential, "eyd_mid"].sum()) / 1e6, 1),
          "buildings_with_eyd": int((R.eyd_mid > 0).sum()),

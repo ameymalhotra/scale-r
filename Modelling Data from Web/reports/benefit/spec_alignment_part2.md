@@ -48,6 +48,126 @@ Decisions D-166 to D-172 in `DECISIONS.md`. Specification:
   - Raising 2,690 flood-prone homes in a Princeton tract by 3 ft avoids about
     $7.0 million a year ($4.3 million to $9.0 million).
 
+## Update (12 Nov 2026): anchored coastal levels, three-way comparison, inland gap, DOR sales
+
+Decisions D-173 to D-176. The main coastal method is now the anchored one
+(below). Sections 4 to 7 further down describe the first Part 2 run, which
+used the nearest-transect method; it is kept as a comparison.
+
+Added sources: the DOR 2026 final sales data file (SDF), downloaded 12 Nov
+2026, with sales in 2025 and 2026 and their qualification codes.
+
+### A. Coastal levels anchored to FEMA's mapped 1% elevation
+
+**How it works:** at each building, the 1% coastal level is FEMA's 2027
+mapped elevation. The other storms are that level plus the transect's step
+from the 1% storm (for example, about 4 ft lower for the 10% storm and
+about 1.7 ft higher for the 0.2% storm). The 0.2% storm reaches only the
+mapped 1% and 0.2% zones.
+
+**Waves against still water.** Mapped elevations include waves where waves
+matter; transect levels do not.
+
+| Zone | What the mapped elevation holds | How it is used |
+|---|---|---|
+| Coastal AE and AH (coastal studies) | Almost still water: a median 0.3 ft above the transect (middle half 0 to 0.6 ft) | Used as the still-water anchor; the small wave part is kept and stated |
+| VE (129 buildings) | About 3 ft of wave crest above still water (median 10 ft against 6.7 ft) | Waves removed with FEMA's breaking-wave rule (crest = still water + 0.55 x water depth); storms shifted in still water; waves added back the same way |
+| AO | A depth | Ground plus depth |
+| 0.2% zone (shaded X) | No 1% elevation | Nearest coastal AE elevation, plus the step to 0.2%; dry for the 1% and more frequent storms |
+| C-8/C-9 combined zones, zone A, minimal zone | (canal model already matches; or no elevation) | Transect still water, as before |
+
+**Results (anchored, estimated):**
+- **County expected yearly damage:** $745M middle ($320M low to $2,217M
+  high), plus $144M beyond the 0.2% storm.
+- **With sea level rise:** +1 ft $1,164M, +2 ft $1,669M, +3 ft $2,313M.
+- **Buildings with water above the floor:** 141,169 in the 1% storm and
+  328,774 in the 0.2% storm.
+
+### B. Three versions against NFIP claims (nothing tuned)
+
+All three count the same things: structure and contents, including the part
+beyond the rarest storm, no displacement. 694 tracts with 50+ occupied
+homes; claims $30.3M a year (2025 dollars, recency weighted).
+
+| | Stage 2 | Transect (D-170) | Anchored (D-173) |
+|---|---|---|---|
+| County, $M per year | 164 | 854 | 889 |
+| Model to claims, all buildings | 5.3 | 27.9 | 29.0 |
+| Model to claims, residential | 2.9 | 16.9 | 16.5 |
+| Tract ranking (Spearman, 95% interval) | 0.49 (0.43 to 0.54) | 0.35 (0.28 to 0.41) | 0.35 (0.28 to 0.41) |
+| Tracts with claims but no modelled damage | 170 | 61 | 60 |
+| Share of claims in those tracts | 5.7% | 3.0% | 3.0% |
+| Damage share in the top tenth of tracts (claims share in brackets) | 60% (35%) | 42% (27%) | 46% (28%) |
+
+**What this shows:**
+- **Overall level.** Stage 2 ranks tracts best and overstates least. The
+  two new versions are nearly the same as each other.
+- **Frequent storms only.** The anchored version's damage from storms
+  between the 10% and 2% levels is $187M a year, 6.1 times claims. That is
+  close to Stage 2's ratio. The high total comes from storms rarer than the
+  50-year storm, which the 1978 to 2025 claims record barely contains, so
+  claims cannot confirm or rule out that part.
+- **Where.** The new versions find damage in many more of the tracts that
+  have claims (60 tracts with claims but no damage, against 170). But they
+  still rank tracts less well. Damage concentrates on the coast, while 94%
+  of claims come from tracts with no rainfall levels (section C).
+
+**Recommendation (D-174): the anchored version.**
+- It follows the specification's five storms and agrees with FEMA's map at
+  every building, with waves handled explicitly.
+- Its frequent-storm level against claims is in line with Stage 2.
+- Its weaker ranking comes from the missing inland rainfall, which no
+  version fixes.
+- Stage 2 stays as a benchmark. Final calibration waits for the policies
+  file.
+
+**Projects with the anchored version (estimated, per year):**
+- **Seawall in North Miami, 8 ft crest:** holds every storm up to the 2%
+  for all 1,881 buildings behind it, and the 1% for 1,824. It avoids
+  **$2.2M** ($0.8M to $7.2M) of $3.3M. A 6 ft crest avoids only $0.13M.
+  With 2 ft of sea level rise, the 8 ft wall holds back only the 10% and 4%
+  storms for most of those buildings and avoids $1.8M.
+- **Raising homes in Princeton (2,726 homes):** raising them 3 ft avoids
+  **$8.4M** ($5.8M to $9.2M) of $10.4M.
+- **Run time:** each scenario 0.02 to 0.07 seconds.
+
+### C. The inland rainfall gap: a known undercount
+
+Rainfall and canal levels for the 10%, 4% and 2% storms exist only in the
+C-8 and C-9 basins. Everywhere else, frequent rainfall floods count as
+zero.
+
+| Group | Buildings | Residents | In the 1% zone |
+|---|---|---|---|
+| C-8 and C-9 (rainfall counted) | 92,024 | 391,229 | 52,759 |
+| Map only (1% level only; frequent storms zero) | 68,031 | 257,725 | 68,031 |
+| Coastal storms counted, rainfall missing | 312,340 | 1,542,888 | 172,112 |
+| No flood source at all | 154,857 | 689,730 | 394 |
+| **All outside C-8 and C-9** | **535,228** | **2,490,343** | **240,537** |
+
+- **Who it affects:** about 2.5 million residents (1.2 million of them in the
+  1% zone) have no frequent rainfall flooding counted.
+- **Claims:** 93.9% of claims come from tracts mostly outside C-8 and C-9.
+- **Why it matters:** this is the main reason the tract ranking is weak.
+- **How it would be fixed:** countywide rainfall depth outputs (requested)
+  or the planned claims-trained flood model.
+
+### D. DOR sales files (with qualification codes)
+
+- **What is online:** the DOR data portal only holds the current roll year
+  (folders 2026F and 2026P). The 2026 final sales file covers sales in 2025
+  and 2026, so it adds nothing for 2021 to 2024.
+- **2021 to 2024:** these files have to be requested from DOR by email
+  (PTOTechnology@floridarevenue.com). Nothing has been sent.
+- **What the 2026 file gave:** 125,117 sales, with no owner names or
+  addresses. Only parcel ID, use code, qualification code, vacant/improved
+  code, sale year, month and price, multi-parcel flag and sale ID code were
+  kept.
+- **Matching:** every parcel matches the tax roll. It confirms qualification
+  codes for 103,099 of the latest sales in the county house layer.
+- **Qualified sales of improved homes in 2025 and 2026:** 18,350
+  single-family and 23,854 condo.
+
 ## 1. Decisions from the user, carried out
 
 | Decision | What was done | Result |

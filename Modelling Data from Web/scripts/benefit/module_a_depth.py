@@ -52,6 +52,9 @@ KEEP = ["fd_id", "bid", "GEOID_tract", "GEOID_bg", "lon", "lat", "occtype", "fou
         "year_built_used", "fema_zone", "fema_bfe_ft_navd88", "nfip_cid", "slr_1ft", "slr_2ft", "slr_3ft"]
 
 
+ANCHOR_KIND = {}
+
+
 def source_levels(name, cfg, b, pts, z):
     """Water levels (n x events) for one source; NaN where it does not apply."""
     ext = paths.FIRM_2027_EXTRACT
@@ -59,8 +62,14 @@ def source_levels(name, cfg, b, pts, z):
     if cfg["type"] == "fema_transects":
         m = z.zone27_source.isin(cfg["zone_sources"]).to_numpy()
         t = wl.transects(ext)
-        f = wl.coastal_alongshore if cfg["method"] == "alongshore" else lambda p, t_, e: wl.coastal_nearest(p, t_)
-        v = f(pts[m], t, ext)
+        if cfg["method"] == "anchored":
+            v = wl.coastal_anchored(pts[m], t, z[m].reset_index(drop=True),
+                                    b.ground_elev_ft_navd88.to_numpy()[m], ext)
+            ANCHOR_KIND[name] = pd.Series(v.anchor_kind.to_numpy(), index=np.flatnonzero(m))
+        elif cfg["method"] == "alongshore":
+            v = wl.coastal_alongshore(pts[m], t, ext)
+        else:
+            v = wl.coastal_nearest(pts[m], t)
         out.loc[m, cfg["events"]] = v[cfg["events"]].to_numpy()
     elif cfg["type"] == "fema_nodes":
         m = z.subbasin_node.notna().to_numpy()
@@ -111,20 +120,22 @@ def main():
     sfha = z.zone27.isin(["A", "AE", "AH", "AO", "VE"]).to_numpy()
     x02 = (z.zone27.eq("X") & z.zone27_subtype.fillna("").str.startswith("0.2 PCT")).to_numpy()
     extent = {ev: (sfha | x02) if ev == "p002" else sfha for ev in EVENTS}
+    for name, cfg in CONFIG["comparison_sources"].items():
+        lv[name] = source_levels(name, cfg, b, pts, z)
+    capped_names = [n for n, c in {**CONFIG["sources"], **CONFIG["comparison_sources"]}.items()
+                    if c["type"] != "buildings_column"]
     uncapped = {}
-    for name in CONFIG["sources"]:
+    for name in capped_names:
         for ev in EVENTS:
             v = lv[name][ev].to_numpy(float).copy()
             uncapped[(name, ev)] = v.copy()
             if CONFIG.get("cap_to_fema_extent", True):
                 v[~extent[ev]] = np.nan
             lv[name][ev] = v
-    for name, cfg in CONFIG["comparison_sources"].items():
-        lv[name] = source_levels(name, cfg, b, pts, z)
     for name, v in lv.items():
         for ev in EVENTS:
             A[f"wse_{name}_{ev}"] = v[ev].to_numpy(np.float32)
-    for name in CONFIG["sea_level_rise_applies_to"]:
+    for name in [n for n in capped_names if {**CONFIG["sources"], **CONFIG["comparison_sources"]}[n]["kind"] == "coastal"]:
         for ev in EVENTS:
             A[f"wse_{name}_uncapped_{ev}"] = uncapped[(name, ev)].astype(np.float32)
 
@@ -144,6 +155,10 @@ def main():
         sx[m] = [p.x for p in q]
         sy[m] = [p.y for p in q]
     A["shore_x"], A["shore_y"] = sx, sy
+    for name, k in ANCHOR_KIND.items():
+        col = np.full(len(A), "", dtype=object)
+        col[k.index.to_numpy()] = k.to_numpy()
+        A[f"anchor_{name}"] = col
     A["shore_dist_m"] = np.hypot(sx - ex, sy - ny)
 
     ffe = A.ffe_ft_navd88.to_numpy()
@@ -169,6 +184,7 @@ def main():
     dep = A[[f"depth_{ev}_slr0" for ev in EVENTS]]
     S = {"buildings": len(A), "seconds": round(time.time() - t0),
          "buildings_by_source": {k: int(v.notna().any(axis=1).sum()) for k, v in lv.items()},
+         "anchor_kinds": {k: v.value_counts().to_dict() for k, v in ANCHOR_KIND.items()},
          "blank_depths": int(A.filter(like="depth_").isna().sum().sum()),
          "buildings_wet_above_floor_slr0_without_extent_cap": unc_wet,
          "buildings_wet_above_floor_slr0": {ev: int((A[f"depth_{ev}_slr0"] > 0).sum()) for ev in EVENTS},

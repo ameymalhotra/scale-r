@@ -4001,3 +4001,133 @@ D-113.
 - Reason: The specification; a rule that is simple to explain.
 - Evidence: `scripts/benefit/module_c_projects.py`; `module_c_examples.json`.
 - Affects: Module C; Module D will read the change in EYD.
+
+### D-173. Coastal water levels anchored to FEMA's mapped 1% elevation at each building
+
+- Date: 12 Nov 2026. Status: Provisional (recommended in D-174). Decided by:
+  the user (anchor to the mapped 1% elevation, transect curve for the
+  differences only); Amey (VE and AE handling).
+- What happened: The user asked to anchor coastal levels to the 2027 mapped
+  1% elevation at each building. The transect frequency curve is used only
+  for the step from the 1% level to the 10%, 4%, 2% and 0.2% levels. The
+  0.2% mapped extent applies to the 0.2% storm. Wave-inclusive and
+  still-water levels must not be mixed.
+- What is wrong: Mapped 1% elevations include waves where waves matter;
+  transect levels are still water. In Miami-Dade:
+  - coastal AE zones sit a median 0.3 ft above the nearest transect still
+    water (middle half 0 to 0.6 ft), so they are almost still water;
+  - VE zones sit a median 10 ft against still water of about 6.7 ft, so
+    they carry about 3 ft of wave crest.
+- How we are fixing it:
+  - AE and AH zones from the coastal studies (STUDY5, STUDY6): the mapped
+    elevation is the still-water 1% anchor; the small wave part (about
+    0.3 ft) is kept and stated;
+  - VE (129 buildings): the wave crest is removed with FEMA's depth-limited
+    breaking wave rule (crest = still water + 0.55 x still-water depth), so
+    still water = (BFE + 0.55 x ground) / 1.55. Each storm is shifted in
+    still water, then the waves are added back with the same rule;
+  - AO: ground plus zone depth;
+  - 0.2% zone (shaded X): the mapped elevation of the nearest coastal AE
+    zone, plus the transect step to 0.2%. The extent cap keeps these
+    buildings dry for the 1% and more frequent storms;
+  - combined coastal and canal zones in C-8 and C-9 (STUDY7), zone A and
+    the minimal zone: no anchor; nearest-transect still water as D-170. The
+    canal model already matches the mapped elevation there;
+  - each storm = anchor + (transect level for that storm - transect 1%
+    level), from the nearest transect.
+  Anchor types: 176,680 mapped elevation, 142,965 nearest AE, 129 VE,
+  48 AO, 182,283 no anchor (most outside the mapped extent).
+- Decision: As above; the D-170 transect method is kept as a comparison
+  source.
+- Reason: The user's instruction; consistent with FEMA's map at each
+  building and no mixing of wave and still-water levels.
+- Evidence: `scripts/benefit/water_levels.py` (`coastal_anchored`);
+  `module_config.json`; `module_a_summary.json`.
+- Affects: Modules A, B and C.
+
+### D-174. Three versions compared with NFIP claims; anchored version recommended
+
+- Date: 12 Nov 2026. Status: Provisional (waiting for the user). Decided
+  by: Amey (recommendation); nothing tuned to claims.
+- What happened: The user asked to compare Stage 2, the transect method
+  (D-170) and the anchored method (D-173) with claims, on totals and tract
+  ranking, without tuning.
+- What is wrong: All three overstate claims (insured, paid losses), as
+  expected. The two new versions overstate much more, and they rank tracts
+  less well than Stage 2.
+- How we are fixing it: Same footing for all three: structure and
+  contents, including the part beyond the rarest storm, no displacement;
+  694 tracts with 50+ occupied homes. Results:
+
+  | | Stage 2 | Transect | Anchored |
+  |---|---|---|---|
+  | County, $M per year | 164 | 854 | 889 |
+  | Model to claims, all | 5.3 | 27.9 | 29.0 |
+  | Model to claims, residential | 2.9 | 16.9 | 16.5 |
+  | Tract ranking (Spearman) | 0.49 | 0.35 | 0.35 |
+  | Tracts with claims but no damage | 170 | 61 | 60 |
+
+  The anchored version's frequent storms alone (10% to 2%) give $187M,
+  6.1 times claims, close to Stage 2's ratio. The rare storms (2% to 0.2%),
+  which the 1978 to 2025 claims barely sample, make the rest. The ranking
+  stays near 0.30 even for frequent storms, because damage concentrates on
+  the coast while 94% of claims come from tracts without rainfall levels
+  (D-175).
+- Decision: Recommend the anchored version for the tool:
+  - it follows the specification (five storms) and matches FEMA's map at
+    every building, with waves handled;
+  - its frequent-storm level is in line with Stage 2 against claims;
+  - its lower ranking comes from the missing inland rainfall, which no
+    version fixes.
+  Stage 2 stays as a benchmark. Final calibration waits for the policies
+  file.
+- Reason: Specification; FEMA consistency; no tuning.
+- Evidence: `scripts/benefit/compare_versions.py`;
+  `version_comparison.json`, `version_comparison.csv`.
+- Affects: Modules B and C; Module D flood variable.
+
+### D-175. Inland rainfall gap recorded as a known undercount
+
+- Date: 12 Nov 2026. Status: Final (as a limitation). Decided by: the user.
+- What happened: Rainfall levels for the 10%, 4% and 2% storms exist only
+  in the C-8 and C-9 basins.
+- What is wrong: Outside them, frequent rainfall floods count as zero.
+- How we are fixing it: Measured and reported:
+  - outside C-8 and C-9: 535,228 buildings and 2.49 million residents
+    (240,537 buildings and 1.20 million residents in the 1% zone);
+  - map only (1% zone, only the 1% level): 68,031 buildings, 257,725
+    residents;
+  - coastal storms counted, rainfall missing: 312,340 buildings, 1.54
+    million residents;
+  - no flood source at all: 154,857 buildings, 689,730 residents;
+  - 93.9% of claims come from tracts mostly outside C-8 and C-9.
+- Decision: Reported as a known undercount until countywide rainfall depth
+  outputs arrive (requested); a claims-trained flood model remains the
+  planned fix (Stage 2 limitation).
+- Reason: The user's instruction.
+- Evidence: `scripts/benefit/inland_gap.py`; `inland_gap.json`.
+- Affects: Modules B and C; claims check.
+
+### D-176. DOR sales files: only 2025 and 2026 are online
+
+- Date: 12 Nov 2026. Status: Provisional (waiting for the user). Decided
+  by: the user (download 2021 to 2024, non-personal fields only).
+- What happened: The user approved downloading the free DOR sales data
+  files (SDF, with qualification codes) for 2021 to 2024.
+- What is wrong: The DOR data portal holds only the current roll year: the
+  SDF folder has 2026F and 2026P only (checked through the portal's file
+  listing). The 2026 final file covers sales in 2025 and 2026, so it adds
+  nothing before 2025. Earlier years must be requested from DOR
+  (PTOTechnology@floridarevenue.com), which is an email the user must send
+  or approve.
+- How we are fixing it: Downloaded the 2026 final SDF (125,117 sales). It
+  holds no owner names or addresses. Kept parcel ID, use code,
+  qualification code, vacant/improved code, sale year, month and price,
+  multi-parcel flag and sale ID code. All parcels match the tax roll; it
+  confirms the qualification code for 103,099 latest sales in the county
+  house layer (2025 and 2026).
+- Decision: Stop here and report. The 2021 to 2024 sales still lack
+  qualification codes.
+- Reason: Only data the user named; no emails sent without approval.
+- Evidence: `scripts/benefit/build_sdf_sales.py`; `sdf_sales_summary.json`.
+- Affects: Module D sales sample.

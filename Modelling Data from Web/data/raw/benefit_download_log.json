@@ -312,6 +312,14 @@
       "downloaded": "2026-11-10",
       "bytes": 20976,
       "sha256": "992dcc30ae3ed9c82c253cafe373a471a96404074bf482c902ed49a7630579e8"
+    },
+    {
+      "file": "data/raw/dor/Dade_23_Final_SDF_2026.zip",
+      "url": "https://floridarevenue.com/property/dataportal/Documents/PTO%20Data%20Portal/Tax%20Roll%20Data%20Files/SDF/2026F/Dade%2023%20Final%20SDF%202026.zip",
+      "publisher_date": "CSV inside dated 16 Oct 2026; sales 2025 and 2026",
+      "downloaded": "2026-11-10",
+      "bytes": 2324867,
+      "sha256": "208b3283a0a7c1a623e6619f0d7375f12754dbdb8e680d33343f72cf8713aa03"
     }
   ]
 }
