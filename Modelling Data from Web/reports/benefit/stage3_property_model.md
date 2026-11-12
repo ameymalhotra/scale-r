@@ -1,5 +1,10 @@
 # Stage 3: Property value model (RAISE-style hedonic model)
 
+> **Draft, paused (D-159).** The professor's specification changes this model: the key
+> variable becomes flood risk (expected yearly damage from Stage 2) instead of distance to
+> project types, with separate single-family and condo MGWR models. The results below are
+> kept for reference only and will not be used in Stage 4.
+
 Benefit simulator, Phase 1. 11 Nov 2026. Branch `benefit-simulator`.
 Decisions D-149 to D-158 in `DECISIONS.md`.
 

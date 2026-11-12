@@ -3638,3 +3638,23 @@ D-113.
 - Reason: The user's approval.
 - Evidence: this entry; `.venv` package list.
 - Affects: `scripts/benefit/stage3_mgwr.py`.
+
+### D-159. Stage 3 paused and kept as a draft after the professor's new specification
+
+- Date: 11 Nov 2026. Status: Provisional. Decided by: the user (on the
+  professor's specification).
+- What happened: The professor sent a specification that changes the
+  property value model. Its key variable must be flood risk (the Stage 2
+  expected yearly damage), not distance to project types. Single-family
+  homes and condos get separate MGWR models. Value change is computed as
+  value x (exp(beta_flood x change in expected yearly damage) - 1).
+- What is wrong: The Stage 3 model (D-149 to D-158) is built around
+  distance to project types, so it does not match the new design.
+- How we are fixing it: Stage 3 stops here. The existing scripts, outputs
+  and report stay in the repository, marked as a draft, and are not used
+  in Stage 4. Work resumes when the updated plan arrives.
+- Decision: As above.
+- Reason: The user's instruction.
+- Evidence: this entry; the draft note at the top of
+  `reports/benefit/stage3_property_model.md`.
+- Affects: Stage 3 (to be redone); Stage 4 property value change.
