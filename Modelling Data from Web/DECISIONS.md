@@ -4131,3 +4131,213 @@ D-113.
 - Reason: Only data the user named; no emails sent without approval.
 - Evidence: `scripts/benefit/build_sdf_sales.py`; `sdf_sales_summary.json`.
 - Affects: Module D sales sample.
+
+### D-177. Benchmark against FEMA's National Risk Index (flood only)
+
+- Date: 12 Nov 2026. Status: Final (benchmark; nothing tuned). Decided by:
+  the user.
+- What happened: The user asked for a comparison with the NRI's expected
+  annual loss to buildings from coastal and inland flooding (December 2025,
+  `fema_miami_dade_dec_2025.csv`), excluding hurricane wind.
+- What is wrong: The two disagree on where flood losses are. NRI puts
+  $269M a year on inland flooding and $18M on coastal flooding. Our model
+  puts almost all of its damage on the coast.
+- How we are fixing it: Compared 706 tracts, totals and ranking (loss per
+  dollar of building value):
+
+  | | Total, $M a year | Ranking against NRI flood | Ranking against NFIP claims |
+  |---|---|---|---|
+  | NRI coastal + inland | 287 | n/a | 0.25 |
+  | Anchored (structure + contents) | 889 | 0.02 | 0.35 |
+  | Anchored, structure only (NRI counts buildings) | 463 | 0.06 | n/a |
+  | Frequent storms only (10% to 2%) | 187 | -0.08 | 0.30 |
+  | Stage 2 | 164 | -0.02 | 0.49 |
+
+  Against NRI coastal flooding alone: anchored 0.14, frequent 0.28, Stage 2
+  0.65.
+- Decision: Report it. NRI ranks NFIP claims less well (0.25) than our
+  anchored model (0.35), so it is a check on totals, not a target. The
+  totals bracket NRI ($187M to $463M against $287M). NRI's large inland
+  flood figure supports the missing inland rainfall (D-175).
+- Reason: The user's instruction; no tuning.
+- Evidence: `scripts/benefit/nri_benchmark.py`; `nri_benchmark.json`,
+  `nri_benchmark_tracts.csv`.
+- Affects: Interpretation of Module B.
+
+### D-178. Module D sales samples
+
+- Date: 12 Nov 2026. Status: Provisional. Decided by: the user (main and
+  test samples); Amey (variables).
+- What happened: Until DOR's 2021 to 2024 files arrive, the 2025 and 2026
+  qualified sales are the main sample, and the house layer's 2021 to 2024
+  latest sales are a test.
+- What is wrong: No pool field is free (D-165), and older sales lack
+  qualification codes.
+- How we are fixing it: Specification variables:
+  - log price;
+  - flood risk = anchored EYD in $1,000s per property, including the part
+    beyond the 0.2% storm (condos: the parcel's damage split by unit just
+    value);
+  - living area; lot (single-family); age; bedrooms; bathrooms
+    (full + half x 0.5);
+  - pool proxy (single-family: special features value above 0, which also
+    counts docks and fences);
+  - waterfront (parcel within 10 m of FEMA water or open water);
+  - log distance to water; ground elevation (3DEP); time (sale year +
+    month).
+  Main: 17,935 single-family and 22,966 condo sales.
+- Decision: As above.
+- Reason: Specification D1 and D2.
+- Evidence: `scripts/benefit/module_d_prepare.py`; `prepare_log.json`.
+- Affects: Module D.
+
+### D-179. Non-market rule for 2021 to 2024 latest sales
+
+- Date: 12 Nov 2026. Status: Provisional. Decided by: Amey (stated before
+  fitting; not tuned on the model).
+- What happened: The house layer's latest sales have no qualification code.
+- What is wrong: Many are not arm's-length (family transfers, nominal
+  prices).
+- How we are fixing it: A sale is kept only if all hold:
+  - price at least $50,000;
+  - price divided by the 2026 just value (moved back to the sale year with
+    FHFA's county index) inside the 2.5th to 97.5th percentile of the same
+    ratio in the qualified 2025 to 2026 sales (single-family 0.92 to 1.73;
+    condo 0.97 to 1.64);
+  - price per square foot (in 2025 dollars) inside the 0.5th to 99.5th
+    percentile of the qualified sales (single-family $171 to $2,251;
+    condo $133 to $2,645);
+  - living area and year built present, not sold before built.
+  Single-family: 92,084 to 41,729 (44,553 below $50,000). Condo: 115,821
+  to 57,824 (37,804 below $50,000).
+- Decision: As above; results reported with and without them.
+- Reason: A simple, stated rule that removes nominal and outlying prices.
+- Evidence: `prepare_log.json` (`older_rule`).
+- Affects: Module D test sample.
+
+### D-181. NFIP policies: full file downloaded and checked; claims check per insured home
+
+- Date: 12 Nov 2026. Status: Final (download); Provisional (check).
+  Decided by: the user.
+- What happened: The user asked for a resumable download of the full
+  `NfipPoliciesV3.parquet`, checked against FEMA, filtered to Miami-Dade,
+  and a claims check per insured building.
+- What is wrong: Nothing with the file. The user's own browser copy in
+  Downloads is complete too (same size), not partial, so it was not
+  deleted.
+- How we are fixing it:
+  - downloaded with `curl -C -` and retries: 3,713,009,365 bytes,
+    matching FEMA's Content-Range; MD5 275e07e99258e4ff7684cf4505f91406,
+    matching FEMA's ETag; SHA-256 recorded;
+  - filtered to censusGeoid starting 12086: 3,317,242 policy records
+    (2009 to 2026); 20 non-identifying fields kept;
+  - residential policy-years about 340,000 to 355,000 a year; take-up
+    (policy-years / occupied homes, 2015 to 2025) 35.5% county-wide,
+    against 20.3% implied in Stage 2's gap breakdown;
+  - modelled insured loss = residential damage x tract take-up x paid-to-
+    damage ratio (0.906): anchored $153M against claims $30.3M (5.0 times),
+    tract ranking 0.46 (0.39 to 0.51); Stage 2 $44M (1.45 times), ranking
+    0.52;
+  - floor height from policy elevation fields (lowest floor minus lowest
+    adjacent grade, block-group medians only): median 1.1 ft (0.9 to
+    1.5 ft), higher than our slab heights (0.25 to 0.75 ft).
+- Decision: Use measured take-up in the calibration. The floor-height
+  finding suggests our damage is too high; report it, and propose using the
+  block-group medians for estimated floors in a later step (not done here,
+  to avoid changing Module B now).
+- Reason: The user's instruction.
+- Evidence: `scripts/benefit/nfip_policies.py`; `nfip_policies_check.json`,
+  `nfip_floor_height_by_bg.csv`; `data/raw/fema/nfip_policies_full/md5.txt`.
+- Affects: Module B calibration.
+
+### D-180. Module D model set-up: OLS benchmark and MGWR on 5,000 sales per model
+
+- Date: 12 Nov 2026. Status: Provisional. Decided by: the specification
+  (D1 to D4); Amey (sample size, bandwidth floor, details).
+- What happened: The specification asks for separate single-family and
+  condo models, OLS first, MGWR on 10,000 to 30,000 sales per model,
+  coefficients stored on every building, and held-out error.
+- What is wrong:
+  - MGWR's time and memory grow with the square of the sample; 2,000 sales
+    took 3 to 17 minutes in Stage 3, and this machine has 17 GB of memory.
+  - In Stage 3, small local windows made local fits unstable (D-153).
+  - Yes/no controls (waterfront, pool proxy) are all zero in many local
+    windows, which made the first runs singular.
+- How we are fixing it:
+  - 20% of main-sample sales held out (random within tracts, seed
+    20261112); OLS on all other main sales (tract-clustered errors);
+  - MGWR on a tract-stratified sample of 5,000 of them (below the
+    specification's 10,000 to 30,000; a larger run is possible overnight);
+  - bandwidth floor 500 neighbours; waterfront and pool proxy held
+    countywide; backfitting starts from a countywide regression;
+  - local coefficients converted to original units around the sample
+    means, so each can be carried to new points on its own bandwidth
+    (bisquare kernel, specification route 2) for held-out sales and for
+    every building;
+  - variants (frequent-storm flood variable; with 2021 to 2024 sales) refit
+    with the main bandwidths held fixed.
+- Decision: As above.
+- Reason: Feasible on this machine; follows the specification otherwise.
+- Evidence: `scripts/benefit/module_d_fit.py`; `outputs/benefit/module_d/*.json`.
+- Affects: Module D.
+
+### D-183. The flood coefficient has the wrong sign for single-family homes
+
+- Date: 12 Nov 2026. Status: Open (needs the user and the professor).
+  Decided by: nobody yet; stopped and reported.
+- What happened: The single-family models give a positive flood
+  coefficient: higher expected yearly damage goes with higher prices.
+  - OLS: +1.6% per $1,000 (0.4% to 2.8%);
+  - MGWR: median +1.3%, with only 12% of locations negative;
+  - within tracts +0.4%; within block groups +0.5%; more than 1 km from
+    water +3.0%.
+  Condos: OLS -1.2% (-2.0% to -0.3%), but about 0 within tracts.
+- What is wrong: With a positive coefficient, the value-change formula says
+  flood protection lowers home values. The cause is mostly mechanical:
+  damage in dollars grows with the home's own value (bigger homes have more
+  to lose). With damage per $100,000 of structure value instead, the
+  single-family effect is -0.06% per $100 a year (-0.39% to +0.26%),
+  that is, no clear effect. Condos show -4.8% (-6.0% to -3.6%) across the
+  county, but +0.9% within tracts.
+- How we are fixing it: Not fixed. The results are reported, and the
+  value change is shown for the test scenarios only to show what the
+  formula gives.
+- Decision: Waiting for the user. Options in the report:
+  1. flood variable as a damage rate (per $100,000 of value), not dollars;
+  2. use only local coefficients that are negative and significant, else 0;
+  3. a published flood discount as an assumption until the before-and-after
+     check (D6) can be run with 2021 to 2024 qualified sales.
+- Reason: The rule to stop and report when results contradict expectations.
+- Evidence: `scripts/benefit/module_d_sign_check.py`; `sign_check.json`;
+  `single_family_main.json`.
+- Affects: Module D value change and tax change.
+
+### D-182. Module D value and tax change: method, and what the current coefficients give
+
+- Date: 12 Nov 2026. Status: Provisional (method); results not usable until
+  D-183 is settled. Decided by: the specification (D4, D5, D7); Amey
+  (details).
+- What happened: The specification asks for coefficients on every building,
+  value change = value x (exp(beta x delta EYD) - 1) with a beta +/- 2 SE
+  range, and tax change in year 1 and year 10 under Florida's caps.
+- What is wrong: With the current (mostly positive) coefficients, the
+  formula gives value losses from flood protection:
+  - seawall (8 ft, North Miami): -$15.2M (-$35.9M to +$6.9M) with the main
+    model; -$4.7M with the frequent-storm model (0.31 times);
+  - elevation (3 ft, Princeton): -$20.3M (-$72.2M to +$34.6M) main;
+    -$20.9M frequent (1.03 times).
+  When carried to buildings, the coefficients also stretch beyond the
+  calibration range in places (condo median +8% per $1,000).
+- How we are fixing it: Method in place and tested:
+  - coefficients and standard errors stored on 383,978 single-family and
+    103,882 condo buildings;
+  - value = 2026 just value allocated to the building; condo damage change
+    split equally across units;
+  - tax: Save Our Homes (2.9%, the lower of 3% and CPI) for homesteads;
+    10% cap on non-school levies for others; school levies on just value;
+    2026 exemptions and millage; 3% market growth; no sales in 10 years.
+- Decision: Keep the method. Do not use the value or tax results until the
+  flood variable is settled (D-183).
+- Reason: Specification; the stop-and-report rule.
+- Evidence: `scripts/benefit/module_d_value_tax.py`; `value_tax_examples.json`.
+- Affects: Module D; benefit per dollar (tax part).

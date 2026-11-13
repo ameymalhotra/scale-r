@@ -123,3 +123,7 @@ Modelling Data from Web/data/processed/benefit/fema2027_zones.parquet
 Modelling Data from Web/data/processed/benefit/module_a_depth.parquet
 Modelling Data from Web/data/processed/benefit/module_b_eyd.parquet
 Modelling Data from Web/data/processed/benefit/sdf_sales.parquet
+Modelling Data from Web/data/raw/fema/nfip_policies_full/
+Modelling Data from Web/data/processed/benefit/module_d_sales.parquet
+Modelling Data from Web/data/processed/benefit/module_d_coefficients.parquet
+Modelling Data from Web/data/processed/benefit/nfip_policies_miami_dade.parquet

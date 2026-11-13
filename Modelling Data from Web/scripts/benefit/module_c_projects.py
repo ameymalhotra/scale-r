@@ -45,26 +45,36 @@ CONFIG = mb.CONFIG
 TO_UTM = Transformer.from_crs("EPSG:4326", "EPSG:26917", always_xy=True)
 
 
+def frequent(L):
+    """Expected yearly damage from the storms between 10% and 2% only (Module D sensitivity)."""
+    L = np.maximum.accumulate(L, axis=1)
+    return (0.5 * (L[:, :-1] + L[:, 1:]) * (mb.P[:-1] - mb.P[1:]))[:, :2].sum(1)
+
+
 class Model:
     """Holds the precomputed Module A and B tables; each project call reruns only affected rows."""
 
     def __init__(self):
         t = time.time()
         self.A = mb.load_a()
-        self.B = pd.read_parquet(paths.MODULE_B_PARQUET, columns=["fd_id", "eyd_low", "eyd_mid", "eyd_high"])
+        self.B = pd.read_parquet(paths.MODULE_B_PARQUET, columns=["fd_id", "eyd_low", "eyd_mid", "eyd_high", "eyd_tail_mid"] +
+                                 [f"loss_{e}_mid" for e in mb.EVENTS])
         assert (self.A.fd_id.to_numpy() == self.B.fd_id.to_numpy()).all()
         self.cur = mb.load_curves()
         self.load_seconds = round(time.time() - t, 1)
 
     def _result(self, rows, scen, extra, t0, sub=None, slr=0.0):
+        lcols = [f"loss_{e}_mid" for e in mb.EVENTS]
         if slr:
             # baseline for the same rows under the same sea level rise
-            base = mb.compute(sub, self.cur, slr=slr)[["eyd_low", "eyd_mid", "eyd_high"]]
+            base = mb.compute(sub, self.cur, slr=slr, keep_losses=True)[["eyd_low", "eyd_mid", "eyd_high", "eyd_tail_mid"] + lcols]
         else:
-            base = self.B.loc[rows, ["eyd_low", "eyd_mid", "eyd_high"]]
+            base = self.B.loc[rows, ["eyd_low", "eyd_mid", "eyd_high", "eyd_tail_mid"] + lcols]
         avoided = {c: float((base[f"eyd_{c}"].to_numpy() - scen[f"eyd_{c}"].to_numpy()).sum()) for c in ("low", "mid", "high")}
         per = pd.DataFrame({"fd_id": self.A.fd_id.to_numpy()[rows], "eyd_mid_before": base.eyd_mid.to_numpy(),
-                            "eyd_mid_after": scen.eyd_mid.to_numpy()})
+                            "eyd_mid_after": scen.eyd_mid.to_numpy(),
+                            "eyd_tail_before": base.eyd_tail_mid.to_numpy(), "eyd_tail_after": scen.eyd_tail_mid.to_numpy(),
+                            "eyd_freq_before": frequent(base[lcols].to_numpy()), "eyd_freq_after": frequent(scen[lcols].to_numpy())})
         return {"buildings_affected": int(len(rows)),
                 "buildings_with_damage_before": int((base.eyd_mid > 0).sum()),
                 "eyd_baseline": {c: float(base[f"eyd_{c}"].sum()) for c in ("low", "mid", "high")},
@@ -96,7 +106,7 @@ class Model:
                 lv = np.fmax(lv, np.nan_to_num(sub[f"wse_{name}_{ev}"].to_numpy(float), nan=-np.inf) + s)
             return lv < crest_ft          # wall holds: coastal water removed for this storm
 
-        scen = mb.compute(sub, self.cur, slr=slr, coastal_off=off)
+        scen = mb.compute(sub, self.cur, slr=slr, coastal_off=off, keep_losses=True)
         held = {ev: int(off(ev, slr).sum()) for ev in mb.EVENTS}
         return self._result(rows, scen, {"wall_length_m": round(wall.length), "crest_ft_navd88": crest_ft,
                                          "candidates_checked": int(len(cand)), "storms_held_by_wall_buildings": held,
@@ -107,7 +117,7 @@ class Model:
         raise_ft = CONFIG["projects"]["elevation"]["default_raise_ft"] if raise_ft is None else raise_ft
         rows = np.flatnonzero(self.A.fd_id.isin(set(fd_ids)).to_numpy())
         sub = self.A.iloc[rows].reset_index(drop=True)
-        scen = mb.compute(sub, self.cur, ffe_add=raise_ft)
+        scen = mb.compute(sub, self.cur, ffe_add=raise_ft, keep_losses=True)
         return self._result(rows, scen, {"raise_ft": raise_ft}, t0)
 
     def pump_drainage(self, *a, **k):
