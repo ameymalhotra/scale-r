@@ -16,12 +16,31 @@ controls (waterfront, pool proxy) are held countywide for the same reason.
 - flood variable = storms 10% to 2% only (sensitivity);
 - training sales including the 2021 to 2024 latest sales that pass the
   non-market rule (D-179), same 5,000 size, same hold-out.
+Update (D-184, D-186): the main flood variable is the damage rate
+(flood_rate, $100 a year per $100,000 of building value); variants
+"frequent" (flood_freq_rate), "dollar" (flood_k, the spec's dollar
+variable, for comparison) and "with_older". MGWR_N=all uses every training
+sale (the specification asks for 10,000 to 30,000 per model); MGWR_OUTDIR
+names a sub-folder for those runs; MGWR_CHUNKS splits the final fit to
+limit memory.
+"fixed <b1,b2,...>": the main model with bandwidths given (intercept first, then the
+variables in XV order), for a rerun after an interrupted final fit (D-193).
+MGWR_TOL sets the backfitting tolerance (default 0.00001; 0.00002 for condo,
+D-194). Checkpoint (D-194): right after backfitting, the fitted selector is
+saved to <segment>_<variant>_checkpoint.pkl and the local coefficients
+(no standard errors yet) to <segment>_<variant>_backfit.parquet and .json;
+a rerun with the same sales, bandwidths and tolerance resumes from the
+checkpoint and goes straight to the standard-error step.
+Progress (D-192): step start and end times, percent of the standard-error
+step done with time left, a heartbeat every 5 minutes, and a status file
+(PROGRESS_STATUS), all through scripts/common/progress.py.
 Writes outputs/benefit/module_d/<segment>_<variant>.json and the local
 estimates <segment>_<variant>_local.parquet (coefficients and standard errors
 in original units, at the calibration points).
 """
 import json
 import os
+import pickle
 import sys
 import time
 from pathlib import Path
@@ -36,11 +55,21 @@ warnings.filterwarnings("ignore", category=LinAlgWarning)
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "common"))
 import paths  # noqa: E402
+from progress import Progress, joblib_progress  # noqa: E402
 
-OUT = paths.OUT_BENEFIT / "module_d"
+P = None  # set in main(); progress reporting (D-192)
+
+OUT = paths.OUT_BENEFIT / "module_d" / os.environ.get("MGWR_OUTDIR", "")
+FLOOD_OF = {"main": "flood_rate", "frequent": "flood_freq_rate", "dollar": "flood_k", "with_older": "flood_rate"}
+N_MAX = 30000
 SEED = 20261112
-N = int(os.environ.get("MGWR_N", "5000"))
+N = os.environ.get("MGWR_N", "5000")
+N = N_MAX if N == "all" else int(N)
 MIN_BW = int(os.environ.get("MGWR_MIN_BW", "500"))
+# worker processes for the local fits (joblib); -1 = all cores, 1 = one core (D-189)
+JOBS = int(os.environ.get("MGWR_JOBS", "-1"))
+# backfitting convergence tolerance (mgwr default 0.00001); condo uses 0.00002 (D-194)
+TOL = float(os.environ.get("MGWR_TOL", "1e-5"))
 HOLDOUT = 0.2
 GLOBAL_VARS = {"waterfront", "pool_proxy"}
 XV = {"single_family": ["FLOOD", "log_living_area", "log_lot", "age", "bedrooms", "bathrooms", "pool_proxy",
@@ -109,24 +138,45 @@ def moran(x, y, r):
     return {"I": round(float(m.I), 3), "p_sim": float(m.p_sim)}
 
 
-def smooth_to(cal_xy, cal_vals, bws, tgt_xy):
+def smooth_to(cal_xy, cal_vals, bws, tgt_xy, progress=None):
     """Carry local estimates to new points: bisquare kernel over each variable's own adaptive bandwidth
-    (nearest calibration points), the same kernel MGWR uses (spec D4, route 2)."""
+    (nearest calibration points), the same kernel MGWR uses (spec D4, route 2).
+    Target points go in blocks so memory stays small: a bandwidth near the whole sample (single-family
+    flood, 9,993 of 10,000) times every building would need about 24 GB at once (D-195). Variables
+    with the same bandwidth share one neighbour search. Results are the same as without blocks."""
     from scipy.spatial import cKDTree
     tree = cKDTree(cal_xy)
+    tgt_xy = np.asarray(tgt_xy)
     out = np.zeros((len(tgt_xy), cal_vals.shape[1]))
-    for j, bw in enumerate(bws):
-        k = int(min(max(bw, 2), len(cal_xy)))
-        d, i = tree.query(tgt_xy, k=k)
-        if k == 1:
-            d, i = d[:, None], i[:, None]
-        h = d[:, -1:] + 1e-9
-        w = (1 - (d / h) ** 2) ** 2
-        out[:, j] = (w * cal_vals[i, j]).sum(1) / w.sum(1)
+    ks = [int(min(max(bw, 2), len(cal_xy))) for bw in bws]
+    groups = {k: [j for j, kk in enumerate(ks) if kk == k] for k in dict.fromkeys(ks)}
+    for k, js in groups.items():
+        step = max(1, int(2e7 // k))          # about 160 MB per array per block
+        blocks = range(0, len(tgt_xy), step)
+        if progress:
+            progress.start(f"carry coefficients, {k} neighbours", total=len(blocks))
+        for n, a in enumerate(blocks, 1):
+            d, i = tree.query(tgt_xy[a:a + step], k=k)
+            h = d[:, -1:] + 1e-9
+            w = (1 - (d / h) ** 2) ** 2
+            for j in js:
+                out[a:a + step, j] = (w * cal_vals[i, j]).sum(1) / w.sum(1)
+            if progress:
+                progress.update(n)
+        if progress:
+            progress.end()
     return out
 
 
-def mgwr_fit(d, xs, bws=None, pool=None):
+def unscale(p, sd, ymu, ysd):
+    """Standardised local coefficients back to original units (log price per unit of x); intercept centred."""
+    out = p * np.r_[ysd, ysd / sd.to_numpy()]
+    out[:, 0] = ymu + ysd * p[:, 0]
+    return out
+
+
+def mgwr_fit(d, xs, bws=None, pool=None, tag=None):
+    import mgwr.gwr
     from mgwr.gwr import MGWR
     from mgwr.sel_bw import Sel_BW
     coords = d[["x", "y"]].to_numpy() + np.random.default_rng(SEED).normal(0, 0.5, (len(d), 2))
@@ -134,8 +184,51 @@ def mgwr_fit(d, xs, bws=None, pool=None):
     X = ((d[xs] - mu) / sd).to_numpy()
     ymu, ysd = d.log_price.mean(), d.log_price.std()
     y = ((d.log_price - ymu) / ysd).to_numpy().reshape(-1, 1)
-    sel = Sel_BW(coords, y, X, multi=True, constant=True)
+    names = ["intercept"] + xs
+    ckpt = OUT / f"{tag}_checkpoint.pkl" if tag else None
+    sel = None
+    if ckpt is not None and ckpt.exists():
+        with open(ckpt, "rb") as f:
+            c = pickle.load(f)
+        if c["n"] == len(d) and np.allclose(c["y"], y) and c["tol"] == TOL and (bws is None or list(c["bws"]) == list(bws)):
+            sel = c["sel"]
+            P.log(f"RESUME from checkpoint {ckpt.name} (backfitting done {c['saved']}); going to the standard-error step")
+        else:
+            P.log(f"checkpoint {ckpt.name} does not match this run (sales, bandwidths or tolerance); refitting")
+    if sel is None:
+        sel = backfit(coords, y, X, xs, d, bws, pool)
+        if ckpt is not None:
+            with open(ckpt, "wb") as f:
+                pickle.dump({"sel": sel, "n": len(d), "y": y, "bws": list(sel.bw[0]), "tol": TOL,
+                             "saved": time.strftime("%Y-%m-%d %H:%M")}, f)
+            loc = pd.DataFrame(unscale(np.asarray(sel.bw[3]), sd, ymu, ysd), columns=[f"b_{n}" for n in names])
+            loc["x"], loc["y"] = d.x.to_numpy(), d.y.to_numpy()
+            loc.to_parquet(OUT / f"{tag}_backfit.parquet", index=False)
+            (OUT / f"{tag}_backfit.json").write_text(json.dumps(
+                {"bandwidths": dict(zip(names, np.asarray(sel.bw[0], float).tolist())), "tolerance": TOL,
+                 "rounds": int(len(sel.bw[2])), "last_change": float(np.asarray(sel.bw[2])[-1]),
+                 "coef_median": dict(zip(names, np.median(loc[[f"b_{n}" for n in names]].to_numpy(), 0).tolist()))},
+                indent=2))
+            P.log(f"CHECKPOINT saved {ckpt.name} and {tag}_backfit.parquet/.json")
+    b = sel.bw[0]
+    # standard-error step: run in chunks (n_jobs x MGWR_CHUNKS parts) and report each finished part
+    orig = mgwr.gwr.Parallel
+    mgwr.gwr.Parallel = joblib_progress(P, "standard errors (final fit)")
+    try:
+        res = MGWR(coords, y, X, sel, constant=True, n_jobs=JOBS).fit(n_chunks=int(os.environ.get("MGWR_CHUNKS", "1")), pool=pool)
+    finally:
+        mgwr.gwr.Parallel = orig
+    params = unscale(res.params, sd, ymu, ysd)
+    bse = res.bse * np.r_[ysd, ysd / sd.to_numpy()]
+    bse[:, 0] = res.bse[:, 0] * ysd
+    return res, names, np.asarray(b, float), params, bse, coords, (mu, sd, ymu, ysd), sel
+
+
+def backfit(coords, y, X, xs, d, bws, pool):
+    from mgwr.sel_bw import Sel_BW
+    sel = Sel_BW(coords, y, X, multi=True, constant=True, n_jobs=JOBS)
     k = X.shape[1] + 1
+    P.start(("bandwidth search (backfitting)" if bws is None else "backfitting with fixed bandwidths") + f", tolerance {TOL:g}")
     if bws is None:
         # yes/no controls (waterfront, pool proxy) are all zero in many local windows, which makes local fits
         # singular (D-153); they are held countywide (bandwidth = whole sample)
@@ -143,19 +236,13 @@ def mgwr_fit(d, xs, bws=None, pool=None):
         mins = [MIN_BW] + [n if v in GLOBAL_VARS else MIN_BW for v in xs]
         # backfitting starts from a countywide regression (init_multi = whole sample) instead of a local
         # regression with every variable at once, which is singular where yes/no controls are all zero
-        b = sel.search(init_multi=n, multi_bw_min=mins, multi_bw_max=[n] * k, pool=pool)
+        b = sel.search(init_multi=n, multi_bw_min=mins, multi_bw_max=[n] * k, pool=pool,
+                       tol_multi=TOL, verbose=os.environ.get("MGWR_VERBOSE", "1") == "1")  # prints each round
     else:
-        b = sel.search(init_multi=len(d), multi_bw_min=list(bws), multi_bw_max=list(bws), pool=pool)
-    res = MGWR(coords, y, X, sel, constant=True).fit(pool=pool)
-    names = ["intercept"] + xs
-    scale = np.r_[ysd, ysd / sd.to_numpy()]
-    params = res.params * scale            # back to original units (log price per unit of x)
-    # intercept kept at the sample mean of every variable (centred), so each local coefficient can be
-    # carried to new points on its own bandwidth without the intercept having to cancel b x mean
-    params[:, 0] = ymu + ysd * res.params[:, 0]
-    bse = res.bse * scale
-    bse[:, 0] = res.bse[:, 0] * ysd
-    return res, names, np.asarray(b, float), params, bse, coords, (mu, sd, ymu, ysd)
+        sel.search(init_multi=len(d), multi_bw_min=list(bws), multi_bw_max=list(bws), pool=pool, tol_multi=TOL)
+    P.end()
+    P.log(f"backfitting rounds {len(sel.bw[2])}, last change {np.asarray(sel.bw[2])[-1]:.3g} (tolerance {TOL:g})")
+    return sel
 
 
 def summary_local(names, params, bse, bws, filt):
@@ -172,9 +259,10 @@ def summary_local(names, params, bse, bws, filt):
 
 def run(segment, variant, bws=None):
     t0 = time.time()
+    P.start(f"{segment} {variant}: load data and OLS")
     s = load(segment)
     xs0 = XV[segment]
-    flood = "flood_freq_k" if variant == "frequent" else "flood_k"
+    flood = FLOOD_OF[variant]
     s["FLOOD"] = s[flood]
     xs = xs0
     pool_n = int(os.environ.get("MGWR_POOL", "4"))
@@ -193,17 +281,23 @@ def run(segment, variant, bws=None):
                 "r2": float(m.rsquared), "holdout_median_abs_pct_error": float(np.median(err) * 100),
                 "coefs": {k: [float(m.params[k]), float(m.bse[k])] for k in m.params.index},
                 "moran_resid": moran(train.x.to_numpy(), train.y.to_numpy(), m.resid.to_numpy())}
-    d = stratified(train, N, SEED).reset_index(drop=True)
-    res, names, b, params, bse, coords, scal = mgwr_fit(d, xs, bws, pool)
+    P.end()
+    # with_older: same size as the main model, so only the sales mix changes
+    n_use = min(N, int((train.sample_name == "main").sum())) if variant == "with_older" else N
+    d = (train if len(train) <= n_use else stratified(train, n_use, SEED)).reset_index(drop=True)
+    res, names, b, params, bse, coords, scal, sel = mgwr_fit(d, xs, bws, pool, tag=f"{segment}_{variant}")
     try:
         filt = res.filter_tvals()
     except Exception:
         filt = None
     R["mgwr"] = {"sample": len(d), "tracts": int(d.GEOID_tract.nunique()), "aicc": float(res.aicc), "r2": float(res.R2),
                  "bandwidths": dict(zip(names, b.tolist())), "bandwidths_fixed_from_main": bws is not None,
+                 "tolerance": TOL, "backfitting_rounds": int(len(sel.bw[2])),
+                 "backfitting_last_change": float(np.asarray(sel.bw[2])[-1]),
                  "centre": dict(zip(xs, scal[0].to_numpy().tolist())),
                  "local": summary_local(names, params, bse, b, filt),
                  "moran_resid": moran(d.x.to_numpy(), d.y.to_numpy(), (res.resid_response.ravel() * scal[3]))}
+    P.start(f"{segment} {variant}: hold-out error and save")
     # hold-out error: carry local coefficients to held-out sales, predict
     beta = smooth_to(coords, params, b, test[["x", "y"]].to_numpy())
     pred = beta[:, 0] + (beta[:, 1:] * (test[xs].to_numpy(float) - scal[0].to_numpy())).sum(1)
@@ -221,6 +315,8 @@ def run(segment, variant, bws=None):
     loc.to_parquet(OUT / f"{segment}_{variant}_local.parquet", index=False)
     R["seconds"] = round(time.time() - t0)
     (OUT / f"{segment}_{variant}.json").write_text(json.dumps(R, indent=2, default=str))
+    P.end()
+    P.log(f"SAVED {OUT / f'{segment}_{variant}.json'} and the local estimates")
     if pool is not None:
         pool.close()
     print(json.dumps({k: v for k, v in R.items() if k != "ols"}, indent=1, default=str)[:4000], flush=True)
@@ -229,14 +325,22 @@ def run(segment, variant, bws=None):
 
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
+    print(f"N={N} out={OUT}", flush=True)
     segment, mode = sys.argv[1], sys.argv[2]
+    global P
+    P = Progress(f"{segment} {mode} {' '.join(sys.argv[3:])}".strip())
     if mode == "search":
         run(segment, "main")
+    elif mode == "fixed":
+        bws = [float(v) for v in sys.argv[3].split(",")]
+        assert len(bws) == len(XV[segment]) + 1, "one bandwidth for the intercept and each variable"
+        run(segment, "main", bws)
     else:
         main_json = json.loads((OUT / f"{segment}_main.json").read_text())
         bws = [main_json["mgwr"]["bandwidths"][n] for n in ["intercept"] + XV[segment]]
-        run(segment, "frequent", bws)
-        run(segment, "with_older", bws)
+        for v in sys.argv[3:] or ["frequent", "dollar", "with_older"]:
+            run(segment, v, bws)
+    P.finish()
 
 
 if __name__ == "__main__":

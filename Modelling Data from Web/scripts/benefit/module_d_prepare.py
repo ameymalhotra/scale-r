@@ -26,6 +26,14 @@ which also counts docks and fences; no pool field is free, D-165),
 waterfront (parcel within 10 m of FEMA water areas or open water), distance
 to water (coast, bay, canal or lake), ground elevation (3DEP), time (sale
 year + month).
+Update (D-184): the main flood variable is now the damage rate, expected
+yearly damage per $100,000 of building value (NSI structure value of the
+buildings on the parcel), in units of $100 a year per $100,000 (0.1% of
+value a year). Dollar damage grows with the home's own value, which made the
+dollar coefficient partly a size and quality effect (D-183). For condos the
+rate is the same for every unit on the parcel, so no split is needed.
+flood_rate (anchored, main) and flood_freq_rate (storms 10% to 2%,
+sensitivity) are added; the dollar variables are kept for comparison.
 Flood risk per sale: the expected yearly damage of the NSI buildings on the
 parcel (nearest building if none). For condos it is split across the units on
 the parcel by their share of just value.
@@ -72,10 +80,10 @@ def building_risk():
                         [f"loss_{e}_mid" for e in EVENTS])
     L = np.maximum.accumulate(B[[f"loss_{e}_mid" for e in EVENTS]].to_numpy(), axis=1)
     freq = (0.5 * (L[:, :-1] + L[:, 1:]) * (P[:-1] - P[1:]))[:, :2].sum(1)
-    pg = pd.read_parquet(paths.BUILDINGS_PARQUET, columns=["fd_id", "parcel_geo_id"])
+    pg = pd.read_parquet(paths.BUILDINGS_PARQUET, columns=["fd_id", "parcel_geo_id", "val_struct"]).set_index("fd_id").reindex(A.fd_id)
     b = pd.DataFrame({"fd_id": A.fd_id, "lon": A.lon, "lat": A.lat, "ground": A.ground_elev_ft_navd88,
                       "eyd": (B.eyd_mid + B.eyd_tail_mid).to_numpy(), "eyd_freq": freq,
-                      "parcel_geo_id": pg.parcel_geo_id.to_numpy()})
+                      "parcel_geo_id": pg.parcel_geo_id.to_numpy(), "val_struct": pg.val_struct.to_numpy()})
     return b
 
 
@@ -111,7 +119,8 @@ def locate(s, b):
 
 def attach_risk(s, b, nal):
     g = b.dropna(subset=["parcel_geo_id"]).groupby("parcel_geo_id").agg(
-        eyd=("eyd", "sum"), eyd_freq=("eyd_freq", "sum"), ground=("ground", "median"), n_bldg=("fd_id", "size"))
+        eyd=("eyd", "sum"), eyd_freq=("eyd_freq", "sum"), ground=("ground", "median"), n_bldg=("fd_id", "size"),
+        val_struct=("val_struct", "sum"))
     s = s.merge(g, left_on="parcel_geo_id", right_index=True, how="left")
     miss = s.eyd.isna().to_numpy()
     LOG[f"no_building_on_parcel_{s.sample_name.iloc[0]}"] = int(miss.sum())
@@ -119,7 +128,7 @@ def attach_risk(s, b, nal):
         from pyproj import Transformer
         bx, by = Transformer.from_crs(4326, UTM, always_xy=True).transform(b.lon.to_numpy(), b.lat.to_numpy())
         _, i = cKDTree(np.c_[bx, by]).query(s.loc[miss, ["x", "y"]].to_numpy())
-        for c, src in [("eyd", "eyd"), ("eyd_freq", "eyd_freq"), ("ground", "ground")]:
+        for c, src in [("eyd", "eyd"), ("eyd_freq", "eyd_freq"), ("ground", "ground"), ("val_struct", "val_struct")]:
             s.loc[miss, c] = b[src].to_numpy()[i]
         s.loc[miss, "n_bldg"] = 1
     # condo units share the parcel's damage by just value
@@ -128,6 +137,11 @@ def attach_risk(s, b, nal):
     share = np.nan_to_num(share, nan=1.0)
     s["flood_k"] = s.eyd * share / 1000.0
     s["flood_freq_k"] = s.eyd_freq * share / 1000.0
+    # damage rate: $100s a year per $100,000 of building value (D-184)
+    v = s.val_struct.where(s.val_struct > 0)
+    s["flood_rate"] = s.eyd / v * 1e5 / 100.0
+    s["flood_freq_rate"] = s.eyd_freq / v * 1e5 / 100.0
+    LOG[f"no_building_value_{s.sample_name.iloc[0]}"] = int(v.isna().sum())
     return s
 
 
@@ -211,6 +225,11 @@ def main():
     LOG["sales"] = S.groupby(["sample_name", "segment"]).size().rename("n").reset_index().to_dict("records")
     LOG["flood_k_share_positive"] = {f"{a}|{b}": round(float((g.flood_k > 0).mean()), 3) for (a, b), g in S.groupby(["sample_name", "segment"])}
     LOG["flood_k_median_positive"] = S[S.flood_k > 0].groupby("segment").flood_k.median().round(3).to_dict()
+    LOG["flood_rate_share_positive"] = {f"{a}|{b}": round(float((g.flood_rate > 0).mean()), 3) for (a, b), g in S.groupby(["sample_name", "segment"])}
+    LOG["flood_rate_quantiles_positive"] = S[S.flood_rate > 0].groupby("segment").flood_rate.quantile([.5, .9, .99]).round(3).unstack().to_dict("index")
+    LOG["corr_flood_with_log_living_area"] = {seg: {"dollar": round(float(g[["flood_k", "log_living_area"]].corr().iloc[0, 1]), 3),
+                                                    "rate": round(float(g[["flood_rate", "log_living_area"]].corr().iloc[0, 1]), 3)}
+                                              for seg, g in S.groupby("segment")}
     LOG["waterfront_share"] = S.groupby("segment").waterfront.mean().round(3).to_dict()
     LOG["bedrooms_missing_share"] = S.groupby("segment").bedrooms_missing.mean().round(3).to_dict()
     (paths.OUT_BENEFIT / "module_d").mkdir(parents=True, exist_ok=True)

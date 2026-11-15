@@ -4341,3 +4341,436 @@ D-113.
 - Reason: Specification; the stop-and-report rule.
 - Evidence: `scripts/benefit/module_d_value_tax.py`; `value_tax_examples.json`.
 - Affects: Module D; benefit per dollar (tax part).
+
+### D-184. Module D flood variable: damage rate instead of dollars (change from the specification)
+
+- Date: 12 Nov 2026. Status: Final (choice); results in D-187. Decided by:
+  the user (option 1 of D-183; option 2 rejected).
+- What happened: The specification's flood variable is expected yearly
+  damage in dollars. With it, the single-family coefficient was positive,
+  because dollar damage grows with the home's own value (D-183).
+- What is wrong: The dollar variable partly measures house size and quality,
+  so its coefficient is not a clean flood effect.
+- How we are fixing it:
+  - flood variable = expected yearly damage per $100,000 of building value
+    (NSI structure value of the buildings on the parcel), in units of $100
+    a year per $100,000 (0.1% of the building's value a year);
+  - condos: the rate is the same for every unit on the parcel (damage and
+    value both split by unit), so no unit split is needed;
+  - main: anchored damage (D-174) including the tail; sensitivity: storms
+    10% to 2% only; the dollar variable is refitted for comparison;
+  - value change keeps the specification's form in the new unit:
+    value_change = value x (exp(beta_rate x delta_rate) - 1), where
+    delta_rate = change in the building's yearly damage / its structure
+    value x 1,000 (same unit as the model);
+  - option 2 (keep only negative significant local coefficients) is not
+    used.
+- Decision: Damage rate is the main Module D flood variable. Logged as a
+  change from the specification (D2, D5).
+- Reason: The user's decision; removes the mechanical link between dollar
+  damage and home value.
+- Evidence: `scripts/benefit/module_d_prepare.py`, `module_d_fit.py`,
+  `module_d_value_tax.py`.
+- Affects: Module D coefficients, value change and tax change.
+
+### D-185. First-floor heights from NFIP policy elevation fields by block group and building type
+
+- Date: 12 Nov 2026. Status: Provisional. Decided by: the user (method);
+  Amey (details).
+- What happened: The policies' elevation fields gave a median floor height
+  of 1.1 ft above the ground, above our NSI slab heights (0.25 to 0.75 ft)
+  (D-181). The user asked to use them, as block-group summaries by building
+  type, and to rerun Modules A and B.
+- What is wrong: The fields are almost all from policies in zones AE and
+  AH, so X-zone buildings have little direct evidence. Each building
+  appears once per policy year.
+- How we are fixing it:
+  - floor height = lowest floor elevation minus lowest adjacent grade,
+    kept between -5 and 20 ft; records collapsed to one per building with a
+    proxy key held in memory only;
+  - four building types from NFIP occupancy and from NSI occupancy:
+    single-family, multi-family and condo, mobile home, non-residential;
+  - median by block group and type where at least 10 buildings; tract and
+    type below that; county by type otherwise; only these summaries are
+    written;
+  - slab buildings take the median; crawlspace, wall, pier and pile
+    buildings keep the NSI height where higher; the code rule (BFE from
+    1973, BFE + 1 ft from 2012) applies on top as before; the old result
+    is kept as ffe_nsi_ft_navd88; every floor stays estimated
+    (ffe_estimated = 1) and keeps the +/-1 ft low and high cases.
+- Results:
+  - 435,667 building records after collapsing policy years; medians:
+    single-family 1.1 ft, multi-family 1.0 ft, non-residential 0.8 ft,
+    mobile home 2.9 ft; summaries for 1,484 block groups (single-family);
+  - source per building: block group 328,491, tract 66,725, county
+    94,785, NSI kept (higher) 137,251; slab median 0.75 to 1.1 ft;
+    first floors raised a median 0.35 ft (76% raised, 0.6% lowered);
+  - county expected yearly damage (mid): $745M to $550M; with the tail
+    $889M to $672M; low $320M to $222M; high $2,217M to $1,800M;
+  - claims check: all buildings 29.0 to 22.1 times claims, tract ranking
+    0.345 to 0.338; insured part (measured take-up) 5.0 to 3.9 times,
+    ranking 0.46 to 0.44; NRI totals ratio 3.1 to 2.3 times.
+- Decision: Use the policy-based floor heights in Modules A and B.
+- Reason: Measured floor heights in Miami-Dade are better evidence than
+  national foundation defaults.
+- Evidence: `scripts/benefit/nfip_floor_heights.py`, `build_ffe.py`;
+  `nfip_floor_height_summary.csv`, `ffe_summary.json`.
+- Affects: Modules A to D, every damage total and the claims comparison.
+
+### D-186. MGWR on every training sale (specification size)
+
+- Date: 12 Nov 2026. Status: Provisional. Decided by: the user (size);
+  Amey (details).
+- What happened: The user asked for MGWR with the specification's 10,000 to
+  30,000 sales per model, run overnight.
+- What is wrong: Nothing. The training sales (2025 and 2026 qualified, 80%
+  not held out) are about 14,000 single-family and 18,000 condo, inside the
+  specification's range, so no sampling is needed.
+- How we are fixing it:
+  - all training sales used (cap 30,000); same hold-out as before;
+  - bandwidth floor kept at 500 neighbours (instability in Stage 3 came
+    from the number of neighbours, not the share of the sample); yes/no
+    controls held countywide as before;
+  - the final fit runs in chunks to limit memory; 8 parallel workers;
+  - variants (frequent storms, dollar variable, with 2021 to 2024 sales)
+    reuse the main bandwidths; the 2021 to 2024 variant keeps the main
+    model's sample size so only the sales mix changes;
+  - the 5,000-sale results stay in `outputs/benefit/module_d/`; the large
+    runs go to `outputs/benefit/module_d/large/`.
+- Decision: Run both segments on every training sale.
+- Reason: The specification and the user's instruction.
+- Evidence: `scripts/benefit/module_d_fit.py`.
+- Affects: Module D coefficients.
+
+### D-187. Main flood result from the data, with a labelled published-discount scenario
+
+- Date: 13 Nov 2026. Status: Final. Decided by: the user.
+- What happened: The single-family MGWR and block-group fixed-effects
+  models both put the price effect of the flood damage rate at about zero
+  (fixed effects: -0.03% per unit, 95% range -0.16% to +0.11%). The user
+  asked how to report this, given that published studies find flood
+  discounts.
+- What is wrong: Nothing in the data. An effect near zero is consistent
+  with the research finding that flood risk is often underpriced in
+  housing markets, especially where buyers are not told about it.
+- How we are fixing it:
+  - the data-based estimate (about zero, with its 95% range) is the main
+    result for single-family and condo;
+  - a separate scenario, labelled as an assumption and not an estimate,
+    applies published discounts: Fu and Nijman (2021), 3% for the FEMA
+    100-year floodplain in coastal Miami-Dade (central case); Beltran,
+    Maddison and Elliott (2018), 4.6% (meta-analysis); Bernstein,
+    Gustafson and Lewis (2019), 7% (exposure to sea level rise). Each
+    discount is turned into a coefficient on our damage rate by dividing
+    ln(1 - discount) by the gap in mean damage rate between buildings
+    inside and outside the 2027 1% zone, per segment;
+  - value and tax change for the two test projects are shown for the
+    main estimate, the fixed-effects estimate and each published scenario;
+  - the underpricing literature is cited in the report.
+- Decision: As above.
+- Reason: The user's instruction. The main result must come from the
+  data; the published values show what the benefit would be if buyers
+  priced flood risk as other studies found.
+- Evidence: `outputs/benefit/module_d/fe_block_group.json`,
+  `scripts/benefit/module_d_value_tax.py` (PUBLISHED, published_coefficients).
+- Affects: Module D report, value and tax results.
+
+### D-188. Which MGWR runs are full size
+
+- Date: 12 Nov 2026. Status: Final. Decided by: the user.
+- What happened: The full-size plan (D-186) fitted all eight models (two
+  segments, main plus three variants) on every training sale. MGWR's work
+  grows with the square of the sample, so the estimate was about 15 hours.
+- What is wrong: The dollar-variable and 2021 to 2024 comparisons are
+  checks, not inputs to the value change, and took about 6 of those hours.
+- How we are fixing it:
+  - full size (every training sale): the single-family and condo main
+    models (damage rate) and the frequent-storm variant;
+  - 5,000 sales (as in D-180): the dollar-variable and 2021 to 2024
+    comparisons, with their own 5,000-sale main model for the bandwidths,
+    in `outputs/benefit/module_d/n5000/`;
+  - the single-family main run that was already going was not restarted;
+    only the queue of later runs was replaced;
+  - the value and tax step uses full-size coefficients where they exist
+    and the 5,000-sale ones for the dollar comparison, and records which.
+- Decision: As above.
+- Reason: The user's choice, to finish overnight; a GPU would not help
+  because the `mgwr` package runs on ordinary processors only.
+- Evidence: `scripts/benefit/module_d_fit.py`,
+  `scripts/benefit/module_d_value_tax.py`.
+- Affects: Module D run time; how comparable the comparison runs are with
+  the main runs (smaller sample).
+
+### D-189. MGWR runs on all 10 processor cores
+
+- Date: 13 Nov 2026. Status: Final. Decided by: the user (use all cores if
+  the results are identical); Amey (test and settings).
+- What happened: The full single-family main model (D-186) had run for
+  about 13 hours against an estimate of about 2, using roughly one of the
+  machine's 10 cores.
+- What is wrong: The run time made the full-size plan impractical.
+- How we are fixing it:
+  - the installed `mgwr` (2.2.1) spreads the local fits over worker
+    processes through its `n_jobs` option (the older `pool` option no
+    longer does anything); the fit script now sets `n_jobs` for both the
+    bandwidth search and the final fit (`MGWR_JOBS`, -1 = all cores) and no
+    longer opens the unused pool;
+  - test on 1,500 single-family sales, all cores against one core: the
+    same bandwidths and the same AICc; local coefficients and standard
+    errors differ by less than 0.000000000000002 (rounding only);
+  - speed: at 1,500 sales all cores was slower (238 against 180 seconds,
+    the cost of handing out many small jobs); at 10,000 sales one local
+    fit took 0.4 seconds on all cores against 0.8 on one, so about twice
+    as fast at the size used;
+  - the search now prints each backfitting round, so progress can be seen;
+  - the full single-family main model already running was left alone.
+- Decision: Run every remaining model on all 10 cores.
+- Reason: Identical results, about half the time at 10,000 sales.
+- Evidence: `scripts/benefit/module_d_fit.py`; test scripts and outputs in
+  the session scratchpad (`par_test.py`, `par_unit.py`).
+- Affects: Module D run time only, not results.
+
+### D-190. Remaining MGWR models at 10,000 sales
+
+- Date: 13 Nov 2026. Status: Provisional. Decided by: the user (size);
+  Amey (details).
+- What happened: Replaces the run plan in D-188. The full single-family
+  main model (all 14,350 training sales; the 30,000 in D-186 is only a
+  cap) had not finished after about 13 hours.
+- What is wrong: At that pace the remaining full-size models would take
+  one to two more days.
+- How we are fixing it:
+  - every remaining model uses 10,000 sales (the low end of the
+    specification's 10,000 to 30,000), drawn with the same stratified
+    sample and seed as before: single-family and condo main (damage rate),
+    the frequent-storm variant, the dollar variable and the 2021 to 2024
+    comparison; results in `outputs/benefit/module_d/n10000/`;
+  - each segment gets its own 10,000-sale main model, and the variants
+    reuse its bandwidths. Bandwidths are counts of neighbouring sales, so
+    bandwidths from a model on a different number of sales would cover a
+    different area; keeping all of a segment's models on the same 10,000
+    sales avoids that;
+  - the value and tax step reads the 10,000-sale models
+    (`MODULE_D_RUN=n10000`) so every variant comes from the same sample;
+  - the full single-family main model (all 14,350 training sales) was
+    stopped by the user on 13 Nov at about 11:40 after 13 hours 25 minutes,
+    unfinished; nothing from it was saved or used. It can be rerun later on
+    a bigger machine if a full-sample check is wanted;
+  - the earlier 5,000-sale queue (D-188) was stopped before any of it ran.
+- Decision: As above.
+- Reason: The user's choice, so the models finish in hours, not days,
+  while staying inside the specification's range.
+- Evidence: `scripts/benefit/module_d_fit.py`,
+  `scripts/benefit/module_d_value_tax.py`.
+- Affects: Module D coefficients (sample size), value and tax results.
+
+### D-191. Block-group fixed-effects model next to MGWR
+
+- Date: 13 Nov 2026. Status: Final. Decided by: the user (side by side);
+  Amey (details).
+- What happened: The single-family MGWR flood effect was near zero and
+  the same everywhere (flood bandwidth 9,993 of 10,000). A standard
+  hedonic model with one dummy per census block group compares only homes
+  in the same block group, so neighbourhood quality cannot drive the
+  flood coefficient.
+- What is wrong: Nothing; a check on MGWR.
+- How we are fixing it:
+  - log price on the specification's house variables plus one dummy per
+    2024 block group, all qualified 2025 to 2026 sales (training and
+    held-out together), single-family and condo separately;
+  - standard errors clustered by block group, and by tract as a stricter
+    check; the frequent-storm rate as a variant;
+  - share of the flood rate's variation within block groups (about 40%
+    in both segments, so the model has variation to use);
+  - held-out error: fit on training sales, predict held-out sales;
+  - its single coefficient per segment is one of the value and tax cases.
+- Decision: Report MGWR and block-group fixed effects side by side.
+- Reason: The user's instruction (D-187 step 5); the fixed-effects model
+  is the usual hedonic benchmark and is robust to neighbourhood quality.
+- Evidence: `scripts/benefit/module_d_fe.py`,
+  `outputs/benefit/module_d/fe_block_group.json`.
+- Affects: Module D report, value and tax results.
+
+### D-192. Progress reporting for every long-running script
+
+- Date: 14 Nov 2026. Status: Final (standard from now on). Decided by:
+  the user.
+- What happened: The condo main model's final fit ran for about 7 hours
+  (against about 65 minutes for single-family) with no way to tell how far
+  it had got, and the bandwidth search had no progress display.
+- What is wrong: Without progress, a slow run cannot be told apart from a
+  stuck one, and finish times can only be guessed.
+- How we are fixing it:
+  - tqdm 4.67.1 installed (pinned) in the project's `.venv` only, so mgwr
+    shows its own progress bars in the log (backfitting rounds; its
+    standard-error bar only fills at the end, so it is not relied on);
+  - new `scripts/common/progress.py`, used by every script that can run
+    longer than a few minutes: each step logs its start and end time and
+    duration; countable work logs percent done and the time left from the
+    rate seen so far; a heartbeat line every 5 minutes; one short status
+    file with the current step, percent done and estimated finish;
+  - the MGWR standard-error step runs in chunks (10 workers x 4 = 40
+    parts) and each finished part is logged, so its percent and time left
+    are visible;
+  - queue runners pass the queue position and the expected length of the
+    later jobs (from the jobs already done), so the status file also shows
+    the whole queue's estimated finish.
+- Decision: As above, for all long-running scripts from now on.
+- Reason: The user's instruction; it makes slow, stuck and finished runs
+  easy to tell apart.
+- Evidence: `scripts/common/progress.py`, `scripts/benefit/module_d_fit.py`,
+  `scripts/benefit/module_d_queue.py`; tested on a 600-sale condo fit
+  (40 parts reported, heartbeat and status file written).
+- Affects: How runs are monitored only; no result changes.
+
+### D-193. Condo main rerun with its search bandwidths held fixed, queue detached
+
+- Date: 14 Nov 2026. Status: Final. Decided by: the user.
+- What happened: The 10,000-sale queue (D-190) ran as a child of the
+  Claude app. When the app restarted at about 00:14 on 14 Nov, the queue
+  was stopped during the condo main model's final fit (standard errors),
+  after about 7 hours of that step. Nothing from the condo main fit was
+  saved. The four single-family models were already saved and are kept.
+- What is wrong: The condo main model, the three condo variants and the
+  value and tax step had to be run again.
+- How we are fixing it:
+  - the condo bandwidth search had finished (13 Nov, 17:13) and its final
+    bandwidths are in the run log: intercept 501, flood rate 503, living
+    area 501, age 501, bedrooms 504, bathrooms 882, waterfront 10,000
+    (countywide by design), distance to water 501, ground elevation 501,
+    time 525. The condo main model is refitted with these held fixed
+    (new `fixed` mode of `module_d_fit.py`), the same way the variants
+    reuse the main bandwidths; the 46-minute search is not repeated;
+  - the condo search stopped at the 200-round limit, not at the
+    convergence tolerance: its last convergence measure was 0.0000103
+    against the 0.00001 cutoff, and the bandwidths had not changed for
+    many rounds before the limit. They are treated as final; the report
+    says so;
+  - the queue (condo main, frequent, dollar, with_older, then value and
+    tax) runs from `scripts/benefit/module_d_queue.py --detach`, in its
+    own session under caffeinate, so an app or terminal restart cannot
+    stop it; each job is its own process and saves its model as soon as
+    it finishes; progress as in D-192, in
+    `outputs/benefit/module_d/n10000/queue/` (queue.log, status.txt,
+    queue.pid). Started 14 Nov 00:29.
+- Decision: As above.
+- Reason: Same bandwidths as the finished search, so the coefficients and
+  standard errors are those the original run would have produced, about
+  45 minutes sooner.
+- Evidence: search log of 13 Nov (rounds 1 to 200, bandwidths stable),
+  `scripts/benefit/module_d_fit.py`, `scripts/benefit/module_d_queue.py`.
+- Affects: Condo Module D models (timing only), value and tax results.
+
+### D-194. Status-file crash and why the condo final fit is slow
+
+- Date: 14 Nov 2026. Status: Final. Decided by: Amey (bug fix); the user
+  (tolerance, validation, checkpoint).
+- What happened: The detached condo queue (D-193) ran the condo main
+  model's standard-error step for 8 hours 54 minutes (00:47 to 09:41 on
+  14 Nov), reached 40 of 40 parts, then stopped with an error before
+  saving. Two threads of the new progress code (D-192) wrote the status
+  file's temporary copy at the same moment; one renamed it, the other
+  then failed. Nothing from the fit was saved, and the queue stopped
+  because the variants need the condo main model.
+- What is wrong: (1) a bug in `scripts/common/progress.py`; (2) the condo
+  final fit takes about six times longer than single-family. mgwr's
+  standard-error step repeats one pass for every backfitting round of the
+  model. The single-family search converged at round 33; the condo search
+  never met the 0.00001 tolerance and used all 200 rounds (convergence
+  measure 0.000049 at round 30, 0.000020 at 60, 0.000016 at 100, 0.0000103
+  at 200; bandwidths unchanged from at least round 30). So every condo
+  model at the current tolerance needs about 9 hours for standard errors.
+- How we are fixing it: (1) status writes now take a lock, use a separate
+  temporary file per thread, and a failed status write is logged instead
+  of stopping the job; tested with 8 threads writing 4,000 times;
+  (2) condo models use a backfitting tolerance of 0.00002 (bandwidths
+  unchanged), reached at about round 60 of the condo search instead of
+  never, so each condo model needs roughly a third of the time;
+  (3) validation first: the single-family main model is refitted at
+  0.00002 with its saved bandwidths and compared with the saved 0.00001
+  model (largest and median change in every coefficient and standard
+  error; flood result and significance); the queue stops if the flood
+  result changes. Result (14 Nov, 14:52; `outputs/benefit/module_d/tol_check.json`):
+  same bandwidths; 28 rounds instead of 33; across all variables and all
+  10,000 local estimates the largest coefficient change is 0.33 of its
+  standard error (median changes 0.004 to 0.07 standard errors) and the
+  largest standard-error change is 4.6% (medians under 0.5%); flood rate
+  median -0.019% per unit before, -0.015% after, share negative 55% and
+  54%, significant local estimates 0 and 0 (raw and corrected); hold-out
+  error 10.69% both. The flood result does not change, so the condo
+  models went ahead. These differences also include the different
+  backfitting path (the saved model's path includes the search rounds),
+  so they are an upper bound on the effect of the tolerance;
+  (4) checkpoint: right after backfitting, each model's fitted selector,
+  local coefficients and fit summary are saved
+  (`<segment>_<variant>_checkpoint.pkl`, `_backfit.parquet`, `_backfit.json`);
+  a rerun with the same sales, bandwidths and tolerance resumes at the
+  standard-error step;
+  (5) queue (validation, comparison, condo main, three condo variants,
+  value and tax) restarted detached on 14 Nov at 13:09.
+- Decision: As above.
+- Reason: A convenience file must never be able to stop a model run.
+- Evidence: `outputs/benefit/module_d/n10000/queue/queue.log` (traceback
+  at 09:41:33), condo search log of 13 Nov, mgwr 2.2.1
+  `MGWR._chunk_compute_R` (loops over `bws_history`, one row per round).
+- Affects: Condo Module D run time; no results changed.
+
+### D-195. Six quick checks of the flood effect with fixed effects; value and tax memory fix
+
+- Date: 14 Nov 2026. Status: Final. Decided by: the user (tests; tract
+  dummies for tests 2 and 3); Amey (details, memory fix).
+- What happened: (1) After the queue, the user asked for six quick checks
+  with the fixed-effects model (single-family and condo, all qualified
+  2025 to 2026 sales), each replacing or adding to the flood rate: FEMA
+  zone (1% zone; VE against AE, 2027 maps); average NFIP premium per
+  insured home by block group; NFIP claims since 2010 per 1,000 homes by
+  block group; the flood rate in five groups; the main model away from
+  water; the main model where floor heights come from the block group's
+  own elevation certificates. (2) The queue's last job (value and tax)
+  was killed by the system after 5 minutes (exit -9, out of memory).
+- What is wrong: (1) Premium and claims are block group values, the same
+  for every sale in a block group, so block group dummies absorb them;
+  FEMA's public records go no finer than block group. VE cannot be
+  tested: 0 single-family and 13 condo sales are in VE. (2) Carrying the
+  local flood coefficients to every building found, for each of 383,978
+  single-family buildings, its 9,993 nearest calibration sales at once
+  (single-family flood bandwidth 9,993 of 10,000): about 24 GB.
+- How we are fixing it:
+  - tests 2 and 3 use one dummy per census tract instead (the user's
+    choice), so they compare block groups in the same tract, standard
+    errors clustered by tract; the main model with tract dummies is shown
+    for comparison; the other tests keep block group dummies and block
+    group clustering;
+  - premium: residential policies (occupancy 1, 2, 3, 11 to 16) that
+    started in 2025, total premium divided by insured units; block groups
+    with at least 10 policies (1,396); only block group totals are made;
+  - claims: residential claims with loss year 2010 or later (8,163; 6,698
+    in a 2024 block group), per 1,000 occupied homes (ACS 2020 to 2024,
+    B25003), in units of 10 claims per 1,000 homes;
+  - groups: none (rate 0) and the quartiles of the positive rates within
+    each segment; away from water: not waterfront and over 500 m from
+    FEMA water areas; floor heights: block groups with their own summary
+    (at least 10 insured buildings of the type, D-185);
+  - each of tests 1 to 3 also run with the flood rate added back;
+  - `smooth_to` now takes the target buildings in blocks (about 160 MB
+    per array) and shares one neighbour search between variables with the
+    same bandwidth; checked identical to the old version on test data;
+    value and tax now reports progress (D-192).
+- Decision: As above.
+- Reason: The user's instruction; the memory fix changes no result.
+- Evidence: `scripts/benefit/module_d_fe_tests.py`,
+  `outputs/benefit/module_d/fe_tests.json` and `fe_tests.csv`;
+  `scripts/benefit/module_d_fit.py` (`smooth_to`),
+  `outputs/benefit/module_d/n10000/queue/value_tax_rerun.log`.
+  Results: single-family: no flood measure is significant except claims
+  (+0.70% per 10 claims per 1,000 homes, 95% range +0.29% to +1.10%,
+  positive); 1% zone +1.19% (-0.06% to +2.45%, p 0.06); flood rate away
+  from water +0.04%, with better floor heights -0.06%, both not
+  significant. Condo: the flood rate stays positive and significant
+  (+0.57% main; +0.95% away from water; +1.14% with better floor heights;
+  the high and very high groups +7.1% and +12.5% against none); 1% zone
+  -3.0% (-7.2% to +1.4%) and premium -0.06%, not significant; claims
+  +1.98% per 10 per 1,000 homes, positive.
+  Value and tax rerun on 14 Nov: 13 minutes, peak memory 3.2 GB,
+  results in `outputs/benefit/module_d/value_tax_examples.json`.
+- Affects: Module D report; value and tax run (memory only).

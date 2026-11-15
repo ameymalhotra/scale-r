@@ -12,6 +12,10 @@ Main-sample training sales (same hold-out as module_d_fit.py). For each segment,
   E. A, homes more than 1 km from open water only;
   F. A, sales inside the FEMA 1% zone only.
 Writes outputs/benefit/module_d/sign_check.json.
+With the argument "rate" (D-184): the same checks with the damage rate
+($100 a year per $100,000 of building value; flood_rate, flood_freq_rate),
+plus the dollar variable on the same sales; writes sign_check_rate.json.
+The argument "ratio" runs the earlier one-off damage-rate test.
 """
 import json
 import sys
@@ -38,7 +42,8 @@ def fit(d, xs, fe=None):
             "ci95": [round(float((np.exp(b - 1.96 * se) - 1) * 100), 2), round(float((np.exp(b + 1.96 * se) - 1) * 100), 2)]}
 
 
-def main():
+def main(rate=False):
+    fv, ffv = ("flood_rate", "flood_freq_rate") if rate else ("flood_k", "flood_freq_k")
     zones = pd.read_parquet(paths.FEMA2027_ZONES_PARQUET, columns=["fd_id", "zone27"])
     R = {}
     for seg in ["single_family", "condo"]:
@@ -52,24 +57,32 @@ def main():
         j = gpd.sjoin(gpd.GeoDataFrame(geometry=gpd.points_from_xy(t.x, t.y), crs=32617, index=t.index), bg,
                       predicate="within", how="left")
         t["GEOID_bg"] = j[~j.index.duplicated()].GEOID
-        t["FLOOD"] = t.flood_k
+        t["FLOOD"] = t[fv]
         t = t.dropna(subset=xs + ["log_price"])
         r = {"A_spec": fit(t, xs), "B_tract_fe": fit(t, xs, "GEOID_tract"), "C_block_group_fe": fit(t, xs, "GEOID_bg")}
         t2 = t.copy()
-        t2["FLOOD"] = t2.flood_freq_k
+        t2["FLOOD"] = t2[ffv]
         r["D_frequent_storms"] = fit(t2, xs)
         r["E_over_1km_from_water"] = fit(t[t.dist_water_m > 1000], xs)
         r["F_in_1pct_zone"] = fit(t[t.flood_k > 0], xs)
+        if rate:
+            t3 = t.copy()
+            t3["FLOOD"] = t3.flood_k
+            r["dollar_same_sales"] = fit(t3, xs)
+            r["dollar_same_sales_tract_fe"] = fit(t3, xs, "GEOID_tract")
+            r["unit"] = "% price change per $100 of yearly damage per $100,000 of building value"
+            r["rate_quantiles_positive"] = t.loc[t[fv] > 0, fv].quantile([.5, .9, .99]).round(3).tolist()
         r["flood_positive_share"] = round(float((t.flood_k > 0).mean()), 3)
         r["corr_flood_waterfront"] = round(float(t[["flood_k", "waterfront"]].corr().iloc[0, 1]), 3)
         r["corr_flood_log_dist_water"] = round(float(t[["flood_k", "log_dist_water"]].corr().iloc[0, 1]), 3)
         R[seg] = r
-    (paths.OUT_BENEFIT / "module_d" / "sign_check.json").write_text(json.dumps(R, indent=2))
+    name = "sign_check_rate.json" if rate else "sign_check.json"
+    (paths.OUT_BENEFIT / "module_d" / name).write_text(json.dumps(R, indent=2))
     print(json.dumps(R, indent=1))
 
 
-if __name__ == "__main__" and len(sys.argv) == 1:
-    main()
+if __name__ == "__main__" and (len(sys.argv) == 1 or sys.argv[1] == "rate"):
+    main(rate=len(sys.argv) > 1)
 
 
 def ratio_check():
@@ -95,5 +108,5 @@ def ratio_check():
     print(json.dumps({k: v["G_damage_rate"] for k, v in R.items()}, indent=1))
 
 
-if __name__ == "__main__" and len(sys.argv) > 1:
+if __name__ == "__main__" and len(sys.argv) > 1 and sys.argv[1] == "ratio":
     ratio_check()

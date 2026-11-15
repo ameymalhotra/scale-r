@@ -35,6 +35,14 @@ Part 2 updates:
   will pick up any future difference.
 - ground elevation (D-166): USGS 3DEP 1 m (NAVD88, GEOID18) replaces the
   NOAA 3 m DEM. The NOAA value is kept in ground_elev_ft_noaa.
+Update (D-185): the typical floor height by foundation type is replaced by
+the NFIP policies' elevation-certificate floor height (lowest floor minus
+lowest adjacent grade), as block-group medians by building type (tract or
+county median where a block group has fewer than 10 buildings; see
+nfip_floor_heights.py). Slab buildings take that median; crawlspace, wall,
+pier and pile buildings keep the NSI height where it is higher. The code
+rule (BFE, BFE + 1 ft) is then applied as before. The previous result is
+kept in ffe_nsi_ft_navd88.
 Year built: the parcel's actual year built from the tax roll; NSI's block
 median where the parcel value is missing. Buildings with no ground value get
 their tract median (flagged).
@@ -50,13 +58,16 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "common"))
 import paths  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from nfip_floor_heights import lookup  # noqa: E402
 
 OUT = paths.OUT_BENEFIT / "spec_alignment"
 FREEBOARD_FROM_YEAR = 2012        # Florida Building Code 2010 edition effective 15 Mar 2012: BFE + 1 ft
 FREEBOARD_FT = 1.0
 SFHA_BFE_ZONES = ["A", "AE", "AH", "VE"]
 NEW_COLS = ["nfip_cid", "initial_firm_date", "ground_source", "year_built_used", "year_built_source", "ground_elev_filled", "ffe_simple_ft_navd88",
-            "ffe_ft_navd88", "ffe_rule", "ffe_estimated", "ffe_above_ground_ft"]
+            "ffe_ft_navd88", "ffe_rule", "ffe_estimated", "ffe_above_ground_ft", "floor_ht_used", "floor_ht_source",
+            "ffe_nsi_ft_navd88"]
 
 
 def main():
@@ -98,8 +109,16 @@ def main():
     g = g.fillna(b.groupby("GEOID_tract").ground_elev_ft_navd88.transform("median"))
     g = g.fillna(b.ground_elev_ft_navd88.median())
 
-    base = g + b.found_ht
-    b["ffe_simple_ft_navd88"] = base                     # the Stage 2 assumption (foundation height only)
+    base_nsi = g + b.found_ht
+    b["ffe_simple_ft_navd88"] = base_nsi                 # the Stage 2 assumption (foundation height only)
+    # floor height from NFIP elevation certificates, block group x building type (D-185)
+    fh_ec, lev = lookup(b)
+    slab = b.found_type.eq("S").to_numpy()
+    fh = np.where(np.isnan(fh_ec), b.found_ht, np.where(slab, fh_ec, np.maximum(b.found_ht, fh_ec)))
+    b["floor_ht_used"] = fh
+    b["floor_ht_source"] = np.where(np.isnan(fh_ec), "nsi_foundation",
+                                    np.where(slab | (fh_ec >= b.found_ht), "nfip_" + lev.astype(str), "nsi_foundation_higher"))
+    base = g + fh
     zone = b.fema_zone.fillna("X")
     bfe = b.fema_bfe_ft_navd88
     post = b.year_built_used > b.initial_firm_date.dt.year
@@ -110,6 +129,7 @@ def main():
     m_ao = post & (zone == "AO") & b.fema_depth_ft.notna()
     req[m_ao] = g[m_ao] + b.fema_depth_ft[m_ao] + fb[m_ao]
     ffe = np.where(req.notna(), np.maximum(base, req), base)
+    b["ffe_nsi_ft_navd88"] = np.where(req.notna(), np.maximum(base_nsi, req), base_nsi)
     b["ffe_ft_navd88"] = ffe
     b["ffe_rule"] = np.select(
         [req.notna() & (req > base) & (fb > 0), req.notna() & (req > base), req.notna()],
@@ -137,6 +157,13 @@ def main():
              ["count", "25%", "50%", "75%"]].round(2).to_dict("index"),
          "typical_foundation_height_ft": b.groupby(["found_type", "found_ht"]).size().rename("buildings").reset_index()
              .to_dict("records"),
+         "floor_height_source": b.floor_ht_source.value_counts().to_dict(),
+         "floor_height_by_foundation_new_vs_nsi": b.groupby("found_type").agg(
+             nsi_median=("found_ht", "median"), new_median=("floor_ht_used", "median")).round(2).to_dict("index"),
+         "ffe_change_vs_nsi_ft": {"median": round(float((b.ffe_ft_navd88 - b.ffe_nsi_ft_navd88).median()), 2),
+                                  "mean": round(float((b.ffe_ft_navd88 - b.ffe_nsi_ft_navd88).mean()), 2),
+                                  "share_raised": round(float((b.ffe_ft_navd88 > b.ffe_nsi_ft_navd88 + 0.01).mean()), 3),
+                                  "share_lowered": round(float((b.ffe_ft_navd88 < b.ffe_nsi_ft_navd88 - 0.01).mean()), 3)},
          "first_floor_below_bfe_1pct": {
              "simple_rule": int((sfha & bfe.notna() & (b.ffe_simple_ft_navd88 < bfe)).sum()),
              "main_rule": int((sfha & bfe.notna() & (b.ffe_ft_navd88 < bfe)).sum())}}
