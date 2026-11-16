@@ -29,6 +29,8 @@ FEMA_RAW_DIR = RAW / "fema"
 NFIP_CLAIMS_CSV = FEMA_RAW_DIR / "nfip_claims_miami_dade.csv"
 HMA_PROJECTS_CSV = FEMA_RAW_DIR / "hma_projects_miami_dade.csv"
 FEMA_DOWNLOAD_LOG = FEMA_RAW_DIR / "download_log.json"
+HMA_SUBAPPS_FL_CSV = FEMA_RAW_DIR / "hma_subapplications_fl" / "hma_subapplications_florida.csv"   # D-197
+HMA_SUBAPPS_FL_LOG = FEMA_RAW_DIR / "hma_subapplications_fl" / "download_log.json"
 TRACT_REL_2010_2020 = BOUNDARY_DIR / "rel2020" / "tab20_tract20_tract10_natl.txt"
 # Benefit simulator downloads (prompt 27, D-119 onward)
 NFIP_POLICIES_CSV = FEMA_RAW_DIR / "nfip_policies_miami_dade.csv.gz"

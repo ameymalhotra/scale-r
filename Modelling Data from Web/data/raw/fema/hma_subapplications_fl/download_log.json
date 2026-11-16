@@ -1,0 +1,16 @@
+{
+  "downloaded_utc": "2026-11-16T23:27:53+00:00",
+  "dataset": {
+    "name": "HmaSubapplications",
+    "title": "HMA Subapplications",
+    "version": 2,
+    "lastRefresh": "2026-07-27T22:39:30.327Z",
+    "recordCount": 63640,
+    "webService": "https://www.fema.gov/api/open/v2/HmaSubapplications",
+    "dataDictionary": "https://www.fema.gov/openfema-data-page/HMA-Subapplications-v2"
+  },
+  "filter": "subapplicantStateAbbreviation eq 'FL'",
+  "api_count": 5291,
+  "rows_saved": 5291,
+  "note": "Replaces HazardMitigationAssistanceProjects v4, which OpenFEMA no longer serves (D-197)."
+}

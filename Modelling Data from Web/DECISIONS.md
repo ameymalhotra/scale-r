@@ -4774,3 +4774,111 @@ D-113.
   Value and tax rerun on 14 Nov: 13 minutes, peak memory 3.2 GB,
   results in `outputs/benefit/module_d/value_tax_examples.json`.
 - Affects: Module D report; value and tax run (memory only).
+
+### D-196. Typical funded flood projects from the SCALE-R database (prompt 29, Part 1)
+
+- Date: 15 Nov 2026. Status: Provisional (Part 1 only; Part 2 waits for
+  the user). Decided by: the user (task); Amey (rules).
+- What happened: The user asked to test Module C on projects like those
+  actually funded in Miami-Dade, starting with what a typical seawall and
+  a typical home elevation project look like in the investment database.
+- What is wrong: The database has 54 seawall projects but only 2 home
+  elevation projects (one clear: 2 homes in Miami Beach), so there is no
+  typical elevation project in our data. Seawall length is stated for 5
+  projects and crest height for 2.
+- How we are fixing it:
+  - flood projects: hazard Flooding or Coastal Hazards, or flood words in
+    the name or description (1,154 of 1,664);
+  - one type per project by keyword rules, first match (seawall; building
+    elevation; pumps; road raising; drainage; canals, levees and
+    structures; beach; green; shoreline repair; floodproofing; buyouts;
+    plans; sewer; roads and parks; other), with 17 rows set by hand after
+    reading them; all rules in `scripts/benefit/typical_projects_part1.py`;
+  - location usable for Parcel, Corridor or Neighborhood points;
+  - costs to 2025 dollars with CPI-U, Reported_Year taken as the cost year
+    (assumption; 2026 as 2025);
+  - cost flags from reading every seawall and elevation row: 11 programme
+    totals, 20 where the seawall is one part of a bigger project, 3 likely
+    duplicates; flagged rows stay in counts but not in cost statistics
+    (32 of 54 seawalls left out);
+  - PortMiami bulkheads (5) and canal or lake edges (4) kept as subtypes,
+    not used for the typical project;
+  - unit costs compared with North Bay Village and Miami Beach seawall
+    figures, Elevate Florida and the USACE Back Bay Chief's Report.
+- Decision: Typical seawall (suggested): 550 ft, crest +6.0 ft NAVD,
+  $1.76M (middle half $0.56M to $2.74M), about $3,500 per ft. Typical
+  elevation project: not set; the user chooses the source.
+- Reason: The user's instruction; the rules are stated so the user can
+  check the classification.
+- Evidence: `outputs/benefit/typical_projects/part1_projects.csv`,
+  `part1_summary.json`, `reports/benefit/typical_projects_part1.md`.
+- Affects: Prompt 29 Part 2 (projects and typical sizes).
+
+### D-197. Typical elevation from FEMA HMA data, and Part 2 settings (prompt 29, Part 2)
+
+- Date: 16 Nov 2026. Status: Accepted. Decided by: the user (data source,
+  rules, Part 2A scope, lengths); Amey (settings marked assumption).
+- What happened: The user chose FEMA's mitigation grant list for the
+  typical elevation project and approved downloading OpenFEMA "Hazard
+  Mitigation Assistance Projects". That dataset no longer exists on
+  OpenFEMA (404 at v1 to v4, not in the DataSets catalogue on 16 Nov
+  2026). We stopped and asked; the user approved its current replacement,
+  HMA Subapplications v2 (already used for Miami-Dade, D-113), for Florida.
+- What is wrong: Our database has one real elevation project, so Part 2
+  needs an outside source for a typical one.
+- How we are fixing it:
+  - downloaded the 5,291 Florida rows of HmaSubapplications v2
+    (`scripts/benefit/download_hma_florida.py`; filter
+    subapplicantStateAbbreviation eq 'FL'; all rows saved, count checked);
+  - elevation = primaryActivity "Elevation" (955 records; 45 in South
+    Florida, 4 in Miami-Dade);
+  - kept funded records only (Closed, Approved, Obligated, Subaward
+    Accepted). Dropped: 40 withdrawn or void, 216 denied, not selected or
+    ineligible, 206 pending or in review, then 2 with no building count
+    and 35 with zero cost. Usable: 456 Florida, 13 South Florida, 1
+    Miami-Dade;
+  - cost = federal + non-federal share (without FEMA management costs),
+    CPI-U to 2025 with the fiscal year as cost year; homes =
+    numberBuildingLocations;
+  - typical = South Florida (13 usable, at least 10): median 1 home,
+    median $253,859 per home (middle half $221,422 to $381,735). All of
+    Florida: median 1 home, $326,706 per home; 79% of projects are one
+    home;
+  - second case, labelled assumption: Elevate Florida, 10 homes at about
+    $267,000 each;
+  - Part 2A: 12 shoreline seawalls, with the 5 PortMiami bulkheads and 4
+    canal or lake edges shown separately; alignment on the FEMA 2027
+    coastal shoreline (transect baseline) centred on the project point;
+    length as stated, otherwise cost / $3,500 per ft, limited to the
+    shoreline line there; crest +6.0 ft NAVD unless stated. Elevation
+    SCALER-0684: the 2 single-family homes with the highest expected
+    yearly damage in Miami Beach (homes not named);
+  - Part 2B: 10 placements each, picked from high, middle and low
+    expected damage bands, one per place, alternating coastal and inland
+    for elevation; in each, the homes with the highest expected yearly
+    damage are raised 3 ft (Module C default, assumption);
+  - benefit per dollar: 7% discount rate (FEMA BCA Toolkit help content,
+    Aug 2025, PDF page 59); project life 50 years for floodwalls and
+    concrete infrastructure, 30 years for residential elevation (FEMA BCA
+    Project Configuration and Cost Estimation Methodology Report, July
+    2025, Table 1, page 16); maintenance 1% of cost a year for seawalls
+    and none for elevation (assumptions; FEMA gives no standard rate).
+    Tax change shown separately with the published Miami price discount
+    scenario (D-187, assumption); value change kept out of the ratio.
+- Decision: As above.
+- Reason: The user's instructions; FEMA's current dataset holds the same
+  elevation subapplications as the retired project list.
+- Evidence: `data/raw/fema/hma_subapplications_fl/` (data and download
+  log), `outputs/benefit/typical_projects/hma_elevation_summary.json`,
+  `scripts/benefit/typical_elevation_hma.py`,
+  `scripts/benefit/typical_projects_part2.py`. Results: typical FEMA
+  elevation returns $1.26 to $2.45 per dollar in 4 high-damage places,
+  $0.10 to $0.58 in middle ones; Elevate Florida case $0.67 to $0.99 in
+  the high places; typical +6 ft seawall clears $1 in 1 of 10 placements
+  and 6 of 443 shoreline stretches (all Miami Beach), $2.58 to $8.68 at
+  +8 ft (sensitivity) in the high places; 7 of 12 real shoreline seawalls
+  are more than 500 m from FEMA's coastal shoreline and were not run.
+  Also added: projects more than 500 m from the coastal shoreline are not
+  run (Module C would otherwise move them to the open shore), and the tax
+  roll is read once per run in `module_d_value_tax.tax_change`.
+- Affects: `reports/benefit/typical_projects_part2.md`.

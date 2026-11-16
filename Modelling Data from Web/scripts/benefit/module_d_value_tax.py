@@ -171,13 +171,23 @@ def value_change(per, C, v):
     return d
 
 
+_NAL = None   # tax roll joined to parcels, read once per run
+
+
+def tax_roll():
+    global _NAL
+    if _NAL is None:
+        nal = pd.read_csv(paths.DOR_DIR / "extract" / "NAL23F202601.csv",
+                          usecols=["PARCEL_ID", "JV", "JV_HMSTD", "AV_SD", "AV_NSD", "TV_SD", "TV_NSD", "TAX_AUTH_CD"],
+                          dtype={"PARCEL_ID": str})
+        m = pd.read_csv(paths.OUT_BENEFIT / "stage1" / "nal_to_parcel.csv.gz", dtype=str)[["PARCEL_ID", "parcel_geo_id"]]
+        _NAL = nal.merge(m, on="PARCEL_ID")
+    return _NAL
+
+
 def tax_change(d):
     """Year 1 and year 10 tax revenue change for the parcels of the buildings in d (value change mid)."""
-    nal = pd.read_csv(paths.DOR_DIR / "extract" / "NAL23F202601.csv",
-                      usecols=["PARCEL_ID", "JV", "JV_HMSTD", "AV_SD", "AV_NSD", "TV_SD", "TV_NSD", "TAX_AUTH_CD"],
-                      dtype={"PARCEL_ID": str})
-    m = pd.read_csv(paths.OUT_BENEFIT / "stage1" / "nal_to_parcel.csv.gz", dtype=str)[["PARCEL_ID", "parcel_geo_id"]]
-    nal = nal.merge(m, on="PARCEL_ID")
+    nal = tax_roll()
     nal = nal[nal.parcel_geo_id.isin(set(d.parcel_geo_id.dropna()))].copy()
     # each building's value change goes to the tax roll records on its parcel, by just value share
     bchg = d.groupby("parcel_geo_id").value_change_mid.sum()
