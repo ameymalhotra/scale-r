@@ -4882,3 +4882,53 @@ D-113.
   run (Module C would otherwise move them to the open shore), and the tax
   roll is read once per run in `module_d_value_tax.tax_change`.
 - Affects: `reports/benefit/typical_projects_part2.md`.
+
+### D-198. Part 2 follow-up: 3% sensitivity, frequent flooding note, best-case elevation, short walls (prompt 29, Part 2 follow-up)
+
+- Date: 16 Nov 2026. Status: Accepted. Decided by: the user (all four
+  additions); Amey (wording, the 200 ft cut applied to length used).
+- What happened: The user asked for small additions to Part 2 without
+  changing the method. While rerunning we also found that the first
+  Part 2 summary, D-197 and the report back swapped a count: 5 of the 12
+  real shoreline seawalls were not run (more than 500 m from FEMA's
+  coastal shoreline) and 7 ran, not the other way round. Table A itself
+  was right.
+- What is wrong: Results were shown at 7% only; frequent tidal flooding
+  was not flagged as missing; elevation results raise the single most
+  damaged home, a best case; short walls (no end-around flooding) were
+  mentioned in summary statements.
+- How we are fixing it:
+  - every benefit per dollar in Tables A and B, the +8 ft seawall
+    sensitivity and the coastline scan is also computed at a 3% discount
+    rate (same project lives and maintenance), shown next to 7% and
+    labelled sensitivity (assumption); 7% stays the main figure;
+  - summary and limits now say the most frequent storm in the model is
+    the 10% (10-year) storm, so high-tide, king-tide and other frequent
+    flooding are missing and seawall benefits are probably understated;
+    a report-only section names NOAA CO-OPS high tide flooding thresholds
+    and flood-day counts (Virginia Key) and the NOAA Sea Level Rise Viewer
+    depth and extent layers as possible sources, with what each gives and
+    the effort; nothing was downloaded;
+  - for the typical FEMA elevation, the same project is also run on the
+    5th and 10th most damaged single-family home in each tract; high-damage
+    results are described as "up to";
+  - real walls with a length used under 200 ft are flagged "end-around
+    flooding not modelled, likely overstated" and left out of totals and
+    best-result statements (Bay Harbor Islands 75 ft, Vizcaya 160 ft
+    among those run; Yacht Club Drive and North Grapeland Heights were not
+    run anyway). All typical walls are 550 ft.
+- Decision: As above.
+- Reason: The user's instructions; the count correction keeps the report
+  consistent with its own table.
+- Evidence: `scripts/benefit/typical_projects_part2.py` (RATE_LOW,
+  SHORT_FT, `top_homes(start=)`), `outputs/benefit/typical_projects/`
+  (`part2_*.csv`, `part2_summary.json`). Results at 7% are unchanged. At
+  3%: elevation ratios rise about 1.6 times and seawall ratios about 1.7
+  times; typical seawall still clears $1 in 1 of 10 placements and in 8
+  of 443 stretches (6 at 7%); Elevate Florida case clears $1 in all four
+  high-damage places ($1.06 to $1.56). 5th most damaged home: $0.58 to
+  $1.22 at 7%; 10th: $0.40 to $0.85 (high-damage places). Real shoreline
+  walls that ran and are at least 200 ft: 5, $15.6M, about $16,600 a
+  year, $0.01 per dollar ($0.02 at 3%).
+- Affects: `reports/benefit/typical_projects_part2.md` (map unchanged,
+  since 7% figures did not change; regenerated with the run).

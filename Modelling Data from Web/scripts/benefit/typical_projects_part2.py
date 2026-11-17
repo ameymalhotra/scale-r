@@ -34,6 +34,11 @@ FEMA gives no standard rate; seawall 1% of construction cost a year and
 elevation $0 (assumptions). Tax change and value change are reported
 separately and kept out of the ratio. Tax uses the published Miami price
 discount scenario (D-187, assumption).
+D-198 additions: every ratio also at a 3% discount rate (sensitivity,
+assumption); for the typical FEMA elevation, the same project on the 5th
+and 10th most damaged home in each location; real walls shorter than
+200 ft are flagged "end-around flooding not modelled, likely overstated"
+and left out of pooled totals.
 Writes outputs/benefit/typical_projects/part2_*.csv, part2_summary.json and
 reports/benefit/typical_projects_part2_map.png.
 """
@@ -57,6 +62,8 @@ OUT = paths.OUT_BENEFIT / "typical_projects"
 MAP_PNG = paths.ROOT / "reports" / "benefit" / "typical_projects_part2_map.png"
 FT = 0.3048
 RATE = 0.07
+RATE_LOW = 0.03        # sensitivity only (assumption, D-198)
+SHORT_FT = 200         # walls shorter than this: end-around flooding not modelled, likely overstated (D-198)
 LIFE = {"seawall": 50, "elevation": 30}
 MAINT = {"seawall": 0.01, "elevation": 0.0}
 COST_PER_FT = 3500.0
@@ -74,9 +81,9 @@ def annuity(n, r=RATE):
     return (1 - (1 + r) ** -n) / r
 
 
-def ratio(kind, avoided, cost):
-    pv_b = avoided * annuity(LIFE[kind])
-    pv_c = cost * (1 + MAINT[kind] * annuity(LIFE[kind]))
+def ratio(kind, avoided, cost, r=RATE):
+    pv_b = avoided * annuity(LIFE[kind], r)
+    pv_c = cost * (1 + MAINT[kind] * annuity(LIFE[kind], r))
     return pv_b / pv_c if cost > 0 else np.nan
 
 
@@ -136,6 +143,7 @@ class Engine:
                "pv_benefit_mid": avoided["mid"] * annuity(LIFE[kind]),
                "bcr_mid": ratio(kind, avoided["mid"], cost), "bcr_low": ratio(kind, avoided["low"], cost),
                "bcr_high": ratio(kind, avoided["high"], cost),
+               "bcr_mid_3pct": ratio(kind, avoided["mid"], cost, RATE_LOW),
                "value_change_mid": float(est.value_change_mid.sum()),
                "tax_year1": tax["tax_change_year1"], "tax_year10": tax["tax_change_year10"],
                "share_avoided_in_rain_basins": rain_share}
@@ -148,17 +156,19 @@ class Engine:
         r, per = self.M.seawall(line, crest)
         r8, _ = self.M.seawall(line, 8.0)
         return {**self.summarise("seawall", r, per, cost, **k), "buildings_behind_wall": r["buildings_affected"],
-                "bcr_mid_crest_8ft": ratio("seawall", r8["losses_avoided_per_year"]["mid"], cost)}
+                "bcr_mid_crest_8ft": ratio("seawall", r8["losses_avoided_per_year"]["mid"], cost),
+                "bcr_mid_crest_8ft_3pct": ratio("seawall", r8["losses_avoided_per_year"]["mid"], cost, RATE_LOW)}
 
     def elevate(self, fd_ids, cost, **k):
         r, per = self.M.elevate(fd_ids, RAISE)
         return self.summarise("elevation", r, per, cost, **k)
 
-    def top_homes(self, mask, n):
+    def top_homes(self, mask, n, start=0):
+        """Single-family homes ranked by expected yearly damage; ranks start+1 to start+n."""
         A, B = self.M.A, self.M.B
         sf = A.occtype.str.startswith("RES1").to_numpy() & mask & (B.eyd_mid.to_numpy() > 0)
         i = np.flatnonzero(sf)
-        i = i[np.argsort(-B.eyd_mid.to_numpy()[i])][:n]
+        i = i[np.argsort(-B.eyd_mid.to_numpy()[i], kind="stable")][start:start + n]
         return A.fd_id.to_numpy()[i].tolist(), i
 
 
@@ -179,7 +189,10 @@ def part_a(E):
                "lon": p.Longitude, "lat": p.Latitude, "cost": p.cost_2025, "length_ft_used": L / FT,
                "length_source": "stated" if stated else ("cost / $3,500 per ft" if L >= want_ft * FT - 1 else "shoreline available"),
                "crest_ft_navd": crest, "crest_source": "stated" if pd.notna(p.crest_ft_navd) else "assumed +6.0",
-               "distance_to_fema_shoreline_m": dist}
+               "distance_to_fema_shoreline_m": dist,
+               "short_wall": bool(L / FT < SHORT_FT)}
+        if row["short_wall"]:
+            row["short_wall_note"] = "end-around flooding not modelled, likely overstated"
         if dist > MAX_SNAP_M:
             row["note"] = (f"FEMA coastal shoreline is {dist / 1000:.1f} km away: the wall is on a river, canal or lake the "
                            "coastal study does not follow, so Module C cannot model it (not run)")
@@ -262,6 +275,7 @@ def part_b(E, hma):
     P.end()
     st["avoided_mid"], st["buildings_behind_wall"] = av, beh
     st["bcr_mid"] = [ratio("seawall", a, 1.76e6) for a in av]
+    st["bcr_mid_3pct"] = [ratio("seawall", a, 1.76e6, RATE_LOW) for a in av]
     st.to_csv(OUT / "part2_seawall_scan.csv", index=False)
     pick = choose(st, "eyd_on_stretch", "place")
     P.start("2B typical seawall placements", total=len(pick))
@@ -299,6 +313,16 @@ def part_b(E, hma):
                  "lon": float(A.lon.to_numpy()[i].mean()), "lat": float(A.lat.to_numpy()[i].mean()), "homes_raised": len(ids)}
             k = {} if lo is None else {"cost_lo": lo * len(ids), "cost_hi": hi * len(ids)}
             r.update(E.elevate(ids, cph * len(ids), **k))
+            if homes == 1:
+                # how fast the return falls: the same project on the 5th and the 10th most damaged home (D-198)
+                for rank in (5, 10):
+                    ids_k, _ = E.top_homes(A.GEOID_tract.to_numpy() == p.tract, 1, start=rank - 1)
+                    rk, _ = E.M.elevate(ids_k, RAISE)
+                    a = rk["losses_avoided_per_year"]["mid"]
+                    r[f"home{rank}_eyd_before_mid"] = rk["eyd_baseline"]["mid"]
+                    r[f"home{rank}_avoided_mid"] = a
+                    r[f"home{rank}_bcr_mid"] = ratio("elevation", a, cph)
+                    r[f"home{rank}_bcr_mid_3pct"] = ratio("elevation", a, cph, RATE_LOW)
             rows.append(r)
             n += 1
             P.update(n)
@@ -358,15 +382,23 @@ def main():
     P.start("map")
     draw_map(b)
     P.end()
-    S = {"settings": {"discount_rate": RATE, "project_life_years": LIFE, "maintenance_share_of_cost_per_year": MAINT,
-                      "annuity_factor": {k: annuity(v) for k, v in LIFE.items()}, "crest_ft_navd": CREST, "raise_ft": RAISE,
+    sh = a[a.group.eq("shoreline") & ~a.short_wall.fillna(False).astype(bool) & a.bcr_mid.notna()]
+    S = {"settings": {"discount_rate": RATE, "discount_rate_sensitivity": RATE_LOW, "short_wall_ft": SHORT_FT, "project_life_years": LIFE, "maintenance_share_of_cost_per_year": MAINT,
+                      "annuity_factor": {k: annuity(v) for k, v in LIFE.items()},
+                      "annuity_factor_3pct": {k: annuity(v, RATE_LOW) for k, v in LIFE.items()}, "crest_ft_navd": CREST, "raise_ft": RAISE,
                       "tax_scenario": TAX_SCENARIO, "typical_elevation": hma["typical"]},
          "real": {g: {"projects": int(len(x)), "cost": float(x.cost.sum()), "avoided_mid": float(x.avoided_mid.sum()),
                       "bcr_pooled": ratio("elevation" if g == "elevation" else "seawall", x.avoided_mid.sum(), x.cost.sum()),
+                      "bcr_pooled_3pct": ratio("elevation" if g == "elevation" else "seawall", x.avoided_mid.sum(), x.cost.sum(), RATE_LOW),
                       "bcr_median": float(x.bcr_mid.median())} for g, x in a.groupby("group")},
+         "real_shoreline_run_excluding_short": {"projects": int(len(sh)), "cost": float(sh.cost.sum()),
+                                                "avoided_mid": float(sh.avoided_mid.sum()),
+                                                "bcr_pooled": ratio("seawall", sh.avoided_mid.sum(), sh.cost.sum()),
+                                                "bcr_pooled_3pct": ratio("seawall", sh.avoided_mid.sum(), sh.cost.sum(), RATE_LOW)},
          "typical": {c: {"placements": int(len(x)), "avoided_mid_median": float(x.avoided_mid.median()),
                          "bcr_median": float(x.bcr_mid.median()), "bcr_max": float(x.bcr_mid.max()), "bcr_min": float(x.bcr_mid.min()),
-                         "above_one": int((x.bcr_mid >= 1).sum())} for c, x in b.groupby("case")}}
+                         "above_one": int((x.bcr_mid >= 1).sum()), "above_one_3pct": int((x.bcr_mid_3pct >= 1).sum()),
+                         "bcr_median_3pct": float(x.bcr_mid_3pct.median())} for c, x in b.groupby("case")}}
     (OUT / "part2_summary.json").write_text(json.dumps(S, indent=2, default=float))
     print(json.dumps(S, indent=1, default=float))
     P.finish()
