@@ -438,3 +438,73 @@ export function benefitPerDollar(kind, avoidedPerYear, cost, rate) {
   const af = annuity(s.life, rate);
   return (avoidedPerYear * af) / (cost * (1 + s.maint * af));
 }
+
+// ------------------------------------------------------------------ placing a drawn wall on the shoreline
+
+function along(lineUtm) {
+  const cum = [0];
+  for (let k = 0; k + 1 < lineUtm.length; k += 1) {
+    cum.push(cum[k] + Math.hypot(lineUtm[k + 1][0] - lineUtm[k][0], lineUtm[k + 1][1] - lineUtm[k][1]));
+  }
+  return cum;
+}
+
+function nearestOnLine(x, y, lineUtm, cum) {
+  let best = { d: Infinity, s: 0 };
+  for (let k = 0; k + 1 < lineUtm.length; k += 1) {
+    const [ax, ay] = lineUtm[k]; const [bx, by] = lineUtm[k + 1];
+    const vx = bx - ax; const vy = by - ay;
+    const L2 = vx * vx + vy * vy;
+    const u = L2 > 0 ? Math.max(0, Math.min(1, ((x - ax) * vx + (y - ay) * vy) / L2)) : 0;
+    const d = Math.hypot(ax + u * vx - x, ay + u * vy - y);
+    if (d < best.d) best = { d, s: cum[k] + u * (cum[k + 1] - cum[k]) };
+  }
+  return best;
+}
+
+function pointAtUtm(lineUtm, cum, s) {
+  let k = 0;
+  while (k + 2 < cum.length && cum[k + 1] < s) k += 1;
+  const seg = cum[k + 1] - cum[k];
+  const u = seg > 0 ? (s - cum[k]) / seg : 0;
+  return [lineUtm[k][0] + u * (lineUtm[k + 1][0] - lineUtm[k][0]), lineUtm[k][1] + u * (lineUtm[k + 1][1] - lineUtm[k][1]), k, u];
+}
+
+/**
+ * Place a drawn wall on FEMA's coastal shoreline (the transect baseline), as Part 2 placed real walls
+ * (typical_projects_part2.Engine.wall_line): centred on the point of the shoreline nearest the middle of the
+ * drawn line, with the drawn length, kept within the shoreline line. The "behind the wall" test only works
+ * for a wall on that line: a wall drawn even 10 m out in the water is crossed by no building's line to the shore.
+ * @param {[number, number][]} drawnLonLat
+ * @param {[number, number][][]} shoreLonLat shoreline lines, lon/lat
+ * @param {[number, number][][]} shoreUtm the same lines in UTM, vertex for vertex
+ * @param {number} maxM farthest the wall may be moved; beyond this it is left where drawn
+ * @returns {{line: [number, number][], movedM: number} | null}
+ */
+export function snapToShore(drawnLonLat, shoreLonLat, shoreUtm, maxM) {
+  if (drawnLonLat.length < 2 || !shoreUtm.length) return null;
+  const du = drawnLonLat.map(([lo, la]) => toUtm17(lo, la));
+  const dcum = along(du);
+  const L = dcum[dcum.length - 1];
+  const [mx, my] = pointAtUtm(du, dcum, L / 2);
+  let best = null;
+  shoreUtm.forEach((line, j) => {
+    const cum = along(line);
+    const n = nearestOnLine(mx, my, line, cum);
+    if (!best || n.d < best.d) best = { ...n, j, cum };
+  });
+  if (!best || best.d > maxM) return null;
+  const line = shoreUtm[best.j]; const ll = shoreLonLat[best.j]; const { cum } = best;
+  const total = cum[cum.length - 1];
+  const len = Math.min(L, total);
+  const a = Math.min(Math.max(best.s - len / 2, 0), total - len);
+  const b = a + len;
+  const toLL = (s) => {
+    const [, , k, u] = pointAtUtm(line, cum, s);
+    return [ll[k][0] + u * (ll[k + 1][0] - ll[k][0]), ll[k][1] + u * (ll[k + 1][1] - ll[k][1])];
+  };
+  const out = [toLL(a)];
+  for (let k = 0; k < cum.length; k += 1) if (cum[k] > a && cum[k] < b) out.push(ll[k]);
+  out.push(toLL(b));
+  return { line: out, movedM: best.d };
+}

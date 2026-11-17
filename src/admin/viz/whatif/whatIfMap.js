@@ -1,7 +1,7 @@
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import {
-  SETTINGS, benefitPerDollar, elevate, makeContext, picksForIds, pointLineDist, seawall, seawallTileKeys,
+  SETTINGS, benefitPerDollar, elevate, makeContext, picksForIds, pointLineDist, seawall, seawallTileKeys, snapToShore,
   tilesForBox, toUtm17, topHomes,
 } from './whatIfEngine.js';
 import { loadJson, tileStore } from './whatIfData.js';
@@ -50,7 +50,7 @@ export function mount() {
   });
   map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right');
 
-  let man = null; let ctx = null; let store = null; let dryStore = null; let shoreUtm = []; let examples = [];
+  let man = null; let ctx = null; let store = null; let dryStore = null; let shoreUtm = []; let shoreLL = []; let examples = [];
   let emode = 'area';
   let drawing = null;           // {kind: 'wall' | 'area', pts: [[lon, lat], ...]}
   const projects = [];
@@ -74,8 +74,8 @@ export function mount() {
       loadJson('examples.json').catch(() => []),
     ]);
     man = m; ctx = makeContext(m, curves); store = tileStore(m); dryStore = tileStore(m, undefined, m.dry_tiles); examples = ex;
-    shoreUtm = shore.features.flatMap((f) => (f.geometry.type === 'LineString' ? [f.geometry.coordinates] : f.geometry.coordinates))
-      .map((line) => line.map(([lo, la]) => toUtm17(lo, la)));
+    shoreLL = shore.features.flatMap((f) => (f.geometry.type === 'LineString' ? [f.geometry.coordinates] : f.geometry.coordinates));
+    shoreUtm = shoreLL.map((line) => line.map(([lo, la]) => toUtm17(lo, la)));
     status('');
     return { shore };
   })();
@@ -121,7 +121,7 @@ export function mount() {
     map.addLayer({ id: 'wi-basins-label', type: 'symbol', source: 'wi-basin-labels',
       layout: { 'text-field': ['concat', ['get', 'basin'], ' basin:\nrainfall flooding modelled here only'], 'text-size': 11, 'text-allow-overlap': false },
       paint: { 'text-color': '#2a5592', 'text-halo-color': '#fff', 'text-halo-width': 1.4 } });
-    map.addLayer({ id: 'wi-shore', type: 'line', source: 'wi-shore', minzoom: 11, paint: { 'line-color': '#5a8fc9', 'line-width': 1, 'line-opacity': 0.7 } });
+    map.addLayer({ id: 'wi-shore', type: 'line', source: 'wi-shore', minzoom: 10, paint: { 'line-color': '#2f6db5', 'line-width': ['interpolate', ['linear'], ['zoom'], 10, 1, 15, 2.5], 'line-opacity': 0.85 } });
     // buildings the model expects water never to reach: faint hollow dots (D-200)
     map.addLayer({ id: 'wi-dry', type: 'circle', source: 'wi-dry', minzoom: BUILDING_ZOOM,
       paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 13, 1.4, 16, 3, 18, 5.5], 'circle-color': '#ffffff',
@@ -137,9 +137,11 @@ export function mount() {
     map.addLayer({ id: 'wi-hit', type: 'circle', source: 'wi-hit',
       paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 11, 3.5, 16, 7, 18, 10],
         'circle-color': ['match', ['get', 't'], 'raised', '#5b2a86', '#1a7f4b'], 'circle-stroke-color': '#fff', 'circle-stroke-width': 1.5 } });
-    map.addLayer({ id: 'wi-walls-case', type: 'line', source: 'wi-walls', layout: { 'line-cap': 'round', 'line-join': 'round' },
+    map.addLayer({ id: 'wi-walls-ghost', type: 'line', source: 'wi-walls', filter: ['==', ['get', 'ghost'], true],
+      paint: { 'line-color': '#f47321', 'line-width': 2, 'line-opacity': 0.6, 'line-dasharray': [2, 2] } });
+    map.addLayer({ id: 'wi-walls-case', type: 'line', source: 'wi-walls', filter: ['!=', ['get', 'ghost'], true], layout: { 'line-cap': 'round', 'line-join': 'round' },
       paint: { 'line-color': '#fff', 'line-width': ['case', ['get', 'sel'], 11, 8] } });
-    map.addLayer({ id: 'wi-walls', type: 'line', source: 'wi-walls', layout: { 'line-cap': 'round', 'line-join': 'round' },
+    map.addLayer({ id: 'wi-walls', type: 'line', source: 'wi-walls', filter: ['!=', ['get', 'ghost'], true], layout: { 'line-cap': 'round', 'line-join': 'round' },
       paint: { 'line-color': ['case', ['get', 'sel'], '#f47321', '#01321e'], 'line-width': ['case', ['get', 'sel'], 7, 5] } });
     // numbered marker per project, visible at every zoom (the list in the panel uses the same numbers)
     map.addLayer({ id: 'wi-marks-dot', type: 'circle', source: 'wi-marks',
@@ -172,7 +174,8 @@ export function mount() {
       <div class="muted">${map.getZoom() < BUILDING_ZOOM ? 'Zoomed out: 2 km squares by total damage. Zoom in to see buildings.' : 'One dot per building in the national building inventory. A house outline with no dot is not in the inventory.'}</div>` : ''}
       <div><span class="sw" style="background:#1a7f4b"></span>protected by the selected project</div>
       <div><span class="sw" style="background:#5b2a86;box-shadow:0 0 0 3px rgba(91,42,134,0.25)"></span>home raised</div>
-      <div><span class="ln"></span>rainfall flooding modelled here only</div></details>`;
+      <div><span class="ln"></span>rainfall flooding modelled here only</div>
+      <div><span class="ln" style="border-top:2.5px solid #2f6db5"></span>FEMA coastal shoreline: walls are placed on it</div></details>`;
   }
 
   async function refreshBuildings() {
@@ -242,10 +245,16 @@ export function mount() {
   async function compute(p) {
     const t0 = performance.now();
     if (p.kind === 'seawall') {
+      // a drawn wall is placed on FEMA's coastal shoreline, as Part 2 placed real walls (D-200); the examples are on it already
+      if (!p.onShore) {
+        const snap = snapToShore(p.drawn, shoreLL, shoreUtm, MAX_SHORE_M);
+        p.line = snap ? snap.line : p.drawn;
+        p.snapM = snap ? snap.movedM : null;
+      }
       await store.ensure(seawallTileKeys(p.line, man));
       p.res = seawall(store.tiles, p.line, p.crest, ctx, { keepPer: true });
       p.lengthFt = p.res.lengthM / FT;
-      p.shoreM = shoreDistance(p.line);
+      p.shoreM = shoreDistance(p.drawn || p.line);
       if (!p.costEdited) p.cost = Math.round(p.lengthFt * SETTINGS.seawall.unitCost);
     } else {
       if (p.mode === 'area') {
@@ -290,7 +299,8 @@ export function mount() {
     const walls = []; const areas = []; const hits = [];
     projects.forEach((p, k) => {
       const isSel = k === sel;
-      if (p.kind === 'seawall') walls.push({ type: 'Feature', properties: { k, sel: isSel }, geometry: { type: 'LineString', coordinates: p.line } });
+      if (p.kind === 'seawall' && p.line) walls.push({ type: 'Feature', properties: { k, sel: isSel, ghost: false }, geometry: { type: 'LineString', coordinates: p.line } });
+      if (p.kind === 'seawall' && p.snapM > 5) walls.push({ type: 'Feature', properties: { k, sel: isSel, ghost: true }, geometry: { type: 'LineString', coordinates: p.drawn } });
       if (p.kind === 'elevation' && p.mode === 'area') areas.push({ type: 'Feature', properties: { k, sel: isSel }, geometry: { type: 'Polygon', coordinates: [[...p.ring, p.ring[0]]] } });
       if (p.kind === 'elevation') {
         for (const q of p.res?.perBuilding || []) hits.push({ type: 'Feature', properties: { t: 'raised', k }, geometry: { type: 'Point', coordinates: [q.lon, q.lat] } });
@@ -342,11 +352,12 @@ export function mount() {
     let what;
     if (p.kind === 'seawall') {
       what = `${fmt(p.lengthFt)} ft wall, crest +${p.crest.toFixed(1)} ft NAVD88`;
+      if (p.snapM > 5) what += `. Placed on FEMA's coastal shoreline (the thin blue line), ${fmt(p.snapM)} m from where you drew it: the model can only test a wall on that line. Your line is shown dashed`;
       if (p.lengthFt < SHORT_WALL_FT) warns.push('Wall under 200 ft: water going around the ends is not modelled; result likely overstated.');
       if (r.protectedMedianDistM != null && r.protectedMedianDistM > 300) {
         warns.push(`Most buildings credited to this wall are far from it (half are more than ${fmt(r.protectedMedianDistM)} m away). The model gives a wall every building whose nearest point on FEMA's coastal shoreline lies behind it, and FEMA's shoreline skips canals and creeks, so water could reach many of these buildings another way. Result likely overstated.`);
       }
-      if (p.shoreM > MAX_SHORE_M) warns.push(`This line is ${(p.shoreM / 1000).toFixed(1)} km from FEMA's coastal shoreline: not covered by FEMA's coastal study, so the model cannot value it.`);
+      if (p.snapM == null && p.shoreM > MAX_SHORE_M) warns.push(`This line is ${(p.shoreM / 1000).toFixed(1)} km from FEMA's coastal shoreline (the thin blue line along the bay and ocean). FEMA's coastal study does not cover the water here (a river, canal or lake), so the model cannot value this wall.`);
     } else {
       what = `${fmt(p.homes)} home${p.homes === 1 ? '' : 's'} raised ${p.raise} ft`;
       if (p.mode === 'area') {
@@ -428,7 +439,7 @@ export function mount() {
     const d = drawing;
     cancelDrawing();
     if (d.kind === 'wall' && d.pts.length >= 2) {
-      update(newProject('seawall', { line: d.pts, crest: Number($('crest').value) }));
+      update(newProject('seawall', { drawn: d.pts, crest: Number($('crest').value) }));
     } else if (d.kind === 'area' && d.pts.length >= 3) {
       update(newProject('elevation', { mode: 'area', ring: d.pts, n: Math.max(1, Math.round(Number($('n-homes').value) || 1)), raise: Number($('raise').value) }));
     }
@@ -439,7 +450,7 @@ export function mount() {
     cancelDrawing();
     projects.length = 0;
     for (const e of examples) {
-      if (e.kind === 'seawall') newProject('seawall', { name: e.label, line: e.line, crest: e.crest_ft });
+      if (e.kind === 'seawall') newProject('seawall', { name: e.label, line: e.line, drawn: e.line, onShore: true, snapM: 0, crest: e.crest_ft });
       else newProject('elevation', { name: e.label, mode: 'ids', fd_ids: e.fd_ids, tiles: e.tiles, raise: e.raise_ft });
     }
     await Promise.all(projects.map((p) => compute(p)));
@@ -555,13 +566,13 @@ export function mount() {
   }
   function startDrag(e) {
     if (drawing) return;
-    const f = map.queryRenderedFeatures(e.point, { layers: ['wi-walls', 'wi-areas-fill'] })[0];
+    const f = map.queryRenderedFeatures(e.point, { layers: ['wi-walls', 'wi-walls-ghost', 'wi-areas-fill'] })[0];
     if (!f) return;
     e.preventDefault();
     const k = Number(f.properties.k);
     const p = projects[k];
     sel = k;
-    drag = { k, start: [e.lngLat.lng, e.lngLat.lat], orig: JSON.parse(JSON.stringify(p.kind === 'seawall' ? p.line : p.ring)) };
+    drag = { k, start: [e.lngLat.lng, e.lngLat.lat], orig: JSON.parse(JSON.stringify(p.kind === 'seawall' ? p.drawn : p.ring)) };
     map.dragPan.disable();
     map.getCanvas().style.cursor = 'grabbing';
   }
@@ -570,7 +581,7 @@ export function mount() {
     const dx = e.lngLat.lng - drag.start[0]; const dy = e.lngLat.lat - drag.start[1];
     const moved = drag.orig.map(([lo, la]) => [lo + dx, la + dy]);
     const p = projects[drag.k];
-    if (p.kind === 'seawall') p.line = moved; else p.ring = moved;
+    if (p.kind === 'seawall') { p.drawn = moved; p.onShore = false; } else p.ring = moved;
     drawProjects();
     dragCompute();
   }
@@ -581,6 +592,7 @@ export function mount() {
     map.getCanvas().style.cursor = '';
   }
   map.on('mousedown', 'wi-walls', startDrag);
+  map.on('mousedown', 'wi-walls-ghost', startDrag);
   map.on('mousedown', 'wi-areas-fill', startDrag);
   map.on('touchstart', 'wi-walls', (e) => { if (e.points.length === 1) startDrag(e); });
   map.on('touchstart', 'wi-areas-fill', (e) => { if (e.points.length === 1) startDrag(e); });

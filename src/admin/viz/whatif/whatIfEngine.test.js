@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { annuity, benefitPerDollar, eydFromLosses, inRing, interp, pointLineDist, prepareCurves, toUtm17 } from './whatIfEngine.js';
+import { annuity, benefitPerDollar, eydFromLosses, inRing, interp, lineLength, pointLineDist, prepareCurves, snapToShore, toUtm17 } from './whatIfEngine.js';
 
 describe('What-If engine building blocks', () => {
   it('interpolates like numpy, held flat beyond the ends', () => {
@@ -50,5 +50,20 @@ describe('What-If engine building blocks', () => {
     // Part 2 S2: $228,964 a year, $1.76M, seawall -> 1.58 at 7%, 2.66 at 3%
     expect(benefitPerDollar('seawall', 228964, 1.76e6, 0.07)).toBeCloseTo(1.578, 2);
     expect(benefitPerDollar('seawall', 228964, 1.76e6, 0.03)).toBeCloseTo(2.66, 2);
+  });
+
+  it('places a wall drawn out in the water onto the shoreline, keeping its length', () => {
+    // a straight east-west shoreline at lat 25.80, and a wall drawn about 30 m north of it
+    const shoreLL = [[[-80.150, 25.80], [-80.140, 25.80], [-80.130, 25.80]]];
+    const shoreUtm = shoreLL.map((l) => l.map(([lo, la]) => toUtm17(lo, la)));
+    const drawn = [[-80.1425, 25.80027], [-80.1375, 25.80027]];
+    const r = snapToShore(drawn, shoreLL, shoreUtm, 500);
+    expect(r.movedM).toBeGreaterThan(25);
+    expect(r.movedM).toBeLessThan(35);
+    for (const [, la] of r.line) expect(la).toBeCloseTo(25.80, 6);
+    const len = (l) => lineLength(l.map(([lo, la]) => toUtm17(lo, la)));
+    expect(Math.abs(len(r.line) - len(drawn))).toBeLessThan(1);
+    // too far away: left where drawn
+    expect(snapToShore([[-80.14, 25.81], [-80.135, 25.81]], shoreLL, shoreUtm, 500)).toBeNull();
   });
 });

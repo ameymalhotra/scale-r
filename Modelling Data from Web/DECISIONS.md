@@ -5018,3 +5018,28 @@ D-113.
 - Affects: The admin panel (`AdminApp.jsx`, `AdminLayout.jsx`,
   `VizPage.jsx`, `src/admin/viz/whatif/`), `vite.config.js` (development
   route only), `scripts/benefit/export_what_if.py`.
+
+### D-201. Drawn seawalls are placed on FEMA's coastal shoreline
+
+- Date: 17 Nov 2026. Status: Accepted. Decided by: Amey, after the user
+  found a drawn wall showing $0.
+- What happened: A 1,588 ft wall drawn just off the Miami Beach bayfront at
+  +9 ft protected nothing.
+- What is wrong: Module C counts a building as behind a wall when its
+  straight line to its nearest point on FEMA's coastal shoreline (transect
+  baseline) crosses the wall. Those lines end at the shoreline, so a wall
+  drawn even 10 m out in the water is crossed by none (tested: the Part 2
+  Miami Beach wall at +8 ft avoids $1.26M a year on the line, $0 when moved
+  10 m into the bay).
+- How we are fixing it: The view places a drawn wall on the shoreline the
+  way Part 2 placed real walls (`wall_line`): centred on the shoreline point
+  nearest the middle of the drawn line, with the drawn length
+  (`snapToShore` in `whatIfEngine.js`, with a test). It says how far the wall
+  moved and shows the drawn line dashed. Lines more than 500 m from the
+  shoreline are left where drawn, with the "not covered by FEMA's coastal
+  study" warning. The shoreline is drawn more clearly and is in the legend.
+- Decision: As above. Module C itself is unchanged, so parity still holds.
+- Reason: Matches how Part 2 placed walls; users cannot be expected to draw
+  exactly on a line they cannot easily see.
+- Evidence: `src/admin/viz/whatif/whatIfEngine.test.js`.
+- Affects: The admin Flood What-If view.
