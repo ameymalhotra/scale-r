@@ -4932,3 +4932,46 @@ D-113.
   year, $0.01 per dollar ($0.02 at 3%).
 - Affects: `reports/benefit/typical_projects_part2.md` (map unchanged,
   since 7% figures did not change; regenerated with the run).
+
+### D-199. Admin Flood What-If, Part 1: browser engine and private per-building export
+
+- Date: 17 Nov 2026. Status: Proposed (Part 1 plan; waits for the user's
+  confirmation before Part 2). Decided by: the user (goal, branch, rules);
+  Amey (design, marked as recommendations).
+- What happened: The user asked for a Flood What-If view in the admin panel
+  so the professor can place a seawall or home elevation and see damage
+  avoided, buildings protected and benefit per dollar. Part 1 is the plan
+  and the data export, on the new branch `admin-what-if` from
+  `benefit-simulator`.
+- What is wrong: Module C runs in Python with a 96 MB table; the admin
+  panel is a static site. The admin data must stay private (D-095), and the
+  D-095 private bucket still does not exist (D-096).
+- How we are fixing it:
+  - recommend a browser engine: a plain JavaScript copy of Module B's
+    `levels`, `event_loss`, `eyd` and Module C's `seawall` and `elevate`,
+    with our own UTM projection formula; no server and no new packages;
+  - export only the 386,929 buildings wet in at least one storm today
+    (of 627,252) to `outputs/admin_data/what_if/` (git-ignored), in 438
+    gzip binary column files on a 2 km UTM grid (21.9 MB in all), plus a
+    manifest, curves, the FEMA coastal shoreline, the C-8 and C-9 outline
+    and an optional overview file; no owner, address or parcel ID fields;
+    parcel fields limited to allocated just value and segment;
+  - round-trip check: Module B's `compute` on the exported files matches
+    the stored expected yearly damage (largest building difference $3.68 a
+    year, high case);
+  - privacy: in production the files go to the private `admin-data`
+    bucket under `what_if/`, read by admins only; the D-095 SQL needs
+    `application/octet-stream` added to the allowed types; for local
+    preview a development-only Vite setting serves the folder;
+  - parity test plan: every Part 2 run reproduced in the browser within
+    1% of Python's damage avoided; baseline within 0.1%.
+- Decision: As above, pending the user's confirmation of the plan and the
+  two choices (JavaScript instead of TypeScript; no new packages).
+- Reason: The engine is small arithmetic on precomputed inputs, so a
+  browser copy is fast and needs no service to host or secure; the parity
+  test keeps it equal to Python.
+- Evidence: `scripts/benefit/export_what_if.py`,
+  `outputs/admin_data/what_if/export_summary.json`,
+  `reports/benefit/admin_what_if_part1.md`.
+- Affects: The admin panel (Part 2), `scripts/common/paths.py`
+  (`ADMIN_DATA_DIR`, `ADMIN_WHAT_IF_DIR`).
