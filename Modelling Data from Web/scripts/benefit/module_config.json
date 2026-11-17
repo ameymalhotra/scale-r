@@ -142,7 +142,10 @@
   "projects": {
     "seawall": {
       "max_distance_to_shore_m": 2000,
-      "snap_tolerance_m": 5
+      "snap_tolerance_m": 5,
+      "inner_water_rule": true,
+      "max_distance_from_wall_m": 1000,
+      "note": "D-202: a building is protected only if its nearest open water is the coastal shoreline behind the wall (not a canal, creek or inner waterway, FEMA 2027 water lines) and it is within 1 km of the wall"
     },
     "elevation": {
       "default_raise_ft": 3.0

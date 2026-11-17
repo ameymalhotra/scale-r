@@ -322,6 +322,7 @@ export function seawall(tiles, lineLonLat, crestFt, ctx, { keepPer = false } = {
   const res = emptyResult();
   const dists = [];
   let candidates = 0;
+  let behindBefore = 0; let removedWater = 0; let removedCap = 0;
   for (const key of tilesForBox(minx, miny, maxx, maxy, ctx.man.tile_m)) {
     const tile = tiles.get(key);
     if (!tile) continue;
@@ -338,7 +339,13 @@ export function seawall(tiles, lineLonLat, crestFt, ctx, { keepPer = false } = {
       for (let k = 0; k + 1 < wall.length && !hit; k += 1) {
         hit = segSegDist2(x, y, sx, sy, wall[k][0], wall[k][1], wall[k + 1][0], wall[k + 1][1]) <= tol2;
       }
-      if (hit) rows.push(i);
+      if (!hit) continue;
+      behindBefore += 1;
+      // waterway rule (D-202): a canal, creek or inner waterway nearer than the coastal shoreline lets water around the wall
+      if (cfg.inner_water_rule && c.inner_water && c.inner_water[i] < c.shore_dist[i]) { removedWater += 1; continue; }
+      // safety cap: within 1 km of the wall (D-202)
+      if (cfg.max_distance_from_wall_m && pointLineDist(x, y, wall) > cfg.max_distance_from_wall_m) { removedCap += 1; continue; }
+      rows.push(i);
     }
     const ww = Object.fromEntries(ctx.events.map((e) => [e, c[`ww_${e}`]]));
     const coastalOff = (ev, i) => {
@@ -350,6 +357,9 @@ export function seawall(tiles, lineLonLat, crestFt, ctx, { keepPer = false } = {
     }
   }
   res.candidates = candidates;
+  res.behindBeforeRules = behindBefore;
+  res.removedByInnerWater = removedWater;
+  res.removedByCapOnly = removedCap;
   // how far the protected buildings are from the wall: a check on the "behind the wall" rule (D-200)
   dists.sort((p, q) => p - q);
   res.protectedMedianDistM = dists.length ? dists[Math.floor(dists.length / 2)] : null;

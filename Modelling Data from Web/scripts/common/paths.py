@@ -100,6 +100,7 @@ MODULE_D_SALES_PARQUET = BENEFIT_DIR / "module_d_sales.parquet"    # Module D sa
 MODULE_D_COEF_PARQUET = BENEFIT_DIR / "module_d_coefficients.parquet"   # stored local flood coefficients per building
 FEMA2027_ZONES_PARQUET = BENEFIT_DIR / "fema2027_zones.parquet"    # 2027 flood zone per building (D-170)
 MODULE_A_PARQUET = BENEFIT_DIR / "module_a_depth.parquet"         # spec Module A output
+INNER_WATER_PARQUET = BENEFIT_DIR / "inner_water_distance.parquet"      # nearest canal, creek or inner waterway (D-202)
 MODULE_B_PARQUET = BENEFIT_DIR / "module_b_eyd.parquet"           # spec Module B output
 COMMUNITY_STATUS_JSON = FEMA_RAW_DIR / "community_status" / "csb_miami_dade.json"   # D-168
 EAD_TRACT_CSV = BENEFIT_DIR / "ead_tract.csv"                      # Stage 2 output

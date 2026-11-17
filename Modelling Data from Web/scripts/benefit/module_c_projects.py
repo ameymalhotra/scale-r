@@ -16,6 +16,11 @@ crest height (ft NAVD88).
   would flood from. Buildings more than max_distance_to_shore_m from the
   shoreline are not affected. Water that goes around the ends is not
   stopped: buildings whose line to the shore misses the wall stay exposed.
+- Waterway rule (D-202): the building's nearest open water must be that
+  coastal shoreline. If a canal, creek, river or inner waterway (FEMA 2027
+  water lines, build_water_distance.py) is nearer, water reaches it another
+  way and it is not protected. Safety cap: within max_distance_from_wall_m
+  (1 km) of the wall.
 - "Low-lying": ground below the crest.
 - For those buildings, the coastal water level is removed for every storm
   whose coastal level (with sea level rise) is below the crest. Storms that
@@ -33,7 +38,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from pyproj import Transformer
-from shapely import LineString, intersects, linestrings
+from shapely import LineString, intersects, linestrings, points
 from shapely.ops import transform
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "common"))
@@ -61,6 +66,8 @@ class Model:
                                  [f"loss_{e}_mid" for e in mb.EVENTS])
         assert (self.A.fd_id.to_numpy() == self.B.fd_id.to_numpy()).all()
         self.cur = mb.load_curves()
+        iw = pd.read_parquet(paths.INNER_WATER_PARQUET, columns=["fd_id", "inner_water_dist_m"]).set_index("fd_id").inner_water_dist_m
+        self.inner_water = iw.reindex(self.A.fd_id).to_numpy(float)
         self.load_seconds = round(time.time() - t, 1)
 
     def _result(self, rows, scen, extra, t0, sub=None, slr=0.0):
@@ -98,6 +105,16 @@ class Model:
         segs = linestrings(np.stack([np.c_[x[cand], y[cand]], np.c_[A.shore_x.to_numpy()[cand], A.shore_y.to_numpy()[cand]]], axis=1))
         behind = intersects(segs, wall.buffer(cfg["snap_tolerance_m"]))
         rows = cand[behind]
+        # waterway rule and 1 km cap (D-202)
+        water_ok = np.ones(len(rows), bool)
+        if cfg.get("inner_water_rule"):
+            water_ok = ~(self.inner_water[rows] < A.shore_dist_m.to_numpy()[rows])
+        near = np.ones(len(rows), bool)
+        if cfg.get("max_distance_from_wall_m"):
+            near = wall.distance(points(np.c_[x[rows], y[rows]])) <= cfg["max_distance_from_wall_m"]
+        removed = {"behind_the_wall_before_rules": int(len(rows)), "removed_by_inner_water": int((~water_ok).sum()),
+                   "removed_by_1km_cap_only": int((water_ok & ~near).sum())}
+        rows = rows[water_ok & near]
         sub = A.iloc[rows].reset_index(drop=True)
 
         def off(ev, s):
@@ -110,7 +127,7 @@ class Model:
         held = {ev: int(off(ev, slr).sum()) for ev in mb.EVENTS}
         return self._result(rows, scen, {"wall_length_m": round(wall.length), "crest_ft_navd88": crest_ft,
                                          "candidates_checked": int(len(cand)), "storms_held_by_wall_buildings": held,
-                                         "sea_level_rise_ft": slr}, t0, sub, slr)
+                                         "sea_level_rise_ft": slr, **removed}, t0, sub, slr)
 
     def elevate(self, fd_ids, raise_ft=None):
         t0 = time.time()

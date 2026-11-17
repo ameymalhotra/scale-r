@@ -97,6 +97,7 @@ def build():
                                                                      for k in ("", "tail") for c in ("low", "mid", "high")])
     assert (A.fd_id.to_numpy() == B.fd_id.to_numpy()).all()
     C = pd.read_parquet(paths.MODULE_D_COEF_PARQUET, columns=["fd_id", "segment", "jv_alloc"]).set_index("fd_id")
+    IW = pd.read_parquet(paths.INNER_WATER_PARQUET, columns=["fd_id", "inner_water_dist_m"]).set_index("fd_id").inner_water_dist_m
     P.end()
     ground = A.ground_elev_ft_navd88.to_numpy(float)
     wc, wo, ww = {}, {}, {}
@@ -157,7 +158,8 @@ def build():
                 ("stories", A.stories.to_numpy()[i].astype(np.uint8)), ("flags", flags[i]),
                 ("val_struct", f32(A.val_struct.to_numpy()[i])), ("val_cont", f32(A.val_cont.to_numpy()[i])),
                 ("residents", f32(A.residents_night.to_numpy()[i])), ("jv", f32(jv[i])), ("segment", seg[i]),
-                ("sqft", f32(A.sqft.to_numpy()[i]))]
+                ("sqft", f32(A.sqft.to_numpy()[i])),
+                ("inner_water", f32(A.fd_id.map(IW).to_numpy()[i]))]   # nearest canal, creek or inner waterway, m (D-202)
         for ev in mb.EVENTS:
             cols += [(f"wc_{ev}", f32(wc[ev][i])), (f"wo_{ev}", f32(wo[ev][i])), (f"ww_{ev}", f32(ww[ev][i]))]
         for c in ("low", "mid", "high"):

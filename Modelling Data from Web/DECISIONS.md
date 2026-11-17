@@ -5043,3 +5043,41 @@ D-113.
   exactly on a line they cannot easily see.
 - Evidence: `src/admin/viz/whatif/whatIfEngine.test.js`.
 - Affects: The admin Flood What-If view.
+
+### D-202. Seawall waterway rule and 1 km cap (Module C and the What-If view)
+
+- Date: 17 Nov 2026. Status: Accepted. Decided by: the user (rule, cap,
+  no new downloads); Amey (which FEMA layer, what counts as inner water).
+- What happened: Module C credited a seawall with every building whose
+  nearest point on FEMA's coastal shoreline lies behind it. FEMA's shoreline
+  skips canals and creeks, so buildings next to Indian Creek, the Miami River
+  or the Biscayne Canal were counted as protected by a wall on the bay.
+- What is wrong: The Part 2 seawall results were overstated (Miami Beach
+  example: 119 protected buildings a median 688 m from a 168 m wall).
+- How we are fixing it:
+  - a building is protected only if its nearest open water is the coastal
+    shoreline, not inner water, and it is within 1 km of the wall
+    (`module_config.json` projects.seawall: inner_water_rule,
+    max_distance_from_wall_m);
+  - inner water: FEMA 2027 FIRM water lines (S_Wtr_Ln, on disk). The water
+    areas layer (S_Wtr_Ar) the user suggested is almost all ponds and misses
+    the canals, so it is not used. Left out: the open coast the study faces,
+    water lines within 30 m of the coastal shoreline, isolated ponds
+    (`build_water_distance.py`, `inner_water_distance.parquet`);
+  - the same rule in the browser engine (export column `inner_water`);
+    parity rerun: 87 runs, largest difference 0.0002%;
+  - the view's overcrediting warning is replaced by a note of how many
+    buildings the rule removed, and a softer warning only when half the
+    protected buildings are more than 600 m away (small canals FEMA's lines
+    may miss).
+- Decision: As above.
+- Reason: The user's rule; it removes the overcrediting found in D-200.
+- Evidence: `reports/benefit/seawall_waterway_rule.md` (before and after);
+  the waterway rule removes 22,640 of 41,808 behind-the-wall checks over 443
+  stretches at +6 and +8 ft, the 1 km cap alone 1,250 (3%). After the rule
+  no typical +6 ft placement or stretch returns $1 per dollar (best 0.87);
+  at +8 ft the high-damage placements return $0.00 to $0.08 (were $2.58 to
+  $8.68). Home elevation unchanged.
+- Affects: `module_c_projects.py`, `typical_projects_part2.py` results,
+  `reports/benefit/typical_projects_part2.md` (to update), the admin
+  Flood What-If view, `scripts/common/paths.py` (INNER_WATER_PARQUET).
