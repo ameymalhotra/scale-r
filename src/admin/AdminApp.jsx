@@ -33,6 +33,7 @@ export default function AdminApp() {
                 <Routes>
                   <Route index element={<VizPage view="gap" />} />
                   <Route path="scenario" element={<VizPage view="scenario" />} />
+                  <Route path="what-if" element={<VizPage view="whatif" />} />
                   <Route path="exposure" element={<Navigate to="/exposure" replace />} />
                 </Routes>
               </Suspense>

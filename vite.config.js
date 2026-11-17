@@ -1,5 +1,8 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import fs from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 /**
  * Inline the entry stylesheet into index.html and preload the navbar font.
@@ -67,9 +70,37 @@ function inlineEntryCssAndPreloadFonts() {
   }
 }
 
+/**
+ * Development only: serve the private admin data staging folder (D-095, D-200) at /__admin_data/ so the
+ * admin Flood What-If view can be previewed locally. `apply: 'serve'` means this route never exists in
+ * `vite build`, and the files are never copied into dist/. Read-only, GET only, no path escapes.
+ */
+function serveAdminDataInDev() {
+  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), 'Modelling Data from Web', 'outputs', 'admin_data')
+  const types = { '.json': 'application/json', '.geojson': 'application/geo+json', '.gz': 'application/octet-stream' }
+  return {
+    name: 'serve-admin-data-in-dev',
+    apply: 'serve',
+    configureServer(server) {
+      server.middlewares.use('/__admin_data', (req, res, next) => {
+        if (req.method !== 'GET') return next()
+        const rel = decodeURIComponent((req.url || '').split('?')[0]).replace(/^\/+/, '')
+        const file = path.resolve(root, rel)
+        if (!file.startsWith(root + path.sep) || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
+          res.statusCode = 404
+          return res.end('Not found')
+        }
+        res.setHeader('Content-Type', types[path.extname(file)] || 'application/octet-stream')
+        res.setHeader('Cache-Control', 'no-store')
+        fs.createReadStream(file).pipe(res)
+      })
+    },
+  }
+}
+
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), inlineEntryCssAndPreloadFonts()],
+  plugins: [react(), inlineEntryCssAndPreloadFonts(), serveAdminDataInDev()],
   publicDir: 'public',
   base: '/',
   build: {

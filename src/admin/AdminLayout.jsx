@@ -72,6 +72,9 @@ export default function AdminLayout({ children }) {
           <NavLink to="/admin/viz/scenario" className="admin-nav__link">
             Scenarios (preliminary)
           </NavLink>
+          <NavLink to="/admin/viz/what-if" className="admin-nav__link">
+            Flood What-If
+          </NavLink>
           <a className="admin-nav__link" href="/dashboard" target="_blank" rel="noreferrer">
             Open public map ↗
           </a>

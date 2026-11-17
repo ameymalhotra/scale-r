@@ -46,6 +46,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from pyproj import Transformer
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "common"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -56,6 +57,7 @@ from progress import Progress  # noqa: E402
 
 OUT = paths.ADMIN_WHAT_IF_DIR
 TILE_M = 2000.0
+TO_LL = Transformer.from_crs("EPSG:26917", "EPSG:4326", always_xy=True)
 SEGS = {"001": 1, "004": 2}
 P = None
 
@@ -118,6 +120,7 @@ def build():
     for name in mb.COASTAL:
         has_coastal |= A[f"wse_{name}_p002"].notna().to_numpy()
     k = np.flatnonzero(wet)
+    dry = A.loc[~wet, ["fd_id", "lon", "lat", "x_utm", "y_utm", "occtype", "sqft", "residents_night", "ground_elev_ft_navd88"]].reset_index(drop=True)
     P.log(f"buildings: {len(A)}; wet in at least one storm: {len(k)}")
     A, B = A.iloc[k].reset_index(drop=True), B.iloc[k].reset_index(drop=True)
     wc, wo, ww = ({e: d[e][k] for e in mb.EVENTS} for d in (wc, wo, ww))
@@ -153,7 +156,8 @@ def build():
                 ("found", A.found_type.map({o: j for j, o in enumerate(founds)}).to_numpy()[i].astype(np.uint8)),
                 ("stories", A.stories.to_numpy()[i].astype(np.uint8)), ("flags", flags[i]),
                 ("val_struct", f32(A.val_struct.to_numpy()[i])), ("val_cont", f32(A.val_cont.to_numpy()[i])),
-                ("residents", f32(A.residents_night.to_numpy()[i])), ("jv", f32(jv[i])), ("segment", seg[i])]
+                ("residents", f32(A.residents_night.to_numpy()[i])), ("jv", f32(jv[i])), ("segment", seg[i]),
+                ("sqft", f32(A.sqft.to_numpy()[i]))]
         for ev in mb.EVENTS:
             cols += [(f"wc_{ev}", f32(wc[ev][i])), (f"wo_{ev}", f32(wo[ev][i])), (f"ww_{ev}", f32(ww[ev][i]))]
         for c in ("low", "mid", "high"):
@@ -164,7 +168,9 @@ def build():
         name = f"{tx}_{ty}.bin.gz"
         (OUT / "tiles" / name).write_bytes(gz)
         lo, la = A.lon.to_numpy()[i], A.lat.to_numpy()[i]
+        sq = [TO_LL.transform(cx, cy) for cx, cy in ((x0, y0), (x0 + TILE_M, y0), (x0 + TILE_M, y0 + TILE_M), (x0, y0 + TILE_M))]
         tiles.append({"file": f"tiles/{name}", "ix": int(tx), "iy": int(ty), "n": int(len(i)), "bytes": len(gz), "raw_bytes": len(buf),
+                      "square": [[round(lo_, 6), round(la_, 6)] for lo_, la_ in sq],
                       "bbox": [round(float(lo.min()), 5), round(float(la.min()), 5), round(float(lo.max()), 5), round(float(la.max()), 5)],
                       "eyd_mid": round(float(B.eyd_mid.to_numpy()[i].sum()))})
         if n % 50 == 0:
@@ -173,7 +179,24 @@ def build():
     ov = pack([("lon", f32(A.lon)), ("lat", f32(A.lat)), ("eyd_mid", f32(B.eyd_mid)), ("tile", (ix * 1000 + iy).astype(np.int32))],
               len(A), [0, 0])
     (OUT / "overview.bin.gz").write_bytes(gzip.compress(ov, 6))
-    return A, B, occs, founds, tiles, raw_total
+    # buildings the model expects water never to reach (dry in all five storms): positions and a few details,
+    # drawn as faint dots so every NSI building is visible (D-200); they cannot change any result
+    (OUT / "dry").mkdir(exist_ok=True)
+    for old in (OUT / "dry").glob("*.bin.gz"):
+        old.unlink()
+    dx, dy = np.floor(dry.x_utm / TILE_M).astype(int), np.floor(dry.y_utm / TILE_M).astype(int)
+    dkeys = pd.Series(list(zip(dx, dy)))
+    dry_tiles = []
+    for (tx, ty), idx in dkeys.groupby(dkeys).groups.items():
+        i = np.asarray(idx)
+        buf = pack([("fd_id", dry.fd_id.to_numpy()[i].astype(np.int32)), ("lon", f32(dry.lon.to_numpy()[i])), ("lat", f32(dry.lat.to_numpy()[i])),
+                    ("res1", dry.occtype.str.startswith("RES1").to_numpy()[i].astype(np.uint8)), ("sqft", f32(dry.sqft.to_numpy()[i])),
+                    ("residents", f32(dry.residents_night.to_numpy()[i])), ("ground", f32(dry.ground_elev_ft_navd88.to_numpy()[i]))],
+                   len(i), [tx * TILE_M, ty * TILE_M])
+        gz = gzip.compress(buf, 6)
+        (OUT / "dry" / f"{tx}_{ty}.bin.gz").write_bytes(gz)
+        dry_tiles.append({"file": f"dry/{tx}_{ty}.bin.gz", "ix": int(tx), "iy": int(ty), "n": int(len(i)), "bytes": len(gz)})
+    return A, B, occs, founds, tiles, raw_total, dry_tiles
 
 
 def write_curves():
@@ -191,7 +214,12 @@ def write_geo():
     base["geometry"] = base.geometry.simplify(2.0)
     base.to_crs(4326).to_file(OUT / "shoreline.geojson", driver="GeoJSON", COORDINATE_PRECISION=6)
     sb = wl.read(paths.FIRM_2027_EXTRACT, "S_Subbasins")
-    g = gpd.GeoDataFrame(geometry=[sb.union_all().buffer(30).buffer(-30).simplify(25)], crs=sb.crs).explode(index_parts=False)
+    sb = sb[sb.BASIN_DESC.isin(["C-8", "C-9"])]          # the layer also holds large regional basins
+    parts = []
+    for name, grp in sb.groupby("BASIN_DESC"):
+        one = gpd.GeoDataFrame({"basin": [name]}, geometry=[grp.union_all().buffer(30).buffer(-30).simplify(25)], crs=sb.crs)
+        parts.append(one.explode(index_parts=False))
+    g = pd.concat(parts, ignore_index=True)
     g = g[g.area > 2e5]
     g.to_crs(4326).to_file(OUT / "rain_basins.geojson", driver="GeoJSON", COORDINATE_PRECISION=5)
 
@@ -234,7 +262,7 @@ def main():
     global P
     P = Progress("admin what-if export")
     OUT.mkdir(parents=True, exist_ok=True)
-    A, B, occs, founds, tiles, raw_total = build()
+    A, B, occs, founds, tiles, raw_total, dry_tiles = build()
     ncur = write_curves()
     P.start("shoreline and rain basin outlines")
     write_geo()
@@ -253,12 +281,14 @@ def main():
            "property_value_published_miami": {s: {"beta_per_rate_unit": v["beta_miami"]} for s, v in pub.items()},
            "files": {"curves": "curves.json", "overview": "overview.bin.gz", "shoreline": "shoreline.geojson",
                      "rain_basins": "rain_basins.geojson"},
-           "tiles": tiles}
+           "tiles": tiles, "dry_tiles": dry_tiles}
     (OUT / "manifest.json").write_text(json.dumps(man, separators=(",", ":")))
     chk = check(A, B)
     size = lambda p: p.stat().st_size
     tb = np.array([t["bytes"] for t in tiles])
-    S = {"buildings_total_module_a": 627252, "buildings_exported": int(len(A)), "tiles": len(tiles), "curves": ncur,
+    S = {"buildings_total_module_a": 627252, "buildings_exported": int(len(A)),
+         "dry_buildings": int(sum(t["n"] for t in dry_tiles)), "dry_tiles": len(dry_tiles),
+         "dry_gz_total_mb": round(sum(t["bytes"] for t in dry_tiles) / 1e6, 2), "tiles": len(tiles), "curves": ncur,
          "tiles_gz_total_mb": round(tb.sum() / 1e6, 2), "tiles_raw_total_mb": round(raw_total / 1e6, 2),
          "tile_gz_kb": {"median": round(float(np.median(tb)) / 1e3, 1), "p90": round(float(np.percentile(tb, 90)) / 1e3, 1),
                         "max": round(float(tb.max()) / 1e3, 1)},

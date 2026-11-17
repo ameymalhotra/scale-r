@@ -4975,3 +4975,46 @@ D-113.
   `reports/benefit/admin_what_if_part1.md`.
 - Affects: The admin panel (Part 2), `scripts/common/paths.py`
   (`ADMIN_DATA_DIR`, `ADMIN_WHAT_IF_DIR`).
+
+### D-200. Admin Flood What-If, Part 2: the view, its checks and three open questions
+
+- Date: 17 Nov 2026. Status: Accepted for the view; three questions open
+  (below). Decided by: the user (plain JavaScript, no new packages, browser
+  engine; show buildings water never reaches); Amey (design details).
+- What happened: Built the Flood What-If view at `/admin/viz/what-if`
+  (`src/admin/viz/whatif/`): seawall and raise-homes tools, dragging,
+  Examples, results with 7% and 3% benefit per dollar, property value kept
+  separate, building details, "Read this with" and About. The browser engine
+  copies Modules B and C; `what_if_parity_fixture.py` writes Python's answers
+  for 87 Part 2 projects to the private folder and `whatIfParity.test.js`
+  checks them. A development-only Vite route serves
+  `outputs/admin_data/` locally; production reads the private bucket
+  (`whatIfData.js`), so no build contains the data. The export now also has
+  house size and the 240,323 buildings the model expects water never to
+  reach (positions only, shown as faint dots).
+- What is wrong: While testing, three problems with the existing model
+  showed up in the view:
+  - the seawall "behind the wall" rule credits buildings far from the wall
+    when FEMA's coastal shoreline skips creeks and canals (Miami Beach
+    example: 119 protected buildings a median 688 m from a 168 m wall);
+  - the published-discount property value scenario stretches a 3%
+    flood-zone discount to heavily flooded homes (6 North Miami homes:
+    +33% of value);
+  - seawalls can only be valued within 2 km of FEMA's coastal shoreline
+    (14% of county damage); walls on tidal rivers and canals cannot be.
+- How we are fixing it: For now only warnings in the view, no change to
+  the method: a warning when half the protected buildings are more than
+  300 m from the wall; the property value change is shown as a share of
+  value with a warning above 5%. Options for each are in
+  `reports/benefit/admin_what_if_part2.md`, section 6 and 7.
+- Decision: View accepted as built. The three method questions wait for
+  the user.
+- Reason: Changing the seawall rule or the Module D scenario would change
+  Part 2 results, so the user decides.
+- Evidence: parity 0.0002% largest difference (rule 1%); baseline totals
+  within 0.1%; drag timing median 3.6 ms seawall, under 1 ms elevation
+  (this MacBook); 192 tests pass; build has no data files; screenshots in
+  the private `outputs/admin_data/what_if_screens/`.
+- Affects: The admin panel (`AdminApp.jsx`, `AdminLayout.jsx`,
+  `VizPage.jsx`, `src/admin/viz/whatif/`), `vite.config.js` (development
+  route only), `scripts/benefit/export_what_if.py`.
