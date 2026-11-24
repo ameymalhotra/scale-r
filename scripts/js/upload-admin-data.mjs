@@ -2,6 +2,7 @@
  * Upload the private admin data (D-095) to the Supabase Storage bucket "admin-data".
  *   npm run upload-admin-data            upload everything
  *   npm run upload-admin-data -- --dry   list what would be uploaded
+ *   npm run upload-admin-data -- --only what_if/examples.json   upload only the named files
  * Source: the git-ignored staging folder "Modelling Data from Web/outputs/admin_data/":
  *   gap/       the resilience gap map (scripts/python/build_viz_tracts.py)
  *   scenario/  the Scenario view (build_scenario_data.py)
@@ -25,6 +26,7 @@ const FOLDERS = ['gap', 'scenario', 'what_if'];
 const SKIP = new Set(['what_if/parity_fixture.json', 'what_if/parity_result.json', 'what_if/reason_parity.json', 'what_if/export_summary.json']);
 const TYPES = { '.json': 'application/json', '.geojson': 'application/geo+json', '.gz': 'application/octet-stream' };
 const dry = process.argv.includes('--dry');
+const only = process.argv.flatMap((a, i, all) => (all[i - 1] === '--only' ? [a] : []));
 
 async function list(dir) {
   const out = [];
@@ -41,7 +43,10 @@ const { data: bucket, error: bucketError } = await supabase.storage.getBucket(BU
 if (bucketError || !bucket) throw new Error(`bucket ${BUCKET} not found: run the SQL in supabase/sql/admin_dashboard.sql first`);
 if (bucket.public) throw new Error(`bucket ${BUCKET} is PUBLIC; refusing to upload admin data`);
 
-const files = (await Promise.all(FOLDERS.map(list))).flat();
+const all = (await Promise.all(FOLDERS.map(list))).flat();
+const missing = only.filter((n) => !all.includes(n));
+if (missing.length) throw new Error(`not in the staging folder (or skipped): ${missing.join(', ')}`);
+const files = only.length ? all.filter((n) => only.includes(n)) : all;
 let bytes = 0;
 let done = 0;
 const queue = [...files];
