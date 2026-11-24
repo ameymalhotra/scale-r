@@ -853,9 +853,58 @@ export function mount() {
     if (tool !== 'examples') setTool('examples');
     await waitFor(() => projects.length && projects.every((p) => p.res) && !$('results').hidden);
   };
+  // the tour's sample projects (demo: true) are ordinary projects while it runs and are removed when it ends
+  const openTool = (t) => { if (tool !== t) setTool(t); };
+  const fitTo = (pts) => {
+    const lo = pts.map((q) => q[0]); const la = pts.map((q) => q[1]);
+    map.fitBounds([[Math.min(...lo), Math.min(...la)], [Math.max(...lo), Math.max(...la)]], { padding: sidePad(), maxZoom: 15.5, duration: 0 });
+  };
+  const showDemo = (p) => { sel = projects.indexOf(p); drawProjects(); renderResults(); };
+  async function demoWall() {
+    await waitFor(() => man && mapReady);
+    let p = projects.find((q) => q.demo && q.kind === 'seawall');
+    if (!p) {
+      const line = examples.find((e) => e.kind === 'seawall')?.line;
+      if (!line) return;
+      p = newProject('seawall', { demo: true, name: 'Sample seawall', drawn: line, crest: Number($('crest').value) });
+      await update(p);
+    }
+    showDemo(p);
+    fitTo(p.line);
+  }
+  async function demoArea() {
+    await waitFor(() => man && mapReady);
+    let p = projects.find((q) => q.demo && q.kind === 'elevation');
+    if (!p) {
+      const e = examples.find((x) => x.kind === 'elevation');
+      if (!e) return;
+      const probe = { kind: 'elevation', mode: 'ids', fd_ids: e.fd_ids, tiles: e.tiles, raise: 3 };
+      await compute(probe);
+      const b = probe.res?.perBuilding?.[0];
+      if (!b) return;
+      const d = 0.0025;   // about 250 m each way
+      const ring = [[b.lon - d, b.lat - d], [b.lon + d, b.lat - d], [b.lon + d, b.lat + d], [b.lon - d, b.lat + d]];
+      $('n-homes').value = '5';
+      p = newProject('elevation', { demo: true, name: 'Sample raised homes', mode: 'area', ring, n: 5, raise: Number($('raise').value) });
+      await update(p);
+    }
+    showDemo(p);
+    fitTo(p.ring);
+  }
+  function removeDemos() {
+    const keep = (list) => list.filter((p) => !p.demo);
+    if (ownProjects) ownProjects = keep(ownProjects);
+    const left = keep(projects);
+    if (left.length === projects.length) return;
+    projects.length = 0;
+    projects.push(...left);
+    sel = projects.length - 1;
+    drawProjects();
+    renderResults();
+  }
   const tour = createTour({
     root,
-    onEnd: () => { cardPopup.remove(); $('tour-btn')?.focus({ preventScroll: true }); },
+    onEnd: () => { cardPopup.remove(); removeDemos(); $('tour-btn')?.focus({ preventScroll: true }); },
     steps: [
       { title: 'Welcome to Flood What-If',
         text: 'This tool estimates how much flood damage a project would prevent in Miami-Dade, and whether it is worth its cost. The tour takes about a minute, and you can leave it at any time.',
@@ -893,11 +942,24 @@ export function mount() {
         text: 'Turn this on to color every building by flood damage and see why some buildings are still not protected.',
         before: async () => { cardPopup.remove(); },
         target: () => $('legend') },
-      { title: 'Try your own project',
-        text: 'Pick <b>Seawall</b>, click <b>Draw a wall</b>, then click along the blue coast line and double-click to finish. For <b>Raise homes</b>, draw an area and choose how many homes. The results appear at once.',
-        target: () => root.querySelector('.bar .seg') },
+      { title: 'Add a seawall',
+        text: 'Open the <b>Seawall</b> tab and click <b>Draw a wall</b>. Click points along the blue coast line, then double-click to finish. On the next step the tour draws one for you.',
+        before: async () => { cardPopup.remove(); openTool('seawall'); },
+        target: () => $('tool-seawall') },
+      { title: 'Your seawall',
+        text: 'The tour drew a wall on the Miami Beach coast, and its card is below. Drag <b>Wall height</b> and watch the damage prevented and the dollars back per $1 change at once.',
+        before: async () => { openTool('seawall'); await demoWall(); },
+        target: () => $('crest')?.closest('label') },
+      { title: 'Raise homes',
+        text: '<b>Draw an area</b>: click its corners, then double-click; the most damaged single-family homes inside are raised. <b>Homes to raise</b> sets how many. <b>Click homes</b> lets you pick buildings one by one. <b>Raise by</b> sets the height.',
+        before: async () => { cardPopup.remove(); openTool('elevation'); if (emode !== 'area') { emode = 'area'; renderElevHelp(); } },
+        target: () => $('tool-elevation') },
+      { title: 'Your raised homes',
+        text: 'The tour drew an area in Miami Shores and raised its 5 most damaged homes, shown in green on the map. Change <b>Homes to raise</b> or <b>Raise by</b> to see the effect.',
+        before: async () => { openTool('elevation'); await demoArea(); },
+        target: () => $('results') },
       { title: 'Where the numbers come from',
-        text: '<b>About</b> explains the data, the method and the limits. All numbers are estimates for discussion, not for decisions. You can reopen this tour any time with the <b>Tour</b> button.',
+        text: '<b>About</b> explains the data, the method and the limits. All numbers are estimates for discussion, not for decisions. The sample projects go away when the tour ends. Reopen it any time with the <b>Tour</b> button.',
         target: () => $('about-btn') },
     ],
   });

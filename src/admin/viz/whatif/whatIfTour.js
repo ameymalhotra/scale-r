@@ -22,6 +22,20 @@ export function placeBubble(rect, box, view) {
   return { side: 'center', left: Math.round((view.w - box.w) / 2), top: clampY(view.h - box.h - EDGE) };
 }
 
+/** The part of an element that can be seen: its box cut to every scrolling box around it. */
+function visibleRect(el) {
+  let r = el.getBoundingClientRect();
+  r = { left: r.left, top: r.top, right: r.right, bottom: r.bottom };
+  for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
+    const o = getComputedStyle(p);
+    if (!/(auto|scroll|hidden)/.test(o.overflowY + o.overflowX)) continue;
+    const c = p.getBoundingClientRect();
+    r = { left: Math.max(r.left, c.left), top: Math.max(r.top, c.top), right: Math.min(r.right, c.right), bottom: Math.min(r.bottom, c.bottom) };
+  }
+  if (r.right <= r.left || r.bottom <= r.top) return null;
+  return { ...r, width: r.right - r.left, height: r.bottom - r.top };
+}
+
 /**
  * steps: [{ title, text, target?: () => Element | null, before?: async () => void }]
  * Returns { start, stop, get step }. onEnd runs once when the tour closes.
@@ -47,7 +61,7 @@ export function createTour({ root, steps, onEnd = () => {} }) {
   function place() {
     if (!bubble || i < 0) return;
     const t = steps[i].target?.();
-    const rect = t && t.getClientRects().length ? t.getBoundingClientRect() : null;
+    const rect = t && t.getClientRects().length ? visibleRect(t) : null;
     const view = { w: window.innerWidth, h: window.innerHeight };
     const phone = view.w <= 768;
     if (rect) {
@@ -82,6 +96,8 @@ export function createTour({ root, steps, onEnd = () => {} }) {
         ${i > 0 ? '<button type="button" class="btn small" data-tour="back">Back</button>' : ''}
         <button type="button" class="btn small primary" data-tour="next">${last ? 'Finish' : 'Next'}</button>
       </div>`;
+    // bring the part into view inside the side column (it scrolls on a phone), then highlight what shows
+    steps[i].target?.()?.scrollIntoView?.({ block: 'nearest' });
     place();
     bubble.querySelector('[data-tour="next"]').focus({ preventScroll: true });
   }

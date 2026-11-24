@@ -5443,3 +5443,28 @@ D-113.
   placed (it always stays inside the window). What-If tests: 22 pass.
 - Affects: `src/admin/viz/whatif/whatIfTour.js`, `whatIfTour.test.js`,
   `whatIfMap.{js,css,html}`.
+
+### D-216. The tour shows how to add a seawall and raise homes
+
+- Date: 24 Nov 2026. Status: Done (not pushed or deployed). Decided by: the
+  user.
+- What happened: The tour (D-215) said in one step how to draw a project but
+  never showed it.
+- What is wrong: A first-time reader learns faster by seeing a project being
+  added and its card appear.
+- How we are fixing it: The one "Try your own project" step became four:
+  "Add a seawall" (opens the Seawall tab and explains Draw a wall),
+  "Your seawall" (the tour places a sample wall on the Miami Beach coast and
+  points to Wall height), "Raise homes" (opens the tab and explains Draw an
+  area, Click homes, Homes to raise and Raise by), and "Your raised homes"
+  (the tour draws a sample area in Miami Shores and raises its 5 most damaged
+  homes). The tour now has 12 steps. The samples are named "Sample seawall"
+  and "Sample raised homes" and are removed when the tour ends; the user's
+  own projects stay. On a phone the highlight now covers only the part of a
+  panel that shows, and the panel scrolls to it.
+- Decision: Adopted.
+- Reason: The user's request.
+- Evidence: Screenshots of steps 8 to 12 on desktop and phone in
+  `outputs/admin_data/what_if_screens/tour/`; in the dev view a user's own
+  wall stayed and both samples were gone after Finish. What-If tests: 22 pass.
+- Affects: `src/admin/viz/whatif/whatIfMap.js`, `whatIfTour.js`.
