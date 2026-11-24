@@ -180,12 +180,14 @@
     }
 
     /* building cards (D-204, short layout D-208) */
-    .cards {
-      position: absolute; top: 14px; right: 56px; z-index: 3; width: 340px; max-height: calc(100% - 28px); overflow: auto;
-      padding: 10px 12px; border-radius: 14px; background: rgba(255, 255, 255, 0.98); box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18);
+    /* building card, a map popup next to the building (D-211) */
+    .cardpop { z-index: 4; }
+    .cardpop .mapboxgl-popup-content {
+      width: 320px; max-width: calc(100vw - 32px); max-height: 46vh; overflow: auto; padding: 12px 14px 10px;
+      border-radius: 12px; background: #fff; box-shadow: 0 8px 28px rgba(0, 0, 0, 0.22);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: var(--ink);
     }
-    .cards-bar { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 4px; font-size: 11.5px; }
-    .cards-row { display: flex; gap: 12px; }
+    .cardpop .mapboxgl-popup-close-button { top: 4px; right: 6px; font-size: 18px; color: var(--muted); }
     .card { flex: 1; min-width: 0; margin: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; font-size: 12px; }
     .card h3 { margin: 0 0 6px; font-size: 12px; font-weight: 600; color: var(--muted); }
     .card .reason { margin: 0 0 8px; padding: 6px 9px; border-left: 4px solid; border-radius: 4px; background: #f6f7f8; font-size: 13.5px; font-weight: 600; color: var(--ink-strong); line-height: 1.35; }
@@ -211,8 +213,7 @@
       .headline b { font-size: 17px; }
       .legend { right: 8px; bottom: 24px; max-width: 58%; padding: 6px 8px; font-size: 10.5px; }
       .status { top: auto; bottom: 70px; left: 50%; }
-      .cards { top: auto; bottom: 8px; left: 8px; right: 8px; width: auto; max-height: 50%; }
-      .cards-row { flex-direction: column; }
+      .cardpop .mapboxgl-popup-content { width: 270px; max-height: 40vh; }
       .mapboxgl-ctrl-top-right { display: none; }
     }
 }

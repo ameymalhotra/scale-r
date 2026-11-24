@@ -86,6 +86,8 @@ export function mount() {
   const dragTimes = [];
   const popup = new mapboxgl.Popup({ closeButton: false, closeOnClick: false, className: 'tip', offset: 8 });
   const infoPopup = new mapboxgl.Popup({ closeButton: true, closeOnClick: true, className: 'tip', offset: 10, maxWidth: '260px' });
+  // building card, anchored to the building (D-211); mapbox picks the side with room
+  const cardPopup = new mapboxgl.Popup({ closeButton: true, closeOnClick: false, className: 'cardpop', offset: 12, maxWidth: '340px', focusAfterOpen: false });
 
 
   $('about').innerHTML = aboutHtml();
@@ -531,6 +533,7 @@ export function mount() {
     if (!man) return;
     cancelDrawing();
     drawing = { kind, pts: [] };
+    cardPopup.remove();
     map.doubleClickZoom.disable();
     map.getCanvas().style.cursor = 'crosshair';
     if (kind === 'wall') { $('wall-draw').classList.add('active'); $('wall-finish').hidden = false; status('Click along the coast; double-click to finish'); applyLayers(); }
@@ -675,13 +678,13 @@ export function mount() {
     const b = map.queryRenderedFeatures(e.point, { layers })[0];
     if (b && b.layer.id === 'wi-hit') { showCard(b.properties.bk, b.properties.bi); return; }
     if (b && b.properties.dk == null && b.properties.k != null && b.properties.i != null) { showCard(b.properties.k, b.properties.i); return; }
-    if (b) { showDry(b, e.lngLat); return; }
+    if (b) { cardPopup.remove(); showDry(b, e.lngLat); return; }
+    cardPopup.remove();
     const a = map.queryRenderedFeatures(e.point, { layers: ['wi-areas-fill'] })[0];
     if (a && a.properties.k != null) { sel = Number(a.properties.k); drawProjects(); renderResults(); }
   });
 
   // ---------------------------------------------------------------- building cards (D-204, short layout D-208)
-  let cards = [];
   function makeCard(key, i) {
     const t = store.tiles.get(key);
     const p = projects[sel];
@@ -719,20 +722,23 @@ export function mount() {
     }
     return { key, i, kind: 'none', color: '#6b7783', title, sentence: 'Floods in at least one storm today.', facts: facts(t, i, man), ex: explainBuilding(t, i, ctx, {}) };
   }
-  // one building at a time; the shift-click compare mode was removed at the user's request (D-209)
+  // One building at a time (compare removed, D-209), opened on the map next to the building (D-211).
   function showCard(key, i) {
     infoPopup.remove(); popup.remove();
-    cards = [makeCard(key, i)];
-    renderCards();
+    const c = store.tiles.get(key).cols;
+    const at = [c.lon[i], c.lat[i]];
+    cardPopup.setLngLat(at).setHTML(cardHtml(makeCard(key, i))).addTo(map);
+    // keep the card in view: if the building sits under the side column or near an edge, slide the map a little
+    const p = map.project(at);
+    const w = map.getContainer().clientWidth; const h = map.getContainer().clientHeight;
+    const left = mobile() ? 20 : 400;
+    const top = mobile() ? ($('side').getBoundingClientRect().bottom + 20) : 40;
+    if (p.x < left + 170 || p.x > w - 170 || p.y < top + 260 || p.y > h - 40) {
+      const tx = Math.min(Math.max(p.x, left + 170), w - 170);
+      const ty = Math.min(Math.max(p.y, top + 260), h - 40);
+      map.panBy([p.x - tx, p.y - ty], { duration: 400 });
+    }
   }
-  function renderCards() {
-    const el = $('cards');
-    if (!cards.length) { el.hidden = true; el.innerHTML = ''; return; }
-    el.hidden = false;
-    el.innerHTML = `<div class="cards-bar"><span></span><button type="button" class="linkbtn" id="cards-close">Close</button></div>
-      <div class="cards-row">${cardHtml(cards[0])}</div>`;
-  }
-  $('cards').addEventListener('click', (e) => { if (e.target.id === 'cards-close') { cards = []; renderCards(); } });
 
   function showDry(f, lngLat) {
     const c = dryStore.tiles.get(f.properties.dk).cols; const i = f.properties.i;
@@ -820,6 +826,7 @@ export function mount() {
     root.removeEventListener('click', onTap);
     popup.remove();
     infoPopup.remove();
+    cardPopup.remove();
     map.remove();
     if (import.meta.env.DEV) delete window.__whatIf;
   };

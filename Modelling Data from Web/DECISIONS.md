@@ -5319,3 +5319,21 @@ D-113.
 - Affects: The admin Flood What-If view. `typical_projects_part2.py`
   (`RATE_LOW`), `closed_system_miami_beach.py` and
   `reports/benefit/typical_projects_part2.md` still use 3% until rerun.
+
+### D-211. Building card opens next to the building
+
+- Date: 24 Nov 2026. Status: Done (not pushed or deployed). Decided by: the
+  user.
+- What happened: Clicking a building opened its card in a fixed panel at
+  the top right (bottom on a phone), away from the building.
+- What is wrong: The reader had to look back and forth to see which
+  building the card was about.
+- How we are fixing it: The card is now a map popup anchored to the
+  building, with a pointer to it. If the building is under the side column
+  or near an edge, the map slides so both are in view. Clicking empty map,
+  or starting to draw, closes it. The fixed card panel is removed.
+- Decision: Adopted.
+- Reason: The user's request.
+- Evidence: `after_desktop_card.jpg`, `after_phone_card.jpg` in
+  `outputs/admin_data/what_if_screens/redesign/`; What-If tests pass.
+- Affects: `src/admin/viz/whatif/whatIfMap.{js,css,html}`.
