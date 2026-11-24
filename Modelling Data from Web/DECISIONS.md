@@ -5081,3 +5081,39 @@ D-113.
 - Affects: `module_c_projects.py`, `typical_projects_part2.py` results,
   `reports/benefit/typical_projects_part2.md` (to update), the admin
   Flood What-If view, `scripts/common/paths.py` (INNER_WATER_PARQUET).
+
+### D-203. Part 2 report updated for the waterway rule; closed-system sensitivity for Miami Beach
+
+- Date: 23 Nov 2026. Status: Accepted. Decided by: the user (update,
+  sanity check, sensitivity, wording); Amey (the closed-system extent).
+- What happened: The Part 2 report still had the seawall results from
+  before the waterway rule (D-202).
+- What is wrong: Its seawall statements were overstated.
+- How we are fixing it:
+  - sanity check, nothing wrong: Miami Beach S2 has 3 buildings directly
+    fronting the wall (two schools and a church, 280 to 300 m back); they
+    flood above the floor only in the 2%, 1% and 0.2% storms, whose bay
+    levels (6.2, 7.0, 8.4 ft) go over a 6 ft crest, so $0 at +6 ft and
+    $12,231 a year at +8 ft. Miami S4 has 18 fronting building records at
+    two points (the building inventory stacks records on one point): 12 on
+    ground at 9.4 ft, above either crest, flooded only in the 0.2% storm;
+    6 with floors at 10.5 to 11.6 ft, reached only by the 0.2% storm
+    (11.6 ft), which goes over both crests; so $0 at +6 and +8 ft;
+  - sensitivity, labelled as not a typical project: a continuous wall on the
+    whole 13.1 km bay-side shoreline of Miami Beach's main island, closing
+    the Biscayne Waterway, Indian Creek and an unnamed north waterway mouth
+    (`closed_system_miami_beach.py`; waterway rule and cap off for this run
+    only); $150M at $3,500 per foot, gates not costed (upper bound):
+    +8 ft avoids $11.2M a year, 0.91 per dollar at 7%, 1.53 at 3%; +6 ft
+    $2.0M a year, 0.16 and 0.28; with the mouths left open about half;
+  - the report summary now explains in plain language why one wall segment
+    protects little (water reaches homes through canals and creeks), and
+    that tidal flooding and existing canal seawalls are still not modelled;
+    Table A, the Table B seawall rows, the coastline scan and the map are
+    from the rerun with the rule.
+- Decision: As above.
+- Reason: The user's instructions.
+- Evidence: `reports/benefit/typical_projects_part2.md`,
+  `reports/benefit/typical_projects_part2_map.png`,
+  `outputs/benefit/typical_projects/closed_system_miami_beach.json`.
+- Affects: The Part 2 report and map.
