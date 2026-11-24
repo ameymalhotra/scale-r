@@ -5386,3 +5386,35 @@ D-113.
   and in the results), reopen and close Examples, and a fast switch while
   loading. What-If tests pass.
 - Affects: `src/admin/viz/whatif/whatIfMap.{js,html}`.
+
+### D-214. Project number markers drawn by the view, not by a map text layer
+
+- Date: 24 Nov 2026. Status: Done (not pushed or deployed). Decided by: the
+  user (bug report), cause found by testing.
+- What happened: After D-213, switching from Examples to Raise homes still
+  left example markers (the numbered dots) on the map. The project list was
+  empty and the map's marker data was empty, yet the map kept drawing them.
+- What is wrong: Root cause, found step by step: (1) reproduced with real
+  clicks; (2) the walls and highlighted buildings cleared, only the numbered
+  markers stayed; (3) the marker data source was empty, so our code was right
+  and the drawing was stale; (4) this was the only map source that fed both
+  a circle layer and a text layer, which Mapbox (v3.15) keeps in two separate
+  caches; giving the numbers their own source fixed the circles, but the text
+  layer still kept old numbers. So Mapbox's text layer does not reliably
+  redraw after its data changes. Our D-213 check missed this because it
+  tested the data, not what is drawn on screen.
+- How we are fixing it: The numbered markers are now small page elements
+  that the view creates from the project list on every redraw and removes
+  itself, so what is shown always matches the list. The tab rules moved to a
+  small module (`whatIfTabs.js`) with tests for every tab change, for never
+  bringing an example back with the user's projects, and for exactly one
+  marker per project.
+- Decision: Adopted.
+- Reason: The map must always match the project list; a check of the data
+  alone is not enough, so the browser check now counts what is drawn.
+- Evidence: Six runs in the dev view (leave to Raise homes, Seawall, or
+  Examples again, including a switch 0.15 s after opening): 3 markers, the
+  wall and 146 buildings while open; 0 of each after leaving. Clicking a
+  marker still selects its project. What-If tests: 18 pass.
+- Affects: `src/admin/viz/whatif/whatIfMap.{js,css}`,
+  `src/admin/viz/whatif/whatIfTabs.js`, `whatIfTabs.test.js`.

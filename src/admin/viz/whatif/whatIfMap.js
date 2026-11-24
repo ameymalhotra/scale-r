@@ -6,6 +6,7 @@ import {
 } from './whatIfEngine.js';
 import { REASON_STYLE, cardHtml, facts, moneyShort, nearestWater, reasonSentence, shortSentence } from './whatIfExplain.js';
 import { loadJson, tileStore } from './whatIfData.js';
+import { markerList, projectsAfterExamples, setAside, tabChange } from './whatIfTabs.js';
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
 
@@ -138,7 +139,7 @@ export function mount() {
     }
     map.addSource('wi-basin-labels', { type: 'geojson', data: { type: 'FeatureCollection', features: [...labelPts].map(([basin, v]) => (
       { type: 'Feature', properties: { basin }, geometry: { type: 'Point', coordinates: v.at } })) } });
-    for (const s of ['wi-areas', 'wi-walls', 'wi-hit', 'wi-draft', 'wi-marks', 'wi-reason', 'wi-links']) map.addSource(s, { type: 'geojson', data: EMPTY });
+    for (const s of ['wi-areas', 'wi-walls', 'wi-hit', 'wi-draft', 'wi-reason', 'wi-links']) map.addSource(s, { type: 'geojson', data: EMPTY });
     const damageColor = (prop) => ['step', ['get', prop], ...DAMAGE_STOPS.flatMap(([v, c], k) => (k === 0 ? [c] : [v, c]))];
     map.addLayer({ id: 'wi-grid', type: 'fill', source: 'wi-grid', maxzoom: BUILDING_ZOOM,
       paint: { 'fill-color': ['step', ['get', 'eyd'], '#f1f1ef', 1e4, '#fdd49e', 1e5, '#fc8d59', 1e6, '#d7301f', 5e6, '#7f0000'], 'fill-opacity': 0.55 } });
@@ -179,12 +180,7 @@ export function mount() {
       paint: { 'line-color': '#fff', 'line-width': ['case', ['get', 'sel'], 11, 8] } });
     map.addLayer({ id: 'wi-walls', type: 'line', source: 'wi-walls', filter: ['!=', ['get', 'ghost'], true], layout: { 'line-cap': 'round', 'line-join': 'round' },
       paint: { 'line-color': ['case', ['get', 'sel'], '#f47321', '#01321e'], 'line-width': ['case', ['get', 'sel'], 7, 5] } });
-    // numbered marker per project, visible at every zoom (the project chips use the same numbers)
-    map.addLayer({ id: 'wi-marks-dot', type: 'circle', source: 'wi-marks',
-      paint: { 'circle-radius': 11, 'circle-color': ['case', ['get', 'sel'], '#f47321', '#01321e'], 'circle-stroke-color': '#fff', 'circle-stroke-width': 2 } });
-    map.addLayer({ id: 'wi-marks-num', type: 'symbol', source: 'wi-marks',
-      layout: { 'text-field': ['to-string', ['get', 'num']], 'text-size': 12, 'text-allow-overlap': true, 'text-font': ['DIN Pro Bold', 'Arial Unicode MS Bold'] },
-      paint: { 'text-color': '#fff' } });
+    // the numbered project markers are page elements, not map layers (D-214): see drawMarkers
     map.addLayer({ id: 'wi-draft-line', type: 'line', source: 'wi-draft', paint: { 'line-color': '#f47321', 'line-width': 3, 'line-dasharray': [2, 1] } });
     map.addLayer({ id: 'wi-draft-pts', type: 'circle', source: 'wi-draft', filter: ['==', ['geometry-type'], 'Point'],
       paint: { 'circle-radius': 4, 'circle-color': '#f47321', 'circle-stroke-color': '#fff', 'circle-stroke-width': 1 } });
@@ -362,6 +358,27 @@ export function mount() {
     return [(Math.min(...lo) + Math.max(...lo)) / 2, (Math.min(...la) + Math.max(...la)) / 2];
   }
 
+  // One numbered marker per project, visible at every zoom (the project chips use the same numbers).
+  // They are page elements rebuilt from the project list on every draw, not a map text layer: Mapbox kept
+  // drawing old numbers after the list changed (D-214), so this view owns them and removes them itself.
+  let markers = [];
+  function drawMarkers() {
+    for (const mk of markers) mk.remove();
+    markers = markerList(projects, sel, projectCenter).map((m) => {
+      const el = document.createElement('button');
+      el.type = 'button';
+      el.className = `wi-mark${m.sel ? ' sel' : ''}`;
+      el.textContent = String(m.num);
+      el.setAttribute('aria-label', `Project ${m.num}: ${m.name}`);
+      el.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        if (drawing) return;
+        sel = m.k; drawProjects(); renderResults();
+      });
+      return new mapboxgl.Marker({ element: el }).setLngLat(m.at).addTo(map);
+    });
+  }
+
   function drawProjects() {
     if (!mapReady) return;
     const walls = []; const areas = []; const hits = [];
@@ -400,9 +417,7 @@ export function mount() {
     map.getSource('wi-reason').setData({ type: 'FeatureCollection', features: rs });
     map.getSource('wi-links').setData({ type: 'FeatureCollection', features: links });
     renderLegend();
-    const marks = projects.map((p, k) => ({ type: 'Feature', properties: { num: k + 1, k, sel: k === sel }, geometry: { type: 'Point', coordinates: projectCenter(p) } }))
-      .filter((f) => f.geometry.coordinates);
-    map.getSource('wi-marks').setData({ type: 'FeatureCollection', features: marks });
+    drawMarkers();
     const d = [];
     if (drawing && drawing.pts.length) {
       const pts = drawing.kind === 'area' && drawing.pts.length > 2 ? [...drawing.pts, drawing.pts[0]] : drawing.pts;
@@ -502,21 +517,21 @@ export function mount() {
   // ---------------------------------------------------------------- controls
   function setTool(t) {
     cancelDrawing();
-    const next = tool === t ? null : t;
     // Examples is a tab of its own: leaving it takes the examples away and brings back the user's projects
-    if (tool === 'examples' && next !== 'examples') leaveExamples();
-    tool = next;
+    const change = tabChange(tool, t);
+    if (change.leaveExamples) leaveExamples();
+    tool = change.next;
     document.querySelectorAll('[data-tool]').forEach((b) => { const on = b.dataset.tool === tool; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); });
     $('tool-seawall').hidden = tool !== 'seawall';
     $('tool-elevation').hidden = tool !== 'elevation';
     renderElevHelp();
     applyLayers();
-    if (tool === 'examples') loadExamples();
+    if (change.enterExamples) loadExamples();
   }
 
   function leaveExamples() {
     projects.length = 0;
-    if (ownProjects) projects.push(...ownProjects);
+    projects.push(...projectsAfterExamples(ownProjects));
     ownProjects = null;
     sel = projects.length - 1;
     if (cardPopup) cardPopup.remove();
@@ -575,7 +590,7 @@ export function mount() {
   async function loadExamples() {
     if (!man) return;
     cancelDrawing();
-    if (!ownProjects) ownProjects = projects.filter((p) => !p.example);
+    ownProjects = setAside(projects, ownProjects);
     projects.length = 0;
     for (const e of examples) {
       if (e.kind === 'seawall') newProject('seawall', { example: true, name: e.label, line: e.line, drawn: e.line, onShore: true, snapM: 0, crest: e.crest_ft });
@@ -672,6 +687,7 @@ export function mount() {
   // ---------------------------------------------------------------- map interaction
   map.on('click', (e) => {
     if (!mapReady) return;
+    if (e.originalEvent?.target?.closest?.('.wi-mark')) return; // a project marker handles its own click
     if (drawing && (drawing.kind === 'wall' || drawing.kind === 'area')) {
       drawing.pts.push([e.lngLat.lng, e.lngLat.lat]);
       drawProjects();
@@ -687,7 +703,7 @@ export function mount() {
       update(p);
       return;
     }
-    const f = map.queryRenderedFeatures(e.point, { layers: ['wi-marks-dot', 'wi-walls'] })[0];
+    const f = map.queryRenderedFeatures(e.point, { layers: ['wi-walls'] })[0];
     if (f && f.properties.k != null) { sel = Number(f.properties.k); drawProjects(); renderResults(); return; }
     const layers = ['wi-hit', 'wi-reason', 'wi-buildings', 'wi-dry'].filter((l) => map.getLayoutProperty(l, 'visibility') !== 'none');
     const b = map.queryRenderedFeatures(e.point, { layers })[0];
@@ -824,7 +840,7 @@ export function mount() {
 
   if (import.meta.env.DEV) {
     // for the timing check in the Part 2 report (drag measurement) and screenshots
-    window.__whatIf = { map, projects, dragTimes, loadExamples: () => setTool('examples'), update, compute, showCard, setWhy, setTool, get sel() { return sel; }, get store() { return store; },
+    window.__whatIf = { map, projects, get markers() { return markers; }, dragTimes, loadExamples: () => setTool('examples'), update, compute, showCard, setWhy, setTool, get sel() { return sel; }, get store() { return store; },
       add: (kind, extra) => update(newProject(kind, extra)) };
   }
 
@@ -842,6 +858,7 @@ export function mount() {
     popup.remove();
     infoPopup.remove();
     cardPopup.remove();
+    for (const mk of markers) mk.remove();
     map.remove();
     if (import.meta.env.DEV) delete window.__whatIf;
   };

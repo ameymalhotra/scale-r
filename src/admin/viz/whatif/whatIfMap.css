@@ -218,3 +218,13 @@
       .mapboxgl-ctrl-top-right { display: none; }
     }
 }
+
+/* numbered project markers (D-214), scoped like the rest */
+.viz-whatif {
+    .wi-mark {
+      width: 24px; height: 24px; padding: 0; border-radius: 50%; border: 2px solid #fff; background: #01321e; color: #fff;
+      font: 700 12px/20px system-ui, sans-serif; text-align: center; cursor: pointer; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+    }
+    .wi-mark.sel { background: #f47321; }
+    .wi-mark:focus-visible { outline: 2px solid #2f6db5; outline-offset: 2px; }
+}
