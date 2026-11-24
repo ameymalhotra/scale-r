@@ -5209,8 +5209,8 @@ D-113.
 
 ### D-207. D-095 fix: private bucket created; all admin views load from it
 
-- Date: 24 Nov 2026. Status: In progress (bucket done, upload and tests
-  next). Decided by: the user (D-095 plan, approved in D-096).
+- Date: 24 Nov 2026. Status: Done (not deployed). Decided by: the user
+  (D-095 plan, approved in D-096).
 - What happened: The user ran the bucket SQL. Checks: bucket `admin-data`
   exists, not public, 10 MB per file, types JSON, GeoJSON and binary
   (`application/octet-stream`, for the What-If tiles); one read policy,
@@ -5228,5 +5228,10 @@ D-113.
 - Decision: The build now contains no admin data.
 - Reason: D-095.
 - Evidence: `npx vite build` (no admin files in `dist/`); 195 tests pass.
+  After the upload (918 files): the public URL answers 400; logged out,
+  every download is refused and listings are empty; signed in as the
+  non-admin test user `scaler-nonadmin-test@example.com` (created by the
+  user, not on the admin list, `is_admin()` false), every download is
+  refused and listings are empty.
 - Affects: All three admin data views. The gap map file stays in the public
   history of `main` (open decision, D-095 step 6).
