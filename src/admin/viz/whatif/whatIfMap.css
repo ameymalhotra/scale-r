@@ -164,6 +164,8 @@
     .switch input::after { content: ''; position: absolute; top: 2px; left: 2px; width: 13px; height: 13px; border-radius: 50%; background: #fff; transition: transform 0.15s; }
     .switch input:checked { background: var(--green); }
     .switch input:checked::after { transform: translateX(13px); }
+    .switch.sub { margin: 4px 0 2px; font-size: 12px; font-weight: 600; }
+    .switch.sub .q { margin-left: 2px; }
     .legend .items { margin-top: 4px; }
 
     .status {

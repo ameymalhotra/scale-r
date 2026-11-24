@@ -77,7 +77,8 @@ export function mount() {
   let damageExpr = STILL_FLOODS;
   let emode = 'area';
   let why = false;
-  let showLinks = false;
+  let showLinks = true;   // water paths on by default once Show why is on; drawn only for buildings behind the wall (D-217)
+  const BEHIND_WALL = new Set(['protected', 'overtopped']);
   let drawing = null;           // {kind: 'wall' | 'area' | 'click', pts: [[lon, lat], ...]}
   const projects = [];
   let sel = -1;
@@ -221,11 +222,11 @@ export function mount() {
       items.push(`<div class="ramp"><span>Yearly damage</span>${DAMAGE_STOPS.slice(1).map(([, c]) => `<i style="background:${c}"></i>`).join('')}<span>$100 to $50k+</span></div>`);
       items.push(dot('#fff', 'Stays dry in every storm', 'border:1px solid #9aa5ae'));
       if (p?.kind === 'seawall' && p.reasonCounts) {
-        items.push(`<div class="lg-h">Near ${esc(p.name)}</div>`);
+        items.push(`<label class="switch sub"><input type="checkbox" id="links" ${showLinks ? 'checked' : ''}><span>Water paths</span><button type="button" class="q" data-tip="A line from each building to the water that floods it, for the buildings behind the wall (green: protected; yellow: water goes over the wall). Each line crosses the wall on its way to the coast.">?</button></label>`);
+        items.push(`<div class="lg-h">Within 1 km of ${esc(p.name)}</div>`);
         for (const [k, v] of Object.entries(REASON_STYLE)) {
           if (p.reasonCounts[k]) items.push(`<div title="${esc(v.label)}"><span class="sw" style="background:${v.color}"></span>${v.short} <b>${fmt(p.reasonCounts[k])}</b></div>`);
         }
-        items.push(`<label class="check"><input type="checkbox" id="links" ${showLinks ? 'checked' : ''}> Lines to nearest water</label>`);
       }
       items.push('<div><span class="ln"></span>Rain flooding modelled (C-8, C-9)</div>');
     }
@@ -374,10 +375,31 @@ export function mount() {
       el.addEventListener('click', (ev) => {
         ev.stopPropagation();
         if (drawing) return;
-        sel = m.k; drawProjects(); renderResults();
+        selectProject(m.k);
       });
       return new mapboxgl.Marker({ element: el }).setLngLat(m.at).addTo(map);
     });
+  }
+
+  /** Fit the map to one project, leaving room for the side column (D-217). */
+  function focusProject(p, duration = 600) {
+    if (!p) return;
+    let pts = [];
+    if (p.kind === 'seawall') {
+      // the wall and the buildings it protects, so both are in view
+      pts = [...(p.line || []), ...(p.reasons || []).filter((q) => q.reason === 'protected').map((q) => {
+        const c = store.tiles.get(q.key).cols; return [c.lon[q.i], c.lat[q.i]];
+      })];
+    } else if (p.mode === 'area') pts = p.ring || [];
+    else pts = (p.res?.perBuilding || []).map((q) => [q.lon, q.lat]);
+    if (!pts.length) return;
+    const lo = pts.map((q) => q[0]); const la = pts.map((q) => q[1]);
+    map.fitBounds([[Math.min(...lo), Math.min(...la)], [Math.max(...lo), Math.max(...la)]], { padding: sidePad(), maxZoom: 15.5, duration });
+  }
+  function selectProject(k, { zoom = true } = {}) {
+    sel = k; editingCost = false;
+    drawProjects(); renderResults();
+    if (zoom) focusProject(projects[k]);
   }
 
   function drawProjects() {
@@ -409,7 +431,7 @@ export function mount() {
         const t = store.tiles.get(q.key);
         const at = [t.cols.lon[q.i], t.cols.lat[q.i]];
         rs.push({ type: 'Feature', properties: { r: q.reason, k: q.key, i: q.i }, geometry: { type: 'Point', coordinates: at } });
-        if (showLinks) {
+        if (showLinks && BEHIND_WALL.has(q.reason)) {
           const w = nearestWater(t, q.i, man);
           if (w.at) links.push({ type: 'Feature', properties: { r: q.reason }, geometry: { type: 'LineString', coordinates: [at, w.at] } });
         }
@@ -602,12 +624,8 @@ export function mount() {
     sel = 0;
     drawProjects();
     renderResults();
-    const pts = projects.flatMap((p) => (p.kind === 'seawall' ? p.line : (p.res?.perBuilding || []).map((q) => [q.lon, q.lat])));
-    if (pts.length) {
-      const lo = pts.map((q) => q[0]); const la = pts.map((q) => q[1]);
-      // fitBounds padding replaces the map's own padding, so keep room for the side column here
-      map.fitBounds([[Math.min(...lo), Math.min(...la)], [Math.max(...lo), Math.max(...la)]], { padding: sidePad(), maxZoom: 13.5, duration: 600 });
-    }
+    // zoom to the selected example (project 1); the chips and numbered markers lead to the others (D-217)
+    focusProject(projects[0]);
   }
 
   function toggleAbout(open) {
@@ -635,7 +653,7 @@ export function mount() {
     else if (t.id === 'cost-edit') { editingCost = true; renderResults(); }
     else if (t.id === 'cost-done') { editingCost = false; renderResults(); }
     else if (t.id === 'cost-reset') { const p = projects[sel]; p.costEdited = false; update(p); }
-    else if (t.closest('[data-sel]')) { sel = Number(t.closest('[data-sel]').dataset.sel); editingCost = false; drawProjects(); renderResults(); }
+    else if (t.closest('[data-sel]')) selectProject(Number(t.closest('[data-sel]').dataset.sel));
   }
   const panel = root.querySelector('.side');
   panel.addEventListener('click', onPanelClick);
@@ -939,7 +957,7 @@ export function mount() {
         },
         target: () => root.querySelector('.cardpop') },
       { title: 'Show why',
-        text: 'Turn this on to color every building by flood damage and see why some buildings are still not protected.',
+        text: 'Turn this on to color every building by flood damage and see why some buildings near a wall are still not protected. <b>Water paths</b> then draws a line from each nearby building to the water that floods it.',
         before: async () => { cardPopup.remove(); },
         target: () => $('legend') },
       { title: 'Add a seawall',

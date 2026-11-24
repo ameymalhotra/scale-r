@@ -5468,3 +5468,34 @@ D-113.
   `outputs/admin_data/what_if_screens/tour/`; in the dev view a user's own
   wall stayed and both samples were gone after Finish. What-If tests: 22 pass.
 - Affects: `src/admin/viz/whatif/whatIfMap.js`, `whatIfTour.js`.
+
+### D-217. Water paths only behind the wall, easier to find; zoom to the selected project
+
+- Date: 24 Nov 2026. Status: Done (not pushed or deployed). Decided by: the
+  user.
+- What happened: With Show why on, "Lines to nearest water" drew a line for
+  every flooding building within 1 km of the wall (1,204 for Example 1),
+  including buildings far from the wall whose water never reaches it. The
+  option was a small checkbox inside the legend. Selecting an example did
+  not move the map to it.
+- What is wrong: The far lines buried the story of the wall, and a regular
+  user would not notice the checkbox.
+- How we are fixing it: The 1 km rule stays for the colored dots (it is the
+  same rule Module C uses, and the counts show how many buildings a short
+  wall misses); the legend heading now says "Within 1 km of" the project.
+  Lines are drawn only for the buildings behind the wall (protected and
+  water goes over the wall: 214 for Example 1), whose path to the coast
+  crosses the wall. A distance cut was tried first and rejected: even the
+  nearest flooding building is about 260 m inland, so 300 m kept only 20
+  lines. The option is now a "Water paths" switch under Show why, on by
+  default, with a ? that explains the lines; the tour's Show why step
+  mentions it. Clicking a project chip or its numbered marker zooms to that
+  project (a wall together with the buildings it protects), and opening
+  Examples zooms to project 1.
+- Decision: Adopted.
+- Reason: The user's request.
+- Evidence: `after3_desktop_exwhy.jpg`, `after3_*_exchip3.jpg` in
+  `outputs/admin_data/what_if_screens/redesign/`; in the dev view, Examples
+  opens at zoom 15.5 on project 1 and chip 2 and marker 1 move the map to
+  their project. What-If tests: 22 pass.
+- Affects: `src/admin/viz/whatif/whatIfMap.{js,css}`.
