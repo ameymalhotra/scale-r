@@ -5235,3 +5235,45 @@ D-113.
   refused and listings are empty.
 - Affects: All three admin data views. The gap map file stays in the public
   history of `main` (open decision, D-095 step 6).
+
+### D-208. Flood What-If view simplified for a first-time reader
+
+- Date: 24 Nov 2026. Status: Done (not pushed or deployed). Decided by: the
+  user (redesign brief: understandable within 30 seconds by someone with no
+  flood modelling background).
+- What happened: The view showed every control, note and layer at once:
+  long paragraphs, jargon (NAVD88, EYD, crest), six reason colours, damage
+  shading, dry dots and the C-8/C-9 outline.
+- What is wrong: A new reader could not tell what to do or what the result
+  meant without reading several paragraphs.
+- How we are fixing it: Layout, wording and defaults only; the engine,
+  rules and numbers are unchanged (parity and engine tests pass as before).
+  - Toolbar: Seawall, Raise homes, Examples, About; tool controls show only
+    for the active tool (wall height; area or click, homes, raise by).
+  - First visit: a three-step hint, dismissed once (localStorage, in
+    try/catch).
+  - One result card: "Prevents about $X a year in flood damage"; buildings
+    protected, residents protected, benefit per dollar with Pays back or
+    Does not pay back; cost with an edit pencil; the five-storm basis.
+    Range, 7% and 3%, project life, cost source and property value are
+    under Details. Warnings and notes are one-line chips with the full text
+    on hover or tap. Money is rounded ($1.3M, $12k).
+  - Map: buildings grey (still floods) and green (protected) by default;
+    the coast line only while drawing a wall. Reason colours, lines to
+    water, damage shading, dry buildings and the C-8/C-9 outline are under
+    a Show why switch; the legend lists only what is shown.
+  - Building card: a one-line answer (for example "Not protected: water
+    reaches it through Indian Creek."), damage before, after and avoided;
+    the storm table and building facts under Details. Compare still works.
+  - About: five bullets (what it does, data, how projects work, benefit
+    per dollar, main limits), with the longer method under More detail.
+  - The D-205 limitation (no cost for 2 to 4 unit buildings) moved to a
+    tooltip on "Homes to raise" and the "not a candidate" card.
+- Decision: Adopted for the admin view.
+- Reason: The user's brief.
+- Evidence: Before and after screenshots (desktop and phone: empty map,
+  seawall placed, building card, Examples, Show why) in
+  `outputs/admin_data/what_if_screens/redesign/` (private); 198 tests pass;
+  new `whatIfExplain.test.js` checks the rounding and one-line answers.
+- Affects: `src/admin/viz/whatif/whatIfMap.{html,css,js}`,
+  `whatIfExplain.js`.
