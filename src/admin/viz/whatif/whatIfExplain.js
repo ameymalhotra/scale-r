@@ -136,19 +136,25 @@ export function cardHtml(card, other) {
     return `<tr class="${d ? 'diff' : ''}"><td>${STORM_NAMES[s.ev] || s.ev}</td><td>${s.level == null ? 'dry' : `${ft(s.level)}${s.wet ? '' : ' (below ground)'}<br><span class="muted">${s.source}</span>`}</td>
       <td>${s.aboveFloorBefore ? 'yes' : 'no'}</td>${col ? `<td>${cell3}</td>` : ''}<td>${money(s.lossBefore)}${col ? ` → ${money(s.lossAfter)}` : ''}</td></tr>`;
   }).join('');
-  const avoided = ex.eydBefore - ex.eydAfter;
+  // a building with several uses shows its totals; the uses are listed below (D-218)
+  const tot = card.total || { before: ex.eydBefore, after: ex.eydAfter };
+  const avoided = tot.before - tot.after;
   const oAv = other ? other.ex.eydBefore - other.ex.eydAfter : null;
   const dd = (a, b) => (other && Math.round(a) !== Math.round(b) ? 'diff' : '');
   const nums = col
-    ? `<div class="nums"><div class="${dd(ex.eydBefore, other?.ex.eydBefore)}"><span class="n">${moneyShort(ex.eydBefore)}</span><span class="l">a year before</span></div>
-        <div class="${dd(ex.eydAfter, other?.ex.eydAfter)}"><span class="n">${moneyShort(ex.eydAfter)}</span><span class="l">after</span></div>
+    ? `<div class="nums"><div class="${dd(tot.before, other?.ex.eydBefore)}"><span class="n">${moneyShort(tot.before)}</span><span class="l">a year before</span></div>
+        <div class="${dd(tot.after, other?.ex.eydAfter)}"><span class="n">${moneyShort(tot.after)}</span><span class="l">after</span></div>
         <div class="av ${dd(avoided, oAv)}"><span class="n">${moneyShort(avoided)}</span><span class="l">avoided</span></div></div>`
-    : `<div class="nums"><div class="${dd(ex.eydBefore, other?.ex.eydBefore)}"><span class="n">${moneyShort(ex.eydBefore)}</span><span class="l">flood damage a year today</span></div></div>`;
+    : `<div class="nums"><div class="${dd(tot.before, other?.ex.eydBefore)}"><span class="n">${moneyShort(tot.before)}</span><span class="l">flood damage a year today</span></div></div>`;
+  const uses = card.uses ? `<table class="uses"><caption>Uses in this building</caption><thead><tr><th>Use</th><th>Damage a year${col ? ' before → after' : ''}</th></tr></thead><tbody>${
+    card.uses.map((u) => `<tr><td>${esc(u.label)} <span class="muted">${esc(u.code)}</span></td><td>${money(u.before)}${col ? ` → ${money(u.after)}` : ''}</td></tr>`).join('')}</tbody></table>` : '';
   return `<article class="card">
     <h3>${esc(card.title)}</h3>
     ${card.sentence ? `<p class="reason" style="border-color:${card.color || '#6b7783'}">${esc(card.sentence)}</p>` : ''}
     ${nums}
+    ${uses}
     <details class="more"><summary>Details</summary>
+      ${card.uses ? '<p class="muted">The national structure inventory lists each use of this building as its own record. The storm table and facts below are for the first use.</p>' : ''}
       ${card.why ? `<p class="why">${esc(card.why)}</p>` : ''}
       <table class="storms"><thead><tr><th>Storm</th><th>Water level</th><th>Above floor?</th>${col ? `<th>${col}</th>` : ''}<th>Damage${col ? ' before → after' : ''}</th></tr></thead><tbody>${storms}</tbody></table>
       <table class="facts">${factRows}</table>

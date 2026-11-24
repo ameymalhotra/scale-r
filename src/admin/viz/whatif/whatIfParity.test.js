@@ -4,13 +4,14 @@
  *  1. Baseline: expected yearly damage today for every exported building, within 0.1% in total.
  *  2. Projects: every Part 2 run in parity_fixture.json (Python Module C), damage avoided within 1%
  *     (within $1 where Python gives $0).
+ *  3. Building counts (D-218): physical buildings (records at the same NSI point) must match Python exactly.
  * Needs the private export in "Modelling Data from Web/outputs/admin_data/what_if/" (git-ignored, D-095).
  * Where it is missing the tests are skipped, not failed.
  */
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { gunzipSync } from 'node:zlib';
-import { computeRows, elevate, makeContext, picksForIds, readTile, seawall, seawallReasons } from './whatIfEngine.js';
+import { buildingId, computeRows, elevate, makeContext, picksForIds, readTile, seawall, seawallReasons } from './whatIfEngine.js';
 
 const DIR = path.resolve(__dirname, '../../../../Modelling Data from Web/outputs/admin_data/what_if');
 const HAVE = existsSync(path.join(DIR, 'manifest.json')) && existsSync(path.join(DIR, 'parity_fixture.json'));
@@ -68,6 +69,10 @@ d('What-If engine parity with Python', () => {
         if (py > 0) expect(rel, `${run.id} ${k}: Python ${py}, browser ${js}`).toBeLessThan(0.01);
         else expect(diff, `${run.id} ${k}: Python 0, browser ${js}`).toBeLessThan(1);
       }
+      // building counts are whole numbers and must match exactly (D-218)
+      expect(res.buildingsAffected, `${run.id}: buildings affected`).toBe(run.buildings_affected_python);
+      expect(res.recordsAffected, `${run.id}: records affected`).toBe(run.records_affected_python);
+      expect(res.buildingsProtected, `${run.id}: buildings protected`).toBe(run.buildings_protected_python);
     }
     writeFileSync(path.join(DIR, 'parity_result.json'), JSON.stringify({ runs: fixture.runs.length, largest_relative: largest, rows: report }, null, 1));
   });
@@ -77,7 +82,10 @@ d('What-If engine parity with Python', () => {
     let checked = 0;
     const mismatches = [];
     for (const run of fixture.runs.filter((r) => r.kind === 'seawall')) {
-      const { items } = seawallReasons(tiles, run.line, run.crest_ft, ctx);
+      const { items, counts } = seawallReasons(tiles, run.line, run.crest_ft, ctx);
+      for (const [reason, n] of Object.entries(run.building_reason_counts)) {
+        if (counts[reason] !== n) mismatches.push(`${run.id}: ${reason} buildings Python ${n}, browser ${counts[reason]}`);
+      }
       const js = new Map(items.map((q) => [tiles.get(q.key).cols.fd_id[q.i], q.reason]));
       const py = new Map(run.reasons);
       for (const [fd, reason] of py) {
@@ -89,5 +97,14 @@ d('What-If engine parity with Python', () => {
     expect(mismatches.slice(0, 10)).toEqual([]);
     expect(checked).toBeGreaterThan(1000);
     writeFileSync(path.join(DIR, 'reason_parity.json'), JSON.stringify({ checked, mismatches: mismatches.length }));
+  });
+
+  it('groups records into the same physical buildings as Python, countywide (D-218)', () => {
+    load();
+    const seen = new Set();
+    let records = 0;
+    for (const [key, tile] of tiles) for (let i = 0; i < tile.n; i += 1) { seen.add(buildingId(key, tile, i)); records += 1; }
+    expect(records).toBe(fixture.county.flooding_records);
+    expect(seen.size).toBe(fixture.county.flooding_buildings);
   });
 });

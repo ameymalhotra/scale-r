@@ -199,6 +199,10 @@
     .card .nums .n { font-size: 15px; font-weight: 700; color: var(--ink-strong); }
     .card .nums .l { font-size: 10.5px; color: var(--muted); }
     .card .nums .av .n { color: var(--good); }
+    .card table.uses { width: 100%; margin-top: 6px; border-collapse: collapse; font-size: 11.5px; }
+    .card table.uses caption { text-align: left; font-weight: 700; font-size: 11.5px; color: var(--ink); padding-bottom: 2px; }
+    .card table.uses th, .card table.uses td { text-align: left; padding: 2px 4px; border-bottom: 1px solid var(--line); }
+    .card table.uses td:last-child, .card table.uses th:last-child { text-align: right; white-space: nowrap; }
     .card .why { font-size: 12px; }
     .card table { width: 100%; border-collapse: collapse; margin: 6px 0 2px; font-size: 11.5px; }
     .card th, .card td { padding: 3px 4px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }

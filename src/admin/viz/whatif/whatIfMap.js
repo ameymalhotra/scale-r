@@ -1,10 +1,10 @@
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import {
-  SETTINGS, benefitPerDollar, elevate, explainBuilding, makeContext, picksForIds, pointLineDist, seawallReasons,
+  SETTINGS, benefitPerDollar, buildingId, elevate, explainBuilding, makeContext, picksForIds, pointLineDist, seawallReasons,
   seawallTileKeys, snapToShore, tilesForBox, toUtm17, topHomes,
 } from './whatIfEngine.js';
-import { REASON_STYLE, cardHtml, facts, moneyShort, nearestWater, reasonSentence, shortSentence } from './whatIfExplain.js';
+import { REASON_STYLE, buildingType, cardHtml, facts, moneyShort, nearestWater, reasonSentence, shortSentence } from './whatIfExplain.js';
 import { loadJson, tileStore } from './whatIfData.js';
 import { markerList, projectsAfterExamples, setAside, tabChange } from './whatIfTabs.js';
 import { createTour } from './whatIfTour.js';
@@ -316,7 +316,8 @@ export function mount() {
       const whyRes = seawallReasons(store.tiles, p.line, p.crest, ctx);
       p.res = whyRes.res;
       p.reasons = whyRes.items;
-      p.reasonCounts = whyRes.counts;
+      p.reasonCounts = whyRes.counts;              // buildings (D-218)
+      p.buildingReason = whyRes.buildingReason;
       p.reasonOf = new Map(whyRes.items.map((q) => [`${q.key}|${q.i}`, q]));
       p.lengthFt = p.res.lengthM / FT;
       p.shoreM = shoreDistance(p.drawn || p.line);
@@ -411,11 +412,15 @@ export function mount() {
       if (p.kind === 'seawall' && p.snapM > 5) walls.push({ type: 'Feature', properties: { k, sel: isSel, ghost: true }, geometry: { type: 'LineString', coordinates: p.drawn } });
       if (p.kind === 'elevation' && p.mode === 'area') areas.push({ type: 'Feature', properties: { k, sel: isSel }, geometry: { type: 'Polygon', coordinates: [[...p.ring, p.ring[0]]] } });
       if (p.kind === 'elevation') {
-        for (const q of p.res?.perBuilding || []) hits.push({ type: 'Feature', properties: { t: 'raised', k, bk: q.key, bi: q.i }, geometry: { type: 'Point', coordinates: [q.lon, q.lat] } });
+        const seenB = new Set();
+        for (const q of p.res?.perBuilding || []) if (!seenB.has(q.b) && seenB.add(q.b)) hits.push({ type: 'Feature', properties: { t: 'raised', k, bk: q.key, bi: q.i }, geometry: { type: 'Point', coordinates: [q.lon, q.lat] } });
       }
       if (p.kind === 'seawall' && p.reasons) {
+        // one dot per building (D-218): the first record of each building, coloured by the building's reason
+        const done = new Set();
         for (const q of p.reasons) {
-          if (q.reason !== 'protected') continue;
+          if (done.has(q.b) || p.buildingReason.get(q.b) !== 'protected') continue;
+          done.add(q.b);
           const c = store.tiles.get(q.key).cols;
           hits.push({ type: 'Feature', properties: { t: 'protected', k, bk: q.key, bi: q.i }, geometry: { type: 'Point', coordinates: [c.lon[q.i], c.lat[q.i]] } });
         }
@@ -427,13 +432,17 @@ export function mount() {
     const ps = projects[sel];
     const rs = []; const links = [];
     if (why && ps?.kind === 'seawall' && ps.reasons) {
+      const done = new Set();
       for (const q of ps.reasons) {
+        if (done.has(q.b)) continue;   // one dot and one line per building (D-218)
+        done.add(q.b);
+        const reason = ps.buildingReason.get(q.b);
         const t = store.tiles.get(q.key);
         const at = [t.cols.lon[q.i], t.cols.lat[q.i]];
-        rs.push({ type: 'Feature', properties: { r: q.reason, k: q.key, i: q.i }, geometry: { type: 'Point', coordinates: at } });
-        if (showLinks && BEHIND_WALL.has(q.reason)) {
+        rs.push({ type: 'Feature', properties: { r: reason, k: q.key, i: q.i }, geometry: { type: 'Point', coordinates: at } });
+        if (showLinks && BEHIND_WALL.has(reason)) {
           const w = nearestWater(t, q.i, man);
-          if (w.at) links.push({ type: 'Feature', properties: { r: q.reason }, geometry: { type: 'LineString', coordinates: [at, w.at] } });
+          if (w.at) links.push({ type: 'Feature', properties: { r: reason }, geometry: { type: 'LineString', coordinates: [at, w.at] } });
         }
       }
     }
@@ -524,6 +533,7 @@ export function mount() {
         <table class="kv">
           <tr><th>Damage prevented a year</th><td>${money(r.avoided.mid)} middle; ${money(r.avoided.low)} to ${money(r.avoided.high)} low to high <span class="tag est">estimated</span></td></tr>
           <tr><th>Damage today, these buildings</th><td>${money(r.before.mid)} a year</td></tr>
+          <tr><th>Use records</th><td>${fmt(r.recordsProtected)} use records protected, ${fmt(r.recordsAffected)} checked. The national structure inventory splits a building with several uses (shops below flats, say) into one record per use at the same point; counts above are buildings, dollars add up every record (D-218).</td></tr>
           <tr><th>Back per $1 at 7%</th><td>${ratio(b7)} (FEMA rate since 2025; ${ratio(b7lo)} to ${ratio(b7hi)} low to high)</td></tr>
           <tr><th>Back per $1 at 3.1%</th><td>${ratio(b3)} (FEMA rate in 2023 and 2024, shown for comparison)</td></tr>
           <tr><th>Project life</th><td>${s.life} years (FEMA)${s.maint ? `; upkeep ${s.maint * 100}% of the cost a year <span class="tag asm">assumed</span>` : '; no upkeep'}</td></tr>
@@ -736,12 +746,43 @@ export function mount() {
   });
 
   // ---------------------------------------------------------------- building cards (D-204, short layout D-208)
+  /** Every record of the building at this point: one per use (D-218). */
+  function usesOf(t, i) {
+    const out = [];
+    for (let j = 0; j < t.n; j += 1) if (t.cols.x[j] === t.cols.x[i] && t.cols.y[j] === t.cols.y[i]) out.push(j);
+    return out;
+  }
+  /** Each use with its own damage before and after the project, and the building totals (D-218). */
+  function addUses(card, t, opts, raised) {
+    const js = usesOf(t, card.i);
+    if (js.length < 2) return card;
+    card.uses = js.map((j) => {
+      const e = explainBuilding(t, j, ctx, opts);
+      const after = raised && !raised(j) ? e.eydBefore : e.eydAfter;
+      return { label: buildingType(man.lists.occtype[t.cols.occ[j]]), code: man.lists.occtype[t.cols.occ[j]], before: e.eydBefore, after };
+    });
+    card.total = { before: card.uses.reduce((a, u) => a + u.before, 0), after: card.uses.reduce((a, u) => a + u.after, 0) };
+    card.title = `Building with ${js.length} uses`;
+    return card;
+  }
   function makeCard(key, i) {
+    const card = makeCardOne(key, i);
+    const t = store.tiles.get(key);
+    const p = projects[sel];
+    if (card.kind === 'seawall') return addUses(card, t, { crestFt: p.crest, protectedRow: card.behind && t.cols.ground[i] < p.crest });
+    if (card.kind === 'elevation') {
+      const picked = new Set((p.picks || []).filter((q) => q.key === key).map((q) => q.i));
+      return addUses(card, t, { raiseFt: p.raise }, (j) => picked.has(j));
+    }
+    return addUses(card, t, {});
+  }
+  function makeCardOne(key, i) {
     const t = store.tiles.get(key);
     const p = projects[sel];
     const title = `Building ${t.cols.fd_id[i]}`;
     if (p?.kind === 'seawall' && p.reasonOf?.has(`${key}|${i}`)) {
-      const q = p.reasonOf.get(`${key}|${i}`);
+      // the building's reason: protected if any of its uses is (D-218)
+      const q = { ...p.reasonOf.get(`${key}|${i}`), reason: p.buildingReason?.get(buildingId(key, t, i)) || p.reasonOf.get(`${key}|${i}`).reason };
       const behind = q.reason === 'protected' || q.reason === 'overtopped';
       const water = nearestWater(t, i, man);
       const ex = explainBuilding(t, i, ctx, { crestFt: p.crest, protectedRow: behind && t.cols.ground[i] < p.crest });

@@ -47,7 +47,8 @@ def main():
             res = float(M.A.set_index("fd_id").residents_night.reindex(prot).sum())
             a = r["losses_avoided_per_year"]
             out[f"{label}_{crest:g}ft"] = {"avoided_low": round(a["low"]), "avoided_mid": round(a["mid"]), "avoided_high": round(a["high"]),
-                                           "buildings_protected": int(len(prot)), "residents_protected": round(res),
+                                           "buildings_protected": M.n_buildings(prot), "records_protected": int(len(prot)),   # D-218
+                                           "residents_protected": round(res),
                                            "bcr_7pct": round(tp.ratio("seawall", a["mid"], cost), 3), "bcr_3pct": round(tp.ratio("seawall", a["mid"], cost, tp.RATE_LOW), 3),
                                            "bcr_7pct_low_high": [round(tp.ratio("seawall", a["low"], cost), 3), round(tp.ratio("seawall", a["high"], cost), 3)],
                                            "eyd_before_mid": round(r["eyd_baseline"]["mid"])}

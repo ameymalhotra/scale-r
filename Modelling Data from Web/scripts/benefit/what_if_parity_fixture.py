@@ -24,6 +24,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "common"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import paths  # noqa: E402
 import typical_projects_part2 as tp  # noqa: E402
+import module_c_projects as mc  # noqa: E402
 from progress import Progress  # noqa: E402
 
 OUT = paths.ADMIN_WHAT_IF_DIR / "parity_fixture.json"
@@ -38,14 +39,18 @@ def main():
     def wall(rid, line, crest):
         # also the reason for every flooding building near the wall, for the explanation layer parity check (D-204)
         t, r = M.seawall_reasons(line, crest)
+        by_b, mixed = mc.building_reasons(t)   # one reason per building (D-218)
         runs.append({"id": rid, "kind": "seawall", "line": [[float(a), float(b)] for a, b in line], "crest_ft": float(crest),
                      "avoided": r["losses_avoided_per_year"], "buildings_affected_python": r["buildings_affected"],
+                     "buildings_protected_python": r["buildings_protected"], "records_affected_python": r["records_affected"],
+                     "building_reason_counts": {k: int(v) for k, v in by_b.value_counts().items()}, "mixed_buildings": mixed,
                      "reasons": [[int(f), str(q)] for f, q in zip(t.fd_id, t.reason)]})
 
     def elev(rid, ids, raise_ft=tp.RAISE):
         r, _ = M.elevate(ids, raise_ft)
         runs.append({"id": rid, "kind": "elevation", "fd_ids": [int(i) for i in ids], "raise_ft": float(raise_ft),
-                     "avoided": r["losses_avoided_per_year"], "buildings_affected_python": r["buildings_affected"]})
+                     "avoided": r["losses_avoided_per_year"], "buildings_affected_python": r["buildings_affected"],
+                     "buildings_protected_python": r["buildings_protected"], "records_affected_python": r["records_affected"]})
 
     # typical seawall placements, rebuilt exactly as in Part 2
     L = 550 * tp.FT
@@ -109,8 +114,10 @@ def main():
           {"id": "E4", "kind": "elevation", "label": f"Typical elevation, {place['E4']} (high damage)", "raise_ft": 3.0, **home("E4")},
           {"id": "E8", "kind": "elevation", "label": f"Typical elevation, {place['E8']} (low damage)", "raise_ft": 3.0, **home("E8")}]
     (paths.ADMIN_WHAT_IF_DIR / "examples.json").write_text(json.dumps(ex, indent=1))
+    # countywide: physical buildings among the flooding records the browser has (D-218)
+    county = {"flooding_records": int(M.wet.sum()), "flooding_buildings": int(pd.unique(M.bldg[M.wet]).size)}
     OUT.write_text(json.dumps({"about":"Python Module C answers for the browser parity test (D-200). Private, not committed.",
-                               "runs": runs}, indent=1, default=float))
+                               "county": county, "runs": runs}, indent=1, default=float))
     print(f"{len(runs)} runs written to {OUT}")
     tp.P.finish()
 

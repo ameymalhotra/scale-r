@@ -5499,3 +5499,64 @@ D-113.
   opens at zoom 15.5 on project 1 and chip 2 and marker 1 move the map to
   their project. What-If tests: 22 pass.
 - Affects: `src/admin/viz/whatif/whatIfMap.{js,css}`.
+
+### D-218. Count physical buildings, not structure records
+
+- Date: 24 Nov 2026. Status: Done (not pushed or deployed). Decided by: the
+  user.
+- What happened: The What-If card for Example 1 said 144 buildings
+  protected, but the map showed about 86 green dots. The National Structure
+  Inventory (NSI) splits a building with several uses into one record per
+  use (occupancy type), all at the same point with the same footprint id,
+  and the floor area is shared among them. Every count labelled "buildings"
+  in the tool, Module C, the parity tests and the reports counted records.
+  Countywide 627,252 records are 570,111 buildings; 386,929 flooding records
+  are 348,094 buildings. 35,000 buildings hold 2 to 12 records.
+- What is wrong: Counts labelled buildings were too high wherever there are
+  mixed-use buildings (Example 1: 144 records, 86 buildings).
+- How we are fixing it:
+  - Grouping key: records at exactly the same NSI point are one building
+    (UTM x and y in Python, the same exported tile position in the browser;
+    no re-export). The NSI building id (bid) was checked and rejected: of
+    the 48,303 records that share a bid but not a point, 47,994 have a blank
+    bid (parcel-based points, each at its own spot, so separate buildings)
+    and 309 in 152 bids are separate footprints 0.3 to 2.7 m apart with
+    their own footprint ids and floor areas.
+  - A building is protected if any of its records has damage avoided > 0;
+    otherwise it takes the group its records share (no building in any
+    parity run has records that disagree otherwise).
+  - Python Module C: buildings_affected, buildings_with_damage_before,
+    buildings_protected and storms_held_by_wall_buildings count buildings;
+    records_* fields keep the record counts. Part 2, the closed-system run
+    and the Module C examples report buildings with records beside them. The
+    Module C example stretch is still chosen by records, so the example and
+    its dollars do not move.
+  - Browser: the card, legend groups and map count and draw one dot (and
+    one water path) per building; Details shows "N use records". A building
+    card for a building with several uses lists each use with its own damage
+    before and after, and shows the building totals.
+  - Parity: the browser must match Python exactly on buildings affected,
+    records affected, buildings protected, buildings per reason group for
+    every Part 2 wall, and the countywide 348,094 flooding buildings.
+- Decision: Adopted.
+- Reason: The user's decision. Dollars are summed over records, so they are
+  unchanged: rerunning the last committed Module C and this version gives
+  identical non-count results; Part 2 and the closed-system outputs differ
+  only in count columns.
+- Evidence: Example 1 in the dev view: 86 buildings protected, 86 green
+  dots, legend 86 / 24 / 116 / 428 (records 144 / 70 / 203 / 787). Raise
+  homes ranking unchanged: it ranks single-family records and every home in
+  the top 10 of each typical tract is its own building; 3,668 RES1 records
+  (2,698 flooding) sit in split buildings, mostly RES1 with one commercial
+  use. What-If tests: 23 pass, including the new building parity checks.
+- Found on the way: `spec_alignment_part2.md` quotes the North Miami wall
+  (1,881 buildings, $2.2M) and Princeton (2,726 homes, $8.4M) from a Module
+  C run made before D-202; the current model gives 104 records / 91
+  buildings and $56,684, and 2,712 homes and $8.0M. That report needs
+  updating for D-202, separately from this change.
+- Affects: `scripts/benefit/module_c_projects.py`,
+  `typical_projects_part2.py`, `closed_system_miami_beach.py`,
+  `what_if_parity_fixture.py`, `src/admin/viz/whatif/whatIfEngine.js`,
+  `whatIfMap.{js,css}`, `whatIfExplain.js`, `whatIfParity.test.js`; reports
+  to update by the user: `typical_projects_part2.md`, `admin_what_if_part1.md`,
+  `admin_what_if_part2.md`, `stage1_data.md`, `spec_alignment_part2.md`.

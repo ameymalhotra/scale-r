@@ -257,9 +257,26 @@ export function makeContext(man, curvesJson) {
   };
 }
 
+/**
+ * One physical building per NSI point (D-218): the NSI splits a mixed-use building into one record per use, all at
+ * the same point, so records at the same tile position are one building. Same rule as building_key() in Module C.
+ */
+export function buildingId(key, tile, i) {
+  return `${key}|${tile.cols.x[i]}|${tile.cols.y[i]}`;
+}
+
+/** Turn the building sets gathered while adding tiles into counts. */
+function finish(res) {
+  res.buildingsAffected = res.bAffected.size;
+  res.buildingsProtected = res.bProtected.size;
+  delete res.bAffected; delete res.bProtected;
+  return res;
+}
+
 function emptyResult() {
   return {
     buildingsAffected: 0, buildingsProtected: 0, residentsProtected: 0,
+    recordsAffected: 0, recordsProtected: 0, bAffected: new Set(), bProtected: new Set(),
     before: { low: 0, mid: 0, high: 0 }, avoided: { low: 0, mid: 0, high: 0 },
     valueChangePublished: 0, valueBasePublished: 0, perBuilding: [],
   };
@@ -278,16 +295,19 @@ function accumulate(res, tile, rows, ctx, opt, keepPer, key) {
   const scen = computeRows(tile, rows, ctx, opt);
   const betas = ctx.man.property_value_published_miami || {};
   const segBeta = [null, betas.single_family?.beta_per_rate_unit, betas.condo?.beta_per_rate_unit];
-  res.buildingsAffected += rows.length;
+  res.recordsAffected += rows.length;
   for (let r = 0; r < rows.length; r += 1) {
     const i = rows[r];
+    const b = buildingId(key, tile, i);
+    res.bAffected.add(b);
     for (const k of CASE_NAMES) {
       res.before[k] += base[k][r];
       res.avoided[k] += base[k][r] - scen[k][r];
     }
     const red = base.mid[r] - scen.mid[r];
     if (red > 0) {
-      res.buildingsProtected += 1;
+      res.recordsProtected += 1;
+      res.bProtected.add(b);   // a building is protected if any of its records has damage avoided > 0 (D-218)
       res.residentsProtected += c.residents[i];
       protectedRows.push(i);
     }
@@ -298,7 +318,7 @@ function accumulate(res, tile, rows, ctx, opt, keepPer, key) {
       res.valueChangePublished += c.jv[i] * (Math.exp(beta * dRate) - 1);
       if (dRate !== 0) res.valueBasePublished += c.jv[i];
     }
-    if (keepPer) res.perBuilding.push({ key, i, fd_id: c.fd_id[i], lon: c.lon[i], lat: c.lat[i], before: base.mid[r], after: scen.mid[r] });
+    if (keepPer) res.perBuilding.push({ key, i, b, fd_id: c.fd_id[i], lon: c.lon[i], lat: c.lat[i], before: base.mid[r], after: scen.mid[r] });
   }
   return protectedRows;
 }
@@ -368,7 +388,7 @@ export function seawall(tiles, lineLonLat, crestFt, ctx, { keepPer = false } = {
   res.protectedShareFarM = dists.length ? dists.filter((d) => d > 300).length / dists.length : 0;
   res.lengthM = lineLength(wall);
   res.ms = typeof performance !== 'undefined' ? performance.now() - t0 : 0;
-  return res;
+  return finish(res);
 }
 
 /**
@@ -389,7 +409,7 @@ export function elevate(tiles, picks, raiseFt, ctx, { keepPer = false } = {}) {
     if (tile) accumulate(res, tile, rows, ctx, { ffeAdd: raiseFt }, keepPer, key);
   }
   res.ms = typeof performance !== 'undefined' ? performance.now() - t0 : 0;
-  return res;
+  return finish(res);
 }
 
 /** Rows for a list of NSI building IDs. */
@@ -599,12 +619,34 @@ export function seawallReasons(tiles, lineLonLat, crestFt, ctx) {
       else if (reduced.has(`${key}|${i}`)) reason = 'protected';
       else reason = 'overtopped';
       if (dw <= cap || reason === 'beyond_1km') {
-        items.push({ key, i, reason, distWallM: dw });
+        items.push({ key, i, b: buildingId(key, tile, i), reason, distWallM: dw });
         counts[reason] += 1;
       }
     }
   }
-  return { res, items, counts };
+  // counts are of buildings (D-218); the per-record counts stay as recordCounts
+  const { byBuilding, mixed } = buildingReasons(items);
+  const bCounts = Object.fromEntries(REASONS.map((r) => [r, 0]));
+  for (const r of byBuilding.values()) bCounts[r] += 1;
+  return { res, items, counts: bCounts, recordCounts: counts, buildingReason: byBuilding, mixedBuildings: mixed };
+}
+
+/**
+ * One reason per building (D-218): protected if any of its records is protected; otherwise the reason its records
+ * share. Same rule as building_reasons() in Module C. mixed counts unprotected buildings whose records disagree.
+ */
+export function buildingReasons(items) {
+  const byBuilding = new Map();
+  const seen = new Map();
+  let mixed = 0;
+  for (const q of items) {
+    const prev = byBuilding.get(q.b);
+    if (prev === undefined) { byBuilding.set(q.b, q.reason); seen.set(q.b, new Set([q.reason])); continue; }
+    seen.get(q.b).add(q.reason);
+    if (q.reason === 'protected') byBuilding.set(q.b, 'protected');
+  }
+  for (const [b, set] of seen) if (set.size > 1 && byBuilding.get(b) !== 'protected') mixed += 1;
+  return { byBuilding, mixed };
 }
 
 /**

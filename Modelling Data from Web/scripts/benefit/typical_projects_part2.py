@@ -137,7 +137,8 @@ class Engine:
         est = d[d[f"beta_{TAX_SCENARIO}"].notna() & d.val_struct.gt(0)]
         tax = self.md.tax_change(est) if len(est) and est.value_change_mid.abs().sum() > 0 else {"tax_change_year1": 0, "tax_change_year10": 0}
         rain_share = float(red[per.fd_id.map(self.rain).fillna(False).to_numpy()].sum() / red.sum()) if red.sum() > 0 else np.nan
-        out = {"buildings_protected": int(len(hit)), "residents_protected": int(round(self.res.reindex(hit).fillna(0).sum())),
+        out = {"buildings_protected": int(per.building[red > 0].nunique()), "records_protected": int(len(hit)),   # D-218
+               "residents_protected": int(round(self.res.reindex(hit).fillna(0).sum())),
                "avoided_low": avoided["low"], "avoided_mid": avoided["mid"], "avoided_high": avoided["high"],
                "eyd_before_mid": r["eyd_baseline"]["mid"], "cost": cost,
                "pv_benefit_mid": avoided["mid"] * annuity(LIFE[kind]),
@@ -241,6 +242,7 @@ def seawall_sites(E, length_m):
     coastal = A.wse_coastal_p01.notna().to_numpy() & (B.eyd_mid.to_numpy() > 0) & (A.shore_dist_m.to_numpy() <= 2000) \
         & (A.ground_elev_ft_navd88.to_numpy() < CREST)
     sx, sy = A.shore_x.to_numpy()[coastal], A.shore_y.to_numpy()[coastal]
+    bc = E.M.bldg[coastal]   # physical buildings (D-218)
     eyd = B.eyd_mid.to_numpy()[coastal]
     tree = cKDTree(np.c_[sx, sy])
     rows = []
@@ -249,7 +251,7 @@ def seawall_sites(E, length_m):
             c = g.interpolate(s)
             idx = tree.query_ball_point([c.x, c.y], r=length_m / 2)
             rows.append({"line": k, "station": s, "x": c.x, "y": c.y, "eyd_on_stretch": float(eyd[idx].sum()) if idx else 0.0,
-                         "buildings_on_stretch": len(idx)})
+                         "buildings_on_stretch": int(pd.unique(bc[idx]).size) if idx else 0, "records_on_stretch": len(idx)})
     st = pd.DataFrame(rows)
     st = st[st.eyd_on_stretch > 0].copy()
     st["place"] = [E.place_of(x, y) for x, y in zip(st.x, st.y)]

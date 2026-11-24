@@ -50,6 +50,25 @@ CONFIG = mb.CONFIG
 TO_UTM = Transformer.from_crs("EPSG:4326", "EPSG:26917", always_xy=True)
 
 
+def building_key(A):
+    """One integer per physical building: records at exactly the same NSI point (D-218).
+    The NSI splits a mixed-use building into one record per occupancy type, all at the same point and with the same
+    footprint id. bid is not used: 47,994 parcel-based records have a blank bid, and 152 bids hold separate footprints."""
+    return pd.factorize(pd.MultiIndex.from_arrays([A.x_utm.to_numpy(), A.y_utm.to_numpy()]))[0]
+
+
+def building_reasons(t):
+    """One reason per building from the per-record reasons of seawall_reasons (D-218): protected if any of its records
+    is protected; otherwise the reason its records share. Returns (per-building Series, buildings whose other
+    records disagree)."""
+    g = t.groupby("building").reason
+    prot = g.apply(lambda v: (v == "protected").any())
+    first = g.first()
+    mixed = g.nunique() > 1
+    out = first.where(~prot, "protected")
+    return out, int((mixed & ~prot).sum())
+
+
 def frequent(L):
     """Expected yearly damage from the storms between 10% and 2% only (Module D sensitivity)."""
     L = np.maximum.accumulate(L, axis=1)
@@ -68,7 +87,15 @@ class Model:
         self.cur = mb.load_curves()
         iw = pd.read_parquet(paths.INNER_WATER_PARQUET, columns=["fd_id", "inner_water_dist_m"]).set_index("fd_id").inner_water_dist_m
         self.inner_water = iw.reindex(self.A.fd_id).to_numpy(float)
+        # One physical building per NSI point (D-218): the NSI splits a mixed-use building into one record per use
+        # (occupancy type), all at the same point. Counts labelled "buildings" count these; dollars stay per record.
+        self.bldg = building_key(self.A)
+        self.bldg_of = pd.Series(self.bldg, index=self.A.fd_id.to_numpy())
         self.load_seconds = round(time.time() - t, 1)
+
+    def n_buildings(self, fd_ids):
+        """Physical buildings among these NSI records (D-218)."""
+        return int(self.bldg_of.reindex(pd.Index(fd_ids)).dropna().nunique())
 
     def _result(self, rows, scen, extra, t0, sub=None, slr=0.0):
         lcols = [f"loss_{e}_mid" for e in mb.EVENTS]
@@ -78,12 +105,17 @@ class Model:
         else:
             base = self.B.loc[rows, ["eyd_low", "eyd_mid", "eyd_high", "eyd_tail_mid"] + lcols]
         avoided = {c: float((base[f"eyd_{c}"].to_numpy() - scen[f"eyd_{c}"].to_numpy()).sum()) for c in ("low", "mid", "high")}
-        per = pd.DataFrame({"fd_id": self.A.fd_id.to_numpy()[rows], "eyd_mid_before": base.eyd_mid.to_numpy(),
+        b = self.bldg[rows]
+        red = base.eyd_mid.to_numpy() - scen.eyd_mid.to_numpy()
+        per = pd.DataFrame({"fd_id": self.A.fd_id.to_numpy()[rows], "building": b, "eyd_mid_before": base.eyd_mid.to_numpy(),
                             "eyd_mid_after": scen.eyd_mid.to_numpy(),
                             "eyd_tail_before": base.eyd_tail_mid.to_numpy(), "eyd_tail_after": scen.eyd_tail_mid.to_numpy(),
                             "eyd_freq_before": frequent(base[lcols].to_numpy()), "eyd_freq_after": frequent(scen[lcols].to_numpy())})
-        return {"buildings_affected": int(len(rows)),
-                "buildings_with_damage_before": int((base.eyd_mid > 0).sum()),
+        return {"buildings_affected": int(pd.unique(b).size), "records_affected": int(len(rows)),
+                "buildings_with_damage_before": int(pd.unique(b[base.eyd_mid.to_numpy() > 0]).size),
+                "records_with_damage_before": int((base.eyd_mid > 0).sum()),
+                # a building is protected if any of its records has damage avoided > 0 (D-218)
+                "buildings_protected": int(pd.unique(b[red > 0]).size), "records_protected": int((red > 0).sum()),
                 "eyd_baseline": {c: float(base[f"eyd_{c}"].sum()) for c in ("low", "mid", "high")},
                 "losses_avoided_per_year": avoided, "seconds": round(time.time() - t0, 2), **extra}, per
 
@@ -126,7 +158,8 @@ class Model:
             return lv < crest_ft          # wall holds: coastal water removed for this storm
 
         scen = mb.compute(sub, self.cur, slr=slr, coastal_off=off, keep_losses=True)
-        held = {ev: int(off(ev, slr).sum()) for ev in mb.EVENTS}
+        bsub = self.bldg[rows]
+        held = {ev: int(pd.unique(bsub[off(ev, slr)]).size) for ev in mb.EVENTS}   # buildings (D-218)
         return self._result(rows, scen, {"wall_length_m": round(wall.length), "crest_ft_navd88": crest_ft,
                                          "candidates_checked": int(len(cand)), "storms_held_by_wall_buildings": held,
                                          "sea_level_rise_ft": slr, **removed}, t0, sub, slr)
@@ -184,7 +217,7 @@ class Model:
         reason = np.select([~coastal_wet, inner, ~behind, dw > cap, reduced],
                            ["rain_only", "inner_water", "bay_beyond_ends", "beyond_1km", "protected"], "overtopped")
         show = (dw <= cap) | (reason == "beyond_1km")
-        t = pd.DataFrame({"fd_id": A.fd_id.to_numpy()[idx], "reason": reason, "dist_to_wall_m": dw, "shore_dist_m": sd,
+        t = pd.DataFrame({"fd_id": A.fd_id.to_numpy()[idx], "building": self.bldg[idx], "reason": reason, "dist_to_wall_m": dw, "shore_dist_m": sd,
                           "inner_water_dist_m": iw})[show].reset_index(drop=True)
         return t, r
 
@@ -227,10 +260,11 @@ def pick_examples(M):
         st = np.array([g.project(p) for p in _pts(np.c_[xs[on], ys[on]])])
         L = 1500.0
         for s0 in np.arange(0, max(g.length - L, 1), 100):
-            k = ((st >= s0) & (st <= s0 + L)).sum()
+            inside = (st >= s0) & (st <= s0 + L)
+            k = inside.sum()   # the stretch is still chosen by records, so the example (and its dollars) do not change (D-218)
             if best is None or k > best[0]:
-                best = (k, g, s0, r.WTR_NM, r.TBASELN_ID)
-    k, g, s0, water, bid = best
+                best = (k, g, s0, r.WTR_NM, r.TBASELN_ID, np.flatnonzero(coastal_hit)[on][inside])
+    k, g, s0, water, bid, hit_rows = best
     seg = substring(g, s0, min(s0 + 1500, g.length))
     to_ll = Transformer.from_crs("EPSG:26917", "EPSG:4326", always_xy=True)
     line = [to_ll.transform(*c) for c in seg.coords]
@@ -239,7 +273,8 @@ def pick_examples(M):
     tract = tr.index[0]
     w1, _ = mb.levels(A, "p01")
     sel = sf & (A.GEOID_tract.to_numpy() == tract) & (w1 > A.ffe_ft_navd88.to_numpy())
-    return {"line": line, "water": water, "baseline_id": int(bid), "buildings_on_stretch": int(k)}, \
+    return {"line": line, "water": water, "baseline_id": int(bid), "buildings_on_stretch": int(pd.unique(M.bldg[hit_rows]).size),
+            "records_on_stretch": int(k)}, \
         {"tract": tract, "fd_ids": A.fd_id.to_numpy()[sel].tolist()}
 
 
@@ -262,14 +297,16 @@ def main():
     R["seawall_crest_8ft_with_2ft_slr"] = r3
     R["seawall_example"] = {"place_at_midpoint": place_of(*mid), "water_body": ex1["water"],
                             "line_lonlat": [[round(a, 6), round(b, 6)] for a, b in ex1["line"]],
-                            "buildings_with_coastal_damage_on_stretch": ex1["buildings_on_stretch"]}
+                            "buildings_with_coastal_damage_on_stretch": ex1["buildings_on_stretch"],
+                            "records_with_coastal_damage_on_stretch": ex1["records_on_stretch"]}
     for ft in (2.0, 3.0, 5.0):
         r, per = M.elevate(ex2["fd_ids"], ft)
         R[f"elevate_{ft:g}ft"] = r
     A = M.A[M.A.GEOID_tract == ex2["tract"]]
     R["elevation_example"] = {"tract": ex2["tract"], "place": place_of(float(A.lon.median()), float(A.lat.median())),
-                              "homes_selected": len(ex2["fd_ids"]),
-                              "single_family_homes_in_tract": int(A.occtype.str.startswith("RES1").sum())}
+                              "homes_selected": M.n_buildings(ex2["fd_ids"]), "records_selected": len(ex2["fd_ids"]),   # D-218
+                              "single_family_homes_in_tract": M.n_buildings(A.fd_id[A.occtype.str.startswith("RES1")]),
+                              "single_family_records_in_tract": int(A.occtype.str.startswith("RES1").sum())}
     for name in ("pump_drainage", "buyout", "green_stormwater"):
         try:
             getattr(M, name)()
