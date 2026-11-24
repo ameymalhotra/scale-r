@@ -1,5 +1,16 @@
 # Aligning to the Flood What-If specification, Part 2: the four modules
 
+> **Note (24 Nov 2026): out-of-date figures.** The North Miami seawall and
+> Princeton elevation figures below come from a run made before D-202 (the
+> waterway rule and 1 km limit for seawalls) and D-218 (counting physical
+> buildings rather than structure records). With the current model:
+> - **North Miami seawall, 8 ft crest:** 91 buildings behind it (104
+>   records); it avoids **$56,684 a year** ($13,381 to $237,880), not $2.2M.
+> - **Princeton, raising homes 3 ft:** 2,712 homes; it avoids **$8.0M a
+>   year** ($5.2M to $9.3M) of $9.8M, not $8.4M of $10.4M.
+>
+> The rest of this report is unchanged.
+
 Benefit simulator. 11 Nov 2026. Branch `benefit-simulator`.
 Decisions D-166 to D-172 in `DECISIONS.md`. Specification:
 `docs/SCALE-R_Flood_What-If_Spec.docx`.
