@@ -1,18 +1,18 @@
-"""Copy the ML dashboard export into the admin Scenario view's data (src/admin/viz/scenario/data/).
+"""Copy the ML dashboard export into the admin Scenario view's private data (outputs/admin_data/scenario/, D-095).
 
     ../.venv/bin/python scripts/website/build_scenario_data.py      (from Modelling Data from Web/)
 
 Reads outputs/ml/dashboard/{tracts,scores,models,compare}.json (written by
 scripts/ml/stage2b_map_model.py and scripts/ml/stage4_dashboard.py) and the TIGER 2024
 tract boundaries, and writes:
-  src/admin/viz/scenario/data/tracts.geojson  tract outlines (land only, simplified) with
+  outputs/admin_data/scenario/tracts.geojson  tract outlines (land only, simplified) with
                                     the current-state attributes
-  src/admin/viz/scenario/data/models.json     both models (machine learning and Bayesian):
+  outputs/admin_data/scenario/models.json     both models (machine learning and Bayesian):
                                     per-tract likelihoods, intervals and scenario changes,
                                     and the inputs the page needs to recompute need (D-109)
-  src/admin/viz/scenario/data/compare.json    the Compare models view (scores, drivers,
+  outputs/admin_data/scenario/compare.json    the Compare models view (scores, drivers,
                                     city effects, heat result, cost per resident by type)
-  src/admin/viz/scenario/data/scores.json     Stage 2 scores for the About panel
+  outputs/admin_data/scenario/scores.json     Stage 2 scores for the About panel
 The single-family scenarios.json of Stage 3 is replaced by models.json.
 Nothing is hand-edited; rerun after the ML pipeline. No dollar predictions are
 written (T5 is unreliable, D-088); observed sited dollars per resident are, so the
@@ -30,8 +30,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "common"))
 import paths  # noqa: E402
 
 DASH = paths.OUT_ML / "dashboard"
-# admin panel only: the public site never imports or links this view (D-094)
-OUT = paths.REPO / "src" / "admin" / "viz" / "scenario" / "data"
+# admin panel only (D-094); private, git-ignored, uploaded to the "admin-data" bucket (D-095)
+OUT = paths.ADMIN_SCENARIO_DIR
 SIMPLIFY_M = 25
 KEEP = ["GEOID", "jurisdiction", "low_pop_flag", "population", "T1_observed", "T2_planned_projects",
         "pred_likelihood", "interval_lo", "interval_hi", "need_pct", "pred_pct", "vulnerability_rc1",

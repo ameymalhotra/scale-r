@@ -6,23 +6,12 @@
  *   session; the bucket's read policy allows admins only (public.is_admin()).
  * The files are never imported, so no build contains them.
  */
-import { supabase } from '../../../lib/supabaseClient.js';
+import { ADMIN_BUCKET, fetchAdminBlob } from '../adminData.js';
 import { readTile } from './whatIfEngine.js';
 
-export const ADMIN_BUCKET = 'admin-data';
+export { ADMIN_BUCKET };
 const PREFIX = 'what_if/';
-
-async function fetchBlob(name, { client = supabase, dev = import.meta.env.DEV } = {}) {
-  if (dev) {
-    const r = await fetch(`/__admin_data/${PREFIX}${name}`);
-    if (!r.ok) throw new Error(`Could not load ${name} (${r.status}). Run export_what_if.py first.`);
-    return r.blob();
-  }
-  if (!client) throw new Error('Supabase is not configured');
-  const { data, error } = await client.storage.from(ADMIN_BUCKET).download(PREFIX + name);
-  if (error || !data) throw new Error(`Could not load ${name}: ${error?.message ?? 'no data'}`);
-  return data;
-}
+const fetchBlob = (name, opts) => fetchAdminBlob(PREFIX + name, opts);
 
 export async function loadJson(name, opts) {
   return JSON.parse(await (await fetchBlob(name, opts)).text());

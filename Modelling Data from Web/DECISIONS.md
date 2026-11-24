@@ -5177,3 +5177,32 @@ D-113.
 - Evidence: `data/raw/fema/hma_subapplications_fl/hma_subapplications_florida.csv`.
 - Affects: The admin Flood What-If view (note and card wording),
   `reports/benefit/typical_projects_part2.md`.
+
+### D-206. Scenario data removed from the admin-what-if history; the view loads it privately
+
+- Date: 24 Nov 2026. Status: Done (not pushed). Decided by: the user (D-095
+  step 6, "Remove the Scenario data from commit a32dbdf").
+- What happened: The admin Scenario data files
+  (`src/admin/viz/scenario/data/`: scenarios.json, scores.json,
+  tracts.geojson, models.json, compare.json) were in local commit `a32dbdf`
+  and in 28 later commits on `admin-what-if`. None was ever pushed.
+- What is wrong: Any push of the branch would have put them on the public
+  GitHub repository, and any build bundled them as public static files.
+- How we are fixing it: Rewrote only this branch's unpushed commits
+  (`origin/main..admin-what-if`, 38 commits) with `git filter-branch
+  --index-filter`, removing that folder from every commit and keeping every
+  other change. Old tip: `366c916`. The files now live in the git-ignored
+  `outputs/admin_data/scenario/` (`paths.ADMIN_SCENARIO_DIR`);
+  `build_scenario_data.py` writes there; the view loads them through the
+  new shared loader `src/admin/viz/adminData.js` (dev middleware locally,
+  private bucket `admin-data` in production, the same as the What-If view);
+  the folder is git-ignored; the Scenario test reads the private copy and
+  is skipped where it is missing.
+- Decision: Done on `admin-what-if` only. `ml-scenario-module` and
+  `benefit-simulator` still hold the old commits and must not be pushed.
+- Reason: D-095, D-096: admin data must never reach the public repository
+  or a public build.
+- Evidence: before and after file lists (29 commits carried the folder, 0
+  after); `npx vite build` has no Scenario data in `dist/assets/`.
+- Affects: Branch history of `admin-what-if`; the admin Scenario view needs
+  the bucket upload (D-095 steps 1 to 3) before it works in production.

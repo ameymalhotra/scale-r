@@ -1,17 +1,23 @@
+// @vitest-environment node
+import { existsSync, readFileSync } from 'node:fs';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import data from './data/models.json';
-import geo from './data/tracts.geojson?raw';
-import compare from './data/compare.json';
 import { likelihoodFor, median, needFor, summary } from './scenarioModel.js';
 
 // The page recomputes need and the gap from per-family percentiles. These checks tie it to the
 // Python pipeline: scenarios.py (single families, Stage 3) and stage4_dashboard.py (presets).
+// Private admin data (D-095), git-ignored: built by build_scenario_data.py. Skipped, not failed, where missing.
+const DIR = path.resolve(__dirname, '../../../../Modelling Data from Web/outputs/admin_data/scenario');
+const HAVE = existsSync(path.join(DIR, 'models.json'));
+const read = (name) => JSON.parse(readFileSync(path.join(DIR, name), 'utf8'));
+const data = HAVE ? read('models.json') : null;
+const compare = HAVE ? read('compare.json') : null;
 const tracts = [];
-JSON.parse(geo).features.forEach((f) => { tracts[f.id] = f.properties; });
+if (HAVE) read('tracts.geojson').features.forEach((f) => { tracts[f.id] = f.properties; });
 const t1 = tracts.map((t) => t.T1_observed);
 const lv = (slr, surge, heat) => ({ slr, surge, heat });
 
-describe('scenario arithmetic', () => {
+describe.skipIf(!HAVE)('scenario arithmetic', () => {
   it('reproduces the current need percentiles and primary gap', () => {
     const nd = needFor(data, lv('slr_3ft', 'surge_cat3', 'heat_current'), t1);
     tracts.forEach((t, i) => {

@@ -1,16 +1,15 @@
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
-// Small Stage 2 summary, bundled so the About panel fills in before the map loads.
-import scores from './data/scores.json';
+import { loadAdminJson } from '../adminData.js';
 import { MODELS, excludesZero, median, pctWithin, summary } from './scenarioModel.js';
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
 
 // Admin only (D-094). Built by "Modelling Data from Web/scripts/website/build_scenario_data.py" from the ML
 // pipeline's export (stage2b_map_model.py, stage4_dashboard.py). Do not hand-edit. Both models: D-109.
-const TRACTS_URL = new URL('./data/tracts.geojson', import.meta.url);
-const MODELS_URL = new URL('./data/models.json', import.meta.url);
-const COMPARE_URL = new URL('./data/compare.json', import.meta.url);
+// Private admin data (D-095): loaded with the admin's session, never bundled (see ../adminData.js).
+const FILES = ['scenario/tracts.geojson', 'scenario/models.json', 'scenario/compare.json', 'scenario/scores.json'];
+let scores = {};
 
 const SEQ_LIKELY = ['#f1f5f4', '#b8dccf', '#5fae95', '#1f7a5c', '#01321e'];
 const SEQ_NEED = ['#fff7ec', '#fdd49e', '#fc8d59', '#d7301f', '#7f0000'];
@@ -364,10 +363,10 @@ export function mount() {
   }
 
   // The panel fills in as soon as the data arrive; the map layers are added once the basemap has loaded.
-  const ready = Promise.all([TRACTS_URL, MODELS_URL, COMPARE_URL].map((u) => fetch(u).then((r) => r.json())))
-    .then(([geo, md, cm]) => {
+  const ready = Promise.all(FILES.map((name) => loadAdminJson(name)))
+    .then(([geo, md, cm, sc]) => {
       if (removed) return geo;
-      data = md; cmp = cm;
+      data = md; cmp = cm; scores = sc;
       tracts = []; boxes = [];
       geo.features.forEach((f) => { tracts[f.id] = f.properties; boxes[f.id] = bbox(f.geometry); });
       $('about').innerHTML = aboutHtml(cmp);

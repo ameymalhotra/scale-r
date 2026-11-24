@@ -119,6 +119,7 @@ OUT_IMPACT = OUTPUTS / "impact"
 OUT_BENEFIT = OUTPUTS / "benefit"
 ADMIN_DATA_DIR = OUTPUTS / "admin_data"          # private admin data staging, git-ignored (D-095 plan)
 ADMIN_WHAT_IF_DIR = ADMIN_DATA_DIR / "what_if"    # Flood What-If browser export (D-199)
+ADMIN_SCENARIO_DIR = ADMIN_DATA_DIR / "scenario"  # admin Scenario view data (D-094, D-095)
 
 # reports written by scripts
 REPORTS = ROOT / "reports"

@@ -127,3 +127,6 @@ Modelling Data from Web/data/raw/fema/nfip_policies_full/
 Modelling Data from Web/data/processed/benefit/module_d_sales.parquet
 Modelling Data from Web/data/processed/benefit/module_d_coefficients.parquet
 Modelling Data from Web/data/processed/benefit/nfip_policies_miami_dade.parquet
+
+# Admin-only data lives in the private Supabase bucket "admin-data" (D-095), never in src/
+src/admin/viz/scenario/data/
