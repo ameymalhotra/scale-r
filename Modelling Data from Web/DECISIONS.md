@@ -5156,3 +5156,24 @@ D-113.
   parity unchanged (0.0002%); 195 tests pass; build has no data files.
 - Affects: `module_c_projects.py`, `build_water_distance.py`,
   `export_what_if.py`, `what_if_parity_fixture.py`, `src/admin/viz/whatif/`.
+
+### D-205. No cost for raising 2 to 4 unit buildings: left as a limitation
+
+- Date: 23 Nov 2026. Status: Accepted. Decided by: the user (add the switch
+  only if FEMA's grant records give a cost).
+- What happened: The area tool raises single-family homes only. The user
+  asked whether duplexes and small apartment buildings could be included.
+- What is wrong: A cost per building is needed, and the typical cost
+  ($254,000) is from single-family FEMA grants.
+- How we are fixing it: Checked the Florida rows of OpenFEMA HMA
+  Subapplications v2 (already on disk, D-197): there is no building-type
+  field; only 115 of 955 elevation records have a title, and no title in
+  the Florida file mentions a duplex, triplex, multi-family building,
+  apartment or condo. So no switch was added. The view and the Part 2
+  report now say so; Click homes still lets a user raise any building and
+  type a cost.
+- Decision: Leave it; listed as a limitation.
+- Reason: The user's rule; no cost source.
+- Evidence: `data/raw/fema/hma_subapplications_fl/hma_subapplications_florida.csv`.
+- Affects: The admin Flood What-If view (note and card wording),
+  `reports/benefit/typical_projects_part2.md`.

@@ -607,7 +607,7 @@ export function mount() {
           rank = `${fmt(r + 1)} of ${fmt(p.ranked.length)} flooding single-family homes in the area`;
           sentence = picked ? `Raised: it ranks ${fmt(r + 1)} by expected yearly damage, inside the top ${fmt(p.n)} chosen.`
             : `Not raised: it ranks ${fmt(r + 1)} by expected yearly damage, outside the top ${fmt(p.n)} chosen. The table shows what raising it would do.`;
-        } else sentence = 'Not a candidate: only single-family homes that flood inside the area are ranked and raised.';
+        } else sentence = 'Not a candidate: only single-family homes that flood inside the area are ranked and raised. The typical cost comes from FEMA grants for single-family homes; FEMA\'s records give no cost for duplexes, small apartment buildings or other types. To test this building, use Click homes and type a cost.';
       } else if (p.mode === 'ids') {
         sentence = picked ? 'Raised: the most damaged single-family home in its census tract (Part 2 example).' : 'Not raised. The table shows what raising it would do.';
       } else sentence = picked ? 'Raised: you chose this building.' : 'Not raised. The table shows what raising it would do.';

@@ -401,6 +401,11 @@ wall's benefit could be slightly overstated.
   summaries.
 - Elevation results raise the most damaged home(s), so they are a best
   case; see the 5th and 10th home table.
+- Only single-family homes are raised. FEMA's grant records (HMA
+  Subapplications) have no building-type field, few titles (115 of 955
+  Florida elevation records) and none mentioning duplexes, small apartment
+  buildings or condos, so there is no typical cost for 2 to 4 unit
+  buildings (D-205).
 - Seawall benefits count buildings only, not roads, parks or utilities.
 - Each placement is judged alone; neighbouring walls that close a gap
   together are not modelled, except in the closed-system sensitivity.
