@@ -5511,7 +5511,7 @@ D-113.
   and the floor area is shared among them. Every count labelled "buildings"
   in the tool, Module C, the parity tests and the reports counted records.
   Countywide 627,252 records are 570,111 buildings; 386,929 flooding records
-  are 348,094 buildings. 35,000 buildings hold 2 to 12 records.
+  are 348,094 buildings. 34,667 buildings hold 2 to 12 records.
 - What is wrong: Counts labelled buildings were too high wherever there are
   mixed-use buildings (Example 1: 144 records, 86 buildings).
 - How we are fixing it:
