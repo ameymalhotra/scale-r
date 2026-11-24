@@ -594,7 +594,7 @@ export function mount() {
       const q = p.reasonOf.get(`${key}|${i}`);
       const behind = q.reason === 'protected' || q.reason === 'overtopped';
       const water = nearestWater(t, i, man);
-      return { key, i, kind: 'seawall', color: REASON_STYLE[q.reason].color, title: `Building ${title}`,
+      return { key, i, kind: 'seawall', behind, color: REASON_STYLE[q.reason].color, title: `Building ${title}`,
         sentence: reasonSentence(q.reason, water, p.crest), facts: facts(t, i, man, { distWallM: q.distWallM }),
         ex: explainBuilding(t, i, ctx, { crestFt: p.crest, protectedRow: behind && t.cols.ground[i] < p.crest }) };
     }
@@ -718,7 +718,7 @@ export function mount() {
 
   if (import.meta.env.DEV) {
     // for the timing check in the Part 2 report (drag measurement) and screenshots
-    window.__whatIf = { map, projects, dragTimes, loadExamples, update, compute, showCard, get sel() { return sel; },
+    window.__whatIf = { map, projects, dragTimes, loadExamples, update, compute, showCard, get sel() { return sel; }, get store() { return store; },
       add: (kind, extra) => update(newProject(kind, extra)) };
   }
 

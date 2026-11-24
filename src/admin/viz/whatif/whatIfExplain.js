@@ -84,7 +84,7 @@ export function facts(tile, i, man, extra = {}) {
 
 /**
  * One card. other (optional): the card it is compared with; rows that differ are highlighted.
- * card: {title, sentence, facts, ex: explainBuilding result, kind: 'seawall' | 'elevation' | 'none'}
+ * card: {title, sentence, facts, ex: explainBuilding result, kind: 'seawall' | 'elevation' | 'none', behind: behind the wall}
  */
 export function cardHtml(card, other) {
   const diff = (k, v) => other && other.facts.find(([kk]) => kk === k)?.[1] !== v;
@@ -93,7 +93,7 @@ export function cardHtml(card, other) {
   const col = card.kind === 'seawall' ? 'Wall blocks it?' : card.kind === 'elevation' ? 'Above the raised floor?' : '';
   const storms = ex.storms.map((s, j) => {
     const o = other?.ex.storms[j];
-    const cell3 = card.kind === 'seawall' ? (!s.wet ? 'dry' : s.blocked ? 'yes' : s.overWall ? 'no, goes over' : s.source === 'sea' ? 'no, not behind it' : 'no, not sea water')
+    const cell3 = card.kind === 'seawall' ? (!s.wet ? 'dry' : s.source !== 'sea' ? 'no, not sea water' : !card.behind ? 'no, not behind it' : s.blocked ? 'yes' : 'no, goes over')
       : card.kind === 'elevation' ? (s.aboveFloorAfter ? 'yes' : 'no') : '';
     const d = o && (Math.round(o.lossBefore) !== Math.round(s.lossBefore) || Math.round(o.lossAfter) !== Math.round(s.lossAfter) || (o.level ?? 0).toFixed(1) !== (s.level ?? 0).toFixed(1));
     return `<tr class="${d ? 'diff' : ''}"><td>${STORM_NAMES[s.ev] || s.ev}</td><td>${s.level == null ? 'dry' : `${ft(s.level)}${s.wet ? '' : ' (below ground)'}<br><span class="muted">${s.source}</span>`}</td>
