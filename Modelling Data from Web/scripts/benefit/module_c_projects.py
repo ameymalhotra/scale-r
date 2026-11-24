@@ -38,7 +38,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from pyproj import Transformer
-from shapely import LineString, intersects, linestrings, points
+from shapely import LineString, distance, linestrings, points
 from shapely.ops import transform
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "common"))
@@ -103,12 +103,14 @@ class Model:
                               (A.shore_dist_m.to_numpy() <= cfg["max_distance_to_shore_m"]) &
                               (A.ground_elev_ft_navd88.to_numpy() < crest_ft))
         segs = linestrings(np.stack([np.c_[x[cand], y[cand]], np.c_[A.shore_x.to_numpy()[cand], A.shore_y.to_numpy()[cand]]], axis=1))
-        behind = intersects(segs, wall.buffer(cfg["snap_tolerance_m"]))
+        # the line to the shore passes within snap_tolerance_m of the wall (exact distance; D-204, was a buffer polygon)
+        behind = distance(segs, wall) <= cfg["snap_tolerance_m"]
         rows = cand[behind]
         # waterway rule and 1 km cap (D-202)
         water_ok = np.ones(len(rows), bool)
         if cfg.get("inner_water_rule"):
-            water_ok = ~(self.inner_water[rows] < A.shore_dist_m.to_numpy()[rows])
+            # compared in single precision, as in the browser export (D-204)
+            water_ok = ~(self.inner_water[rows].astype(np.float32) < A.shore_dist_m.to_numpy()[rows].astype(np.float32))
         near = np.ones(len(rows), bool)
         if cfg.get("max_distance_from_wall_m"):
             near = wall.distance(points(np.c_[x[rows], y[rows]])) <= cfg["max_distance_from_wall_m"]
@@ -128,6 +130,63 @@ class Model:
         return self._result(rows, scen, {"wall_length_m": round(wall.length), "crest_ft_navd88": crest_ft,
                                          "candidates_checked": int(len(cand)), "storms_held_by_wall_buildings": held,
                                          "sea_level_rise_ft": slr, **removed}, t0, sub, slr)
+
+    REASONS = ["protected", "overtopped", "inner_water", "bay_beyond_ends", "beyond_1km", "rain_only"]
+
+    @property
+    def wet(self):
+        """Buildings wet (water above ground) in at least one storm today: the What-If export set."""
+        if not hasattr(self, "_wet"):
+            g = self.A.ground_elev_ft_navd88.to_numpy(float)
+            w = np.zeros(len(self.A), bool)
+            cw = np.zeros(len(self.A), bool)
+            for ev in mb.EVENTS:
+                lv, _ = mb.levels(self.A, ev)
+                w |= lv > g
+                c = np.nan_to_num(self.A[f"wse_coastal_{ev}"].to_numpy(float), nan=-np.inf)
+                cw |= c > g
+            self._wet, self._coastal_wet = w, cw
+        return self._wet
+
+    def seawall_reasons(self, line_lonlat, crest_ft):
+        """Why each flooding building near a wall is or is not protected (D-204). One reason per building, in order:
+        rain_only: no coastal water above its ground in any storm (it floods only from rainfall, canals or the map
+          level, which a seawall does not change);
+        inner_water: its nearest open water is a canal, creek, river or inner waterway, not the coastal shoreline;
+        bay_beyond_ends: its nearest water is the coastal shoreline, but its line to the shore misses the wall;
+        beyond_1km: behind the wall but more than max_distance_from_wall_m from it;
+        protected: behind the wall and its yearly damage (middle) goes down;
+        overtopped: behind the wall, but every storm that floods it goes over the crest (or its ground is above it).
+        Shown: flooding buildings within max_distance_from_wall_m of the wall, plus those beyond it that would
+        otherwise count. Returns (table, Model.seawall result)."""
+        r, per = self.seawall(line_lonlat, crest_ft)
+        cfg = CONFIG["projects"]["seawall"]
+        wall = transform(TO_UTM.transform, LineString(line_lonlat))
+        A = self.A
+        wet = self.wet
+        x, y = A.x_utm.to_numpy(), A.y_utm.to_numpy()
+        reach = cfg["max_distance_to_shore_m"]
+        cap = cfg.get("max_distance_from_wall_m") or np.inf
+        minx, miny, maxx, maxy = wall.buffer(reach).bounds
+        idx = np.flatnonzero(wet & (x >= minx) & (x <= maxx) & (y >= miny) & (y <= maxy))
+        dw = distance(points(np.c_[x[idx], y[idx]]), wall)
+        sx, sy = A.shore_x.to_numpy()[idx], A.shore_y.to_numpy()[idx]
+        has_shore = np.isfinite(sx) & np.isfinite(sy)
+        segs = linestrings(np.stack([np.c_[x[idx], y[idx]], np.c_[np.nan_to_num(sx), np.nan_to_num(sy)]], axis=1))
+        cross = has_shore & (distance(segs, wall) <= cfg["snap_tolerance_m"])
+        sd = A.shore_dist_m.to_numpy()[idx].astype(np.float32)
+        iw = self.inner_water[idx].astype(np.float32)
+        inner = iw < sd
+        coastal_wet = self._coastal_wet[idx]
+        behind = cross & (sd <= reach)
+        red = per.set_index("fd_id")
+        reduced = (red.eyd_mid_before - red.eyd_mid_after).reindex(A.fd_id.to_numpy()[idx]).fillna(0).to_numpy() > 0
+        reason = np.select([~coastal_wet, inner, ~behind, dw > cap, reduced],
+                           ["rain_only", "inner_water", "bay_beyond_ends", "beyond_1km", "protected"], "overtopped")
+        show = (dw <= cap) | (reason == "beyond_1km")
+        t = pd.DataFrame({"fd_id": A.fd_id.to_numpy()[idx], "reason": reason, "dist_to_wall_m": dw, "shore_dist_m": sd,
+                          "inner_water_dist_m": iw})[show].reset_index(drop=True)
+        return t, r
 
     def elevate(self, fd_ids, raise_ft=None):
         t0 = time.time()

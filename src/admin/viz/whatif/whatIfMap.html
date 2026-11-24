@@ -21,6 +21,7 @@
       <input type="range" id="crest" min="4" max="12" step="0.5" value="6" aria-describedby="crest-note">
     </label>
     <p class="note" id="crest-note">Top of the wall, in feet above the NAVD88 datum. Typical funded wall: +6 ft.</p>
+    <label class="check"><input type="checkbox" id="links"> Show each building's line to its nearest water</label>
   </section>
 
   <section id="tool-elevation" aria-label="Raise homes tool" hidden>
@@ -66,3 +67,4 @@
 </aside>
 <div class="legend" id="legend" aria-label="Map legend"></div>
 <div class="status" id="status" role="status" aria-live="polite"></div>
+<section class="cards" id="cards" aria-label="Building explanation" aria-live="polite" hidden></section>

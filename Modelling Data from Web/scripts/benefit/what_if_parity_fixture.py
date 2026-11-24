@@ -36,9 +36,11 @@ def main():
     runs = []
 
     def wall(rid, line, crest):
-        r, _ = M.seawall(line, crest)
+        # also the reason for every flooding building near the wall, for the explanation layer parity check (D-204)
+        t, r = M.seawall_reasons(line, crest)
         runs.append({"id": rid, "kind": "seawall", "line": [[float(a), float(b)] for a, b in line], "crest_ft": float(crest),
-                     "avoided": r["losses_avoided_per_year"], "buildings_affected_python": r["buildings_affected"]})
+                     "avoided": r["losses_avoided_per_year"], "buildings_affected_python": r["buildings_affected"],
+                     "reasons": [[int(f), str(q)] for f, q in zip(t.fd_id, t.reason)]})
 
     def elev(rid, ids, raise_ft=tp.RAISE):
         r, _ = M.elevate(ids, raise_ft)

@@ -1,9 +1,10 @@
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import {
-  SETTINGS, benefitPerDollar, elevate, makeContext, picksForIds, pointLineDist, seawall, seawallTileKeys, snapToShore,
-  tilesForBox, toUtm17, topHomes,
+  SETTINGS, benefitPerDollar, elevate, explainBuilding, makeContext, picksForIds, pointLineDist, seawallReasons,
+  seawallTileKeys, snapToShore, tilesForBox, toUtm17, topHomes,
 } from './whatIfEngine.js';
+import { REASON_STYLE, cardHtml, facts, nearestWater, reasonSentence } from './whatIfExplain.js';
 import { loadJson, tileStore } from './whatIfData.js';
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
@@ -129,6 +130,15 @@ export function mount() {
     map.addLayer({ id: 'wi-buildings', type: 'circle', source: 'wi-buildings', minzoom: BUILDING_ZOOM,
       paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 13, 1.8, 16, 4, 18, 7], 'circle-color': damageColor('eyd'),
         'circle-stroke-width': 0, 'circle-opacity': 0.85 } });
+    // explanation layer (D-204): each flooding building near the selected wall coloured by its reason, and an optional
+    // line to the water it is matched to
+    map.addSource('wi-reason', { type: 'geojson', data: EMPTY });
+    map.addSource('wi-links', { type: 'geojson', data: EMPTY });
+    const reasonColor = ['match', ['get', 'r'], ...Object.entries(REASON_STYLE).flatMap(([k, v]) => [k, v.color]), '#999'];
+    map.addLayer({ id: 'wi-links', type: 'line', source: 'wi-links', paint: { 'line-color': reasonColor, 'line-width': 0.9, 'line-opacity': 0.75 } });
+    map.addLayer({ id: 'wi-reason', type: 'circle', source: 'wi-reason',
+      paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 12, 2.5, 16, 5.5, 18, 8], 'circle-color': reasonColor,
+        'circle-stroke-color': '#fff', 'circle-stroke-width': ['interpolate', ['linear'], ['zoom'], 12, 0.3, 16, 1] } });
     map.addLayer({ id: 'wi-areas-fill', type: 'fill', source: 'wi-areas', paint: { 'fill-color': ['case', ['get', 'sel'], '#f47321', '#01321e'], 'fill-opacity': 0.12 } });
     map.addLayer({ id: 'wi-areas-line', type: 'line', source: 'wi-areas', paint: { 'line-color': ['case', ['get', 'sel'], '#f47321', '#01321e'], 'line-width': 2 } });
     map.addLayer({ id: 'wi-hit-halo', type: 'circle', source: 'wi-hit', filter: ['==', ['get', 't'], 'raised'],
@@ -164,6 +174,14 @@ export function mount() {
       { type: 'Feature', properties: { eyd: t.eyd_mid }, geometry: { type: 'Polygon', coordinates: [[...t.square, t.square[0]]] } })) };
   }
 
+  function reasonLegend() {
+    const p = projects[sel];
+    if (p?.kind !== 'seawall' || !p.reasonCounts) return '';
+    return `<div class="lg-h"><b>Why, for ${p.name}</b> (flooding buildings within 1 km)</div>${Object.entries(REASON_STYLE).map(([k, v]) => (
+      `<div><span class="sw" style="background:${v.color}"></span>${v.label} <b>${fmt(p.reasonCounts[k])}</b></div>`)).join('')}
+      <div class="muted">Click a building for its card; shift-click a second one to compare.</div>`;
+  }
+
   function renderLegend() {
     const shade = $('shade').checked;
     const wasOpen = $('legend').querySelector('details')?.open;
@@ -172,7 +190,7 @@ export function mount() {
       ${DAMAGE_STOPS.slice(1).map(([v, c], k, a) => `<div><span class="sw" style="background:${c}"></span>${k + 1 < a.length ? `${money(v)} to ${money(a[k + 1][0])}` : `over ${money(v)}`} a building</div>`).join('')}
       <div><span class="sw" style="background:#fff;border:1px solid #9aa5ae"></span>no flooding in the model's storms</div>
       <div class="muted">${map.getZoom() < BUILDING_ZOOM ? 'Zoomed out: 2 km squares by total damage. Zoom in to see buildings.' : 'One dot per building in the national building inventory. A house outline with no dot is not in the inventory.'}</div>` : ''}
-      <div><span class="sw" style="background:#1a7f4b"></span>protected by the selected project</div>
+      ${reasonLegend()}
       <div><span class="sw" style="background:#5b2a86;box-shadow:0 0 0 3px rgba(91,42,134,0.25)"></span>home raised</div>
       <div><span class="ln"></span>rainfall flooding modelled here only</div>
       <div><span class="ln" style="border-top:2.5px solid #2f6db5"></span>FEMA coastal shoreline: walls are placed on it</div></details>`;
@@ -252,7 +270,12 @@ export function mount() {
         p.snapM = snap ? snap.movedM : null;
       }
       await store.ensure(seawallTileKeys(p.line, man));
-      p.res = seawall(store.tiles, p.line, p.crest, ctx, { keepPer: true });
+      // the reason for every flooding building near the wall, same rule as Module C (D-204)
+      const why = seawallReasons(store.tiles, p.line, p.crest, ctx);
+      p.res = why.res;
+      p.reasons = why.items;
+      p.reasonCounts = why.counts;
+      p.reasonOf = new Map(why.items.map((q) => [`${q.key}|${q.i}`, q]));
       p.lengthFt = p.res.lengthM / FT;
       p.shoreM = shoreDistance(p.drawn || p.line);
       if (!p.costEdited) p.cost = Math.round(p.lengthFt * SETTINGS.seawall.unitCost);
@@ -262,6 +285,7 @@ export function mount() {
         await store.ensure(tilesForBox(Math.min(...xs.map((q) => q[0])), Math.min(...xs.map((q) => q[1])),
           Math.max(...xs.map((q) => q[0])), Math.max(...xs.map((q) => q[1])), man.tile_m));
         p.picks = topHomes(store.tiles, p.ring, p.n, ctx);
+        p.ranked = p.picks.ranked;
         p.available = p.picks.available;
       } else if (p.mode === 'ids') {
         await store.ensure(p.tiles);
@@ -304,13 +328,28 @@ export function mount() {
       if (p.kind === 'elevation' && p.mode === 'area') areas.push({ type: 'Feature', properties: { k, sel: isSel }, geometry: { type: 'Polygon', coordinates: [[...p.ring, p.ring[0]]] } });
       if (p.kind === 'elevation') {
         for (const q of p.res?.perBuilding || []) hits.push({ type: 'Feature', properties: { t: 'raised', k }, geometry: { type: 'Point', coordinates: [q.lon, q.lat] } });
-      } else if (isSel) {
-        for (const q of p.res?.perBuilding || []) if (q.before - q.after > 0) hits.push({ type: 'Feature', properties: { t: 'protected', k }, geometry: { type: 'Point', coordinates: [q.lon, q.lat] } });
       }
     });
     map.getSource('wi-walls').setData({ type: 'FeatureCollection', features: walls });
     map.getSource('wi-areas').setData({ type: 'FeatureCollection', features: areas });
     map.getSource('wi-hit').setData({ type: 'FeatureCollection', features: hits });
+    const ps = projects[sel];
+    const rs = []; const links = [];
+    if (ps?.kind === 'seawall' && ps.reasons) {
+      const showLinks = $('links')?.checked;
+      for (const q of ps.reasons) {
+        const t = store.tiles.get(q.key);
+        const at = [t.cols.lon[q.i], t.cols.lat[q.i]];
+        rs.push({ type: 'Feature', properties: { r: q.reason, k: q.key, i: q.i }, geometry: { type: 'Point', coordinates: at } });
+        if (showLinks) {
+          const w = nearestWater(t, q.i, man);
+          if (w.at) links.push({ type: 'Feature', properties: { r: q.reason }, geometry: { type: 'LineString', coordinates: [at, w.at] } });
+        }
+      }
+    }
+    map.getSource('wi-reason').setData({ type: 'FeatureCollection', features: rs });
+    map.getSource('wi-links').setData({ type: 'FeatureCollection', features: links });
+    renderLegend();
     const marks = projects.map((p, k) => ({ type: 'Feature', properties: { num: k + 1, k, sel: k === sel }, geometry: { type: 'Point', coordinates: projectCenter(p) } }))
       .filter((f) => f.geometry.coordinates);
     map.getSource('wi-marks').setData({ type: 'FeatureCollection', features: marks });
@@ -495,6 +534,7 @@ export function mount() {
     if (t.id === 'raise') { $('raise-out').textContent = `${t.value} ft`; if (p?.kind === 'elevation') { p.raise = Number(t.value); update(p); } }
     if (t.id === 'n-homes' && p?.kind === 'elevation' && p.mode === 'area') { p.n = Math.max(1, Math.round(Number(t.value) || 1)); update(p); }
     if (t.id === 'shade') refreshBuildings();
+    if (t.id === 'links') drawProjects();
   }
   function onPanelChange(e) {
     if (e.target.id !== 'cost') return;
@@ -528,11 +568,71 @@ export function mount() {
     }
     const f = map.queryRenderedFeatures(e.point, { layers: ['wi-marks-dot', 'wi-walls'] })[0];
     if (f && f.properties.k != null) { sel = Number(f.properties.k); drawProjects(); renderResults(); return; }
-    const b = map.queryRenderedFeatures(e.point, { layers: ['wi-buildings', 'wi-dry'] })[0];
+    const b = map.queryRenderedFeatures(e.point, { layers: ['wi-reason', 'wi-hit', 'wi-buildings', 'wi-dry'] })[0];
+    if (b && b.properties.dk == null && (b.properties.k != null && b.properties.i != null) && b.layer.id !== 'wi-hit') {
+      showCard(b.properties.k, b.properties.i, e.originalEvent?.shiftKey);
+      return;
+    }
+    if (b && b.layer.id === 'wi-hit') { const q = hitAt(b); if (q) { showCard(q.key, q.i, e.originalEvent?.shiftKey); return; } }
     if (b) { showBuilding(b, e.lngLat); return; }
     const a = map.queryRenderedFeatures(e.point, { layers: ['wi-areas-fill'] })[0];
     if (a && a.properties.k != null) { sel = Number(a.properties.k); drawProjects(); renderResults(); }
   });
+  function hitAt(f) {
+    const p = projects[Number(f.properties.k)];
+    const [lo, la] = f.geometry.coordinates;
+    return (p?.res?.perBuilding || []).find((q) => Math.abs(q.lon - lo) < 1e-6 && Math.abs(q.lat - la) < 1e-6);
+  }
+
+  // ---------------------------------------------------------------- explanation cards (D-204)
+  let cards = [];
+  function makeCard(key, i) {
+    const t = store.tiles.get(key);
+    const p = projects[sel];
+    const title = `${t.cols.fd_id[i]}`;
+    if (p?.kind === 'seawall' && p.reasonOf?.has(`${key}|${i}`)) {
+      const q = p.reasonOf.get(`${key}|${i}`);
+      const behind = q.reason === 'protected' || q.reason === 'overtopped';
+      const water = nearestWater(t, i, man);
+      return { key, i, kind: 'seawall', color: REASON_STYLE[q.reason].color, title: `Building ${title}`,
+        sentence: reasonSentence(q.reason, water, p.crest), facts: facts(t, i, man, { distWallM: q.distWallM }),
+        ex: explainBuilding(t, i, ctx, { crestFt: p.crest, protectedRow: behind && t.cols.ground[i] < p.crest }) };
+    }
+    if (p?.kind === 'elevation') {
+      const picked = (p.picks || []).some((q) => q.key === key && q.i === i);
+      let rank; let sentence;
+      if (p.mode === 'area') {
+        const r = (p.ranked || []).findIndex((q) => q.key === key && q.i === i);
+        if (r >= 0) {
+          rank = `${fmt(r + 1)} of ${fmt(p.ranked.length)} flooding single-family homes in the area`;
+          sentence = picked ? `Raised: it ranks ${fmt(r + 1)} by expected yearly damage, inside the top ${fmt(p.n)} chosen.`
+            : `Not raised: it ranks ${fmt(r + 1)} by expected yearly damage, outside the top ${fmt(p.n)} chosen. The table shows what raising it would do.`;
+        } else sentence = 'Not a candidate: only single-family homes that flood inside the area are ranked and raised.';
+      } else if (p.mode === 'ids') {
+        sentence = picked ? 'Raised: the most damaged single-family home in its census tract (Part 2 example).' : 'Not raised. The table shows what raising it would do.';
+      } else sentence = picked ? 'Raised: you chose this building.' : 'Not raised. The table shows what raising it would do.';
+      return { key, i, kind: 'elevation', color: picked ? '#5b2a86' : '#6b7783', title: `Building ${title}`, sentence,
+        facts: facts(t, i, man, { rank }), ex: explainBuilding(t, i, ctx, { raiseFt: p.raise }) };
+    }
+    return { key, i, kind: 'none', title: `Building ${title}`, sentence: '', facts: facts(t, i, man), ex: explainBuilding(t, i, ctx, {}) };
+  }
+  function showCard(key, i, compare) {
+    infoPopup.remove(); popup.remove();
+    const c = makeCard(key, i);
+    cards = compare && cards.length ? [cards[cards.length - 1], c] : [c];
+    renderCards();
+  }
+  function renderCards() {
+    const el = $('cards');
+    if (!cards.length) { el.hidden = true; el.innerHTML = ''; return; }
+    const [a, b] = cards;
+    el.hidden = false;
+    el.classList.toggle('two', cards.length === 2);
+    el.innerHTML = `<div class="cards-bar"><b>${cards.length === 2 ? 'Two buildings compared (differences highlighted)' : 'Why this building'}</b><button type="button" class="btn small" id="cards-close">Close</button></div>
+      <div class="cards-row">${cardHtml(a, b)}${b ? cardHtml(b, a) : ''}</div>`;
+  }
+  $('cards').addEventListener('click', (e) => { if (e.target.id === 'cards-close') { cards = []; renderCards(); } });
+
   function showBuilding(f, lngLat) {
     const pr = f.properties;
     let html;
@@ -618,7 +718,7 @@ export function mount() {
 
   if (import.meta.env.DEV) {
     // for the timing check in the Part 2 report (drag measurement) and screenshots
-    window.__whatIf = { map, projects, dragTimes, loadExamples, update, compute, get sel() { return sel; },
+    window.__whatIf = { map, projects, dragTimes, loadExamples, update, compute, showCard, get sel() { return sel; },
       add: (kind, extra) => update(newProject(kind, extra)) };
   }
 

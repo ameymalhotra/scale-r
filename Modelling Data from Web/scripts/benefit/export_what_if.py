@@ -97,7 +97,8 @@ def build():
                                                                      for k in ("", "tail") for c in ("low", "mid", "high")])
     assert (A.fd_id.to_numpy() == B.fd_id.to_numpy()).all()
     C = pd.read_parquet(paths.MODULE_D_COEF_PARQUET, columns=["fd_id", "segment", "jv_alloc"]).set_index("fd_id")
-    IW = pd.read_parquet(paths.INNER_WATER_PARQUET, columns=["fd_id", "inner_water_dist_m"]).set_index("fd_id").inner_water_dist_m
+    IWT = pd.read_parquet(paths.INNER_WATER_PARQUET).set_index("fd_id")
+    IW = IWT.inner_water_dist_m
     P.end()
     ground = A.ground_elev_ft_navd88.to_numpy(float)
     wc, wo, ww = {}, {}, {}
@@ -127,6 +128,9 @@ def build():
     wc, wo, ww = ({e: d[e][k] for e in mb.EVENTS} for d in (wc, wo, ww))
     has_coastal = has_coastal[k]
     occs = sorted(A.occtype.unique())
+    iwt = IWT.reindex(A.fd_id)
+    water_names = sorted(iwt.inner_water_name.fillna("NP").unique())
+    wname_idx = iwt.inner_water_name.fillna("NP").map({n: j for j, n in enumerate(water_names)}).to_numpy().astype(np.int32)
     founds = sorted(A.found_type.unique())
     seg = A.fd_id.map(C.segment).map({"single_family": 1, "condo": 2}).fillna(0).astype("uint8").to_numpy()
     jv = A.fd_id.map(C.jv_alloc).fillna(0).to_numpy()
@@ -159,7 +163,10 @@ def build():
                 ("val_struct", f32(A.val_struct.to_numpy()[i])), ("val_cont", f32(A.val_cont.to_numpy()[i])),
                 ("residents", f32(A.residents_night.to_numpy()[i])), ("jv", f32(jv[i])), ("segment", seg[i]),
                 ("sqft", f32(A.sqft.to_numpy()[i])),
-                ("inner_water", f32(A.fd_id.map(IW).to_numpy()[i]))]   # nearest canal, creek or inner waterway, m (D-202)
+                ("inner_water", f32(A.fd_id.map(IW).to_numpy()[i])),   # nearest canal, creek or inner waterway, m (D-202)
+                # explanation layer (D-204): nearest inner water point and its name, year built
+                ("iw_x", f32(iwt.inner_water_x.to_numpy()[i] - x0)), ("iw_y", f32(iwt.inner_water_y.to_numpy()[i] - y0)),
+                ("iw_name", wname_idx[i]), ("year_built", f32(A.year_built_used.to_numpy()[i]))]
         for ev in mb.EVENTS:
             cols += [(f"wc_{ev}", f32(wc[ev][i])), (f"wo_{ev}", f32(wo[ev][i])), (f"ww_{ev}", f32(ww[ev][i]))]
         for c in ("low", "mid", "high"):
@@ -198,7 +205,7 @@ def build():
         gz = gzip.compress(buf, 6)
         (OUT / "dry" / f"{tx}_{ty}.bin.gz").write_bytes(gz)
         dry_tiles.append({"file": f"dry/{tx}_{ty}.bin.gz", "ix": int(tx), "iy": int(ty), "n": int(len(i)), "bytes": len(gz)})
-    return A, B, occs, founds, tiles, raw_total, dry_tiles
+    return A, B, occs, founds, tiles, raw_total, dry_tiles, water_names
 
 
 def write_curves():
@@ -264,7 +271,7 @@ def main():
     global P
     P = Progress("admin what-if export")
     OUT.mkdir(parents=True, exist_ok=True)
-    A, B, occs, founds, tiles, raw_total, dry_tiles = build()
+    A, B, occs, founds, tiles, raw_total, dry_tiles, water_names = build()
     ncur = write_curves()
     P.start("shoreline and rain basin outlines")
     write_geo()
@@ -279,7 +286,7 @@ def main():
            "range": {"ffe_shift_estimated_ft": mb.CONFIG["range"]["ffe_shift_estimated_ft"], "curve_band": mb.CONFIG["range"]["curve_band"],
                      "whole_building_high": mb.CONFIG["range"]["whole_building_high"], "floor_height_ft": 10.0},
            "seawall": mb.CONFIG["projects"]["seawall"],
-           "lists": {"occtype": occs, "found_type": founds, "segment": ["none", "single_family", "condo"]},
+           "lists": {"occtype": occs, "found_type": founds, "segment": ["none", "single_family", "condo"], "water_name": water_names},
            "property_value_published_miami": {s: {"beta_per_rate_unit": v["beta_miami"]} for s, v in pub.items()},
            "files": {"curves": "curves.json", "overview": "overview.bin.gz", "shoreline": "shoreline.geojson",
                      "rain_basins": "rain_basins.geojson"},

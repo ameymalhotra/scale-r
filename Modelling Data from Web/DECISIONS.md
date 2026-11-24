@@ -5117,3 +5117,42 @@ D-113.
   `reports/benefit/typical_projects_part2_map.png`,
   `outputs/benefit/typical_projects/closed_system_miami_beach.json`.
 - Affects: The Part 2 report and map.
+
+### D-204. Explanation layer in the Flood What-If view
+
+- Date: 23 Nov 2026. Status: Accepted. Decided by: the user (what to show);
+  Amey (colours, wording, the two precision changes below).
+- What happened: The user wanted to see why each building is or is not
+  protected by a seawall, and why homes are or are not picked for raising.
+- What is wrong: The view showed totals only, so results such as $0 for
+  the Miami Beach wall could not be checked building by building.
+- How we are fixing it:
+  - one reason per flooding building within 1 km of the selected wall, in
+    this order: floods only from rainfall or canals; nearest water is a
+    canal, creek or inner waterway (named where FEMA's water line has a
+    name); nearest water is the bay beyond the ends of the wall; beyond the
+    1 km limit; protected (yearly damage goes down); behind the wall but
+    every flooding storm goes over it. Defined once in Python
+    (`Model.seawall_reasons`) and copied in the browser (`seawallReasons`);
+  - cards: click a building for the reason, nearest water and distances,
+    heights (estimated or from records), year built, type, value, a
+    five-storm table (level, above the floor, blocked or not, damage before
+    and after) and yearly damage; shift-click a second building to compare
+    side by side with differences highlighted; for raising homes, the rank
+    by expected damage and the storms before and after raising;
+  - a toggle draws each building's line to the water it is matched to;
+  - export: nearest inner-water point and name, and year built, added
+    (`build_water_distance.py`, `export_what_if.py`); inverse map projection
+    in the browser (`fromUtm17`, tested against pyproj);
+  - precision, no change to the rule: Module C's "line passes within 5 m of
+    the wall" now uses the exact distance instead of an approximated buffer
+    shape, and the canal-versus-shore comparison uses single precision, as
+    the browser does. Rerunning Part 2 changed no result.
+- Decision: As above.
+- Reason: The user's request; the same rule in both places keeps the cards
+  honest.
+- Evidence: `whatIfParity.test.js`: the reason of all 23,946 buildings near
+  the 42 Part 2 wall runs matches Python (0 mismatches); damage avoided
+  parity unchanged (0.0002%); 195 tests pass; build has no data files.
+- Affects: `module_c_projects.py`, `build_water_distance.py`,
+  `export_what_if.py`, `what_if_parity_fixture.py`, `src/admin/viz/whatif/`.

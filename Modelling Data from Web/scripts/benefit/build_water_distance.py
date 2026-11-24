@@ -15,7 +15,8 @@ and miss most canals, so they are not used. Left out:
 - any water line point within 30 m of the coastal shoreline (the same edge of water, drawn twice);
 - closed outlines (ponds and lakes) that do not touch another water line or the shoreline within 30 m: isolated
   ponds are not connected to the sea.
-Writes data/processed/benefit/inner_water_distance.parquet (fd_id, inner_water_dist_m, inner_water_name).
+Writes data/processed/benefit/inner_water_distance.parquet (fd_id, inner_water_dist_m, inner_water_name,
+inner_water_x, inner_water_y: the nearest inner water point, for the What-If explanation layer, D-204).
 """
 import json
 import sys
@@ -73,7 +74,8 @@ def main():
     pts, names, info = inner_water()
     A = pd.read_parquet(paths.MODULE_A_PARQUET, columns=["fd_id", "x_utm", "y_utm", "shore_dist_m"])
     d, i = cKDTree(pts).query(np.c_[A.x_utm, A.y_utm])
-    out = pd.DataFrame({"fd_id": A.fd_id, "inner_water_dist_m": d.astype("float32"), "inner_water_name": names[i]})
+    out = pd.DataFrame({"fd_id": A.fd_id, "inner_water_dist_m": d.astype("float32"), "inner_water_name": names[i],
+                        "inner_water_x": pts[i, 0], "inner_water_y": pts[i, 1]})   # nearest inner water point, UTM (D-204)
     out.to_parquet(paths.INNER_WATER_PARQUET, index=False)
     near_coast = A.shore_dist_m.to_numpy() <= 2000
     info["buildings"] = int(len(A))

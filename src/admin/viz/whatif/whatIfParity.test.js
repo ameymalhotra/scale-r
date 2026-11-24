@@ -10,7 +10,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { gunzipSync } from 'node:zlib';
-import { computeRows, elevate, makeContext, picksForIds, readTile, seawall } from './whatIfEngine.js';
+import { computeRows, elevate, makeContext, picksForIds, readTile, seawall, seawallReasons } from './whatIfEngine.js';
 
 const DIR = path.resolve(__dirname, '../../../../Modelling Data from Web/outputs/admin_data/what_if');
 const HAVE = existsSync(path.join(DIR, 'manifest.json')) && existsSync(path.join(DIR, 'parity_fixture.json'));
@@ -70,5 +70,24 @@ d('What-If engine parity with Python', () => {
       }
     }
     writeFileSync(path.join(DIR, 'parity_result.json'), JSON.stringify({ runs: fixture.runs.length, largest_relative: largest, rows: report }, null, 1));
+  });
+
+  it('gives every building near each Part 2 wall the same reason as Python (D-204)', () => {
+    load();
+    let checked = 0;
+    const mismatches = [];
+    for (const run of fixture.runs.filter((r) => r.kind === 'seawall')) {
+      const { items } = seawallReasons(tiles, run.line, run.crest_ft, ctx);
+      const js = new Map(items.map((q) => [tiles.get(q.key).cols.fd_id[q.i], q.reason]));
+      const py = new Map(run.reasons);
+      for (const [fd, reason] of py) {
+        checked += 1;
+        if (js.get(fd) !== reason) mismatches.push(`${run.id}: building ${fd} Python ${reason}, browser ${js.get(fd)}`);
+      }
+      for (const fd of js.keys()) if (!py.has(fd)) mismatches.push(`${run.id}: building ${fd} only in the browser (${js.get(fd)})`);
+    }
+    expect(mismatches.slice(0, 10)).toEqual([]);
+    expect(checked).toBeGreaterThan(1000);
+    writeFileSync(path.join(DIR, 'reason_parity.json'), JSON.stringify({ checked, mismatches: mismatches.length }));
   });
 });

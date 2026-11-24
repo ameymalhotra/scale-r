@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { annuity, benefitPerDollar, eydFromLosses, inRing, interp, lineLength, pointLineDist, prepareCurves, snapToShore, toUtm17 } from './whatIfEngine.js';
+import { fromUtm17, annuity, benefitPerDollar, eydFromLosses, inRing, interp, lineLength, pointLineDist, prepareCurves, snapToShore, toUtm17 } from './whatIfEngine.js';
 
 describe('What-If engine building blocks', () => {
   it('interpolates like numpy, held flat beyond the ends', () => {
@@ -65,5 +65,14 @@ describe('What-If engine building blocks', () => {
     expect(Math.abs(len(r.line) - len(drawn))).toBeLessThan(1);
     // too far away: left where drawn
     expect(snapToShore([[-80.14, 25.81], [-80.135, 25.81]], shoreLL, shoreUtm, 500)).toBeNull();
+  });
+
+  it('projects back from UTM 17N like pyproj (under 1 cm)', () => {
+    for (const [lon, lat] of [[-80.13, 25.79], [-80.45, 25.47], [-80.19, 25.95]]) {
+      const [x, y] = toUtm17(lon, lat);
+      const [lo, la] = fromUtm17(x, y);
+      expect(Math.abs(lo - lon) * 100000).toBeLessThan(0.01);   // degrees x 100 km, about metres
+      expect(Math.abs(la - lat) * 111000).toBeLessThan(0.01);
+    }
   });
 });

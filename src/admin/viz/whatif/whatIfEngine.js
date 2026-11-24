@@ -114,6 +114,7 @@ export function computeRows(tile, rows, ctx, opt = {}) {
     out[`tail${k[0].toUpperCase()}${k.slice(1)}`] = new Float64Array(rows.length);
   }
   const ne = events.length;
+  if (opt.keepLosses) out.lossMid = new Float64Array(rows.length * ne);
   const L = { low: new Float64Array(ne), mid: new Float64Array(ne), high: new Float64Array(ne) };
   const wcs = events.map((e) => c[`wc_${e}`]);
   const wos = events.map((e) => c[`wo_${e}`]);
@@ -150,6 +151,7 @@ export function computeRows(tile, rows, ctx, opt = {}) {
         L[k][j] = (fs * vs + fc * baseC) * share;
       }
     }
+    if (opt.keepLosses) for (let j = 0; j < ne; j += 1) out.lossMid[r * ne + j] = L.mid[j];
     for (const k of CASE_NAMES) {
       const { body, tail } = eydFromLosses(L[k], P);
       out[k][r] = body;
@@ -426,6 +428,7 @@ export function topHomes(tiles, ring, n, ctx) {
   cand.sort((p, q) => q.eyd - p.eyd);
   const out = cand.slice(0, n);
   out.available = cand.length;
+  out.ranked = cand;     // every candidate in order, for the explanation cards (D-204)
   return out;
 }
 
@@ -517,4 +520,120 @@ export function snapToShore(drawnLonLat, shoreLonLat, shoreUtm, maxM) {
   for (let k = 0; k < cum.length; k += 1) if (cum[k] > a && cum[k] < b) out.push(ll[k]);
   out.push(toLL(b));
   return { line: out, movedM: best.d };
+}
+
+
+// ------------------------------------------------------------------ explanation layer (D-204)
+
+/** UTM zone 17N (EPSG:26917) back to longitude, latitude; Krüger series, GRS80. Matches pyproj to under 1 cm. */
+export function fromUtm17(x, y) {
+  const a = 6378137;
+  const f = 1 / 298.257222101;
+  const k0 = 0.9996;
+  const n = f / (2 - f);
+  const A = (a / (1 + n)) * (1 + (n * n) / 4 + (n ** 4) / 64);
+  const be = [n / 2 - (2 / 3) * n * n + (37 / 96) * n ** 3, (1 / 48) * n * n + (1 / 15) * n ** 3, (17 / 480) * n ** 3];
+  const de = [2 * n - (2 / 3) * n * n - 2 * n ** 3, (7 / 3) * n * n - (8 / 5) * n ** 3, (56 / 15) * n ** 3];
+  const xi = y / (k0 * A);
+  const eta = (x - 500000) / (k0 * A);
+  let xp = xi;
+  let ep = eta;
+  for (let j = 1; j <= 3; j += 1) {
+    xp -= be[j - 1] * Math.sin(2 * j * xi) * Math.cosh(2 * j * eta);
+    ep -= be[j - 1] * Math.cos(2 * j * xi) * Math.sinh(2 * j * eta);
+  }
+  const chi = Math.asin(Math.sin(xp) / Math.cosh(ep));
+  let phi = chi;
+  for (let j = 1; j <= 3; j += 1) phi += de[j - 1] * Math.sin(2 * j * chi);
+  const lam = Math.atan2(Math.sinh(ep), Math.cos(xp));
+  return [-81 + (lam * 180) / Math.PI, (phi * 180) / Math.PI];
+}
+
+export const REASONS = ['protected', 'overtopped', 'inner_water', 'bay_beyond_ends', 'beyond_1km', 'rain_only'];
+
+/**
+ * Why each flooding building near a wall is or is not protected: the same rule, in the same order, as
+ * module_c_projects.Model.seawall_reasons (checked by whatIfParity.test.js).
+ * @returns {{res: object, items: {key: string, i: number, reason: string, distWallM: number}[], counts: Record<string, number>}}
+ */
+export function seawallReasons(tiles, lineLonLat, crestFt, ctx) {
+  const res = seawall(tiles, lineLonLat, crestFt, ctx, { keepPer: true });
+  const reduced = new Set(res.perBuilding.filter((q) => q.before - q.after > 0).map((q) => `${q.key}|${q.i}`));
+  const cfg = ctx.man.seawall;
+  const wall = lineLonLat.map(([lo, la]) => toUtm17(lo, la));
+  const tol2 = cfg.snap_tolerance_m ** 2;
+  const reach = cfg.max_distance_to_shore_m;
+  const cap = cfg.max_distance_from_wall_m || Infinity;
+  const xs = wall.map((p) => p[0]); const ys = wall.map((p) => p[1]);
+  const minx = Math.min(...xs) - reach; const maxx = Math.max(...xs) + reach;
+  const miny = Math.min(...ys) - reach; const maxy = Math.max(...ys) + reach;
+  const items = [];
+  const counts = Object.fromEntries(REASONS.map((r) => [r, 0]));
+  for (const key of tilesForBox(minx, miny, maxx, maxy, ctx.man.tile_m)) {
+    const tile = tiles.get(key);
+    if (!tile) continue;
+    const c = tile.cols;
+    const [x0, y0] = tile.origin;
+    const wcs = ctx.events.map((e) => c[`wc_${e}`]);
+    for (let i = 0; i < tile.n; i += 1) {
+      const x = c.x[i] + x0; const y = c.y[i] + y0;
+      if (x < minx || x > maxx || y < miny || y > maxy) continue;
+      const dw = pointLineDist(x, y, wall);
+      const sx = c.shore_x[i] + x0; const sy = c.shore_y[i] + y0;
+      let cross = false;
+      if (Number.isFinite(sx) && Number.isFinite(sy)) {
+        for (let k = 0; k + 1 < wall.length && !cross; k += 1) {
+          cross = segSegDist2(x, y, sx, sy, wall[k][0], wall[k][1], wall[k + 1][0], wall[k + 1][1]) <= tol2;
+        }
+      }
+      let coastalWet = false;
+      for (const w of wcs) if (w[i] > c.ground[i]) { coastalWet = true; break; }
+      const sd = c.shore_dist[i];
+      const inner = c.inner_water[i] < sd;
+      const behind = cross && sd <= reach;
+      let reason;
+      if (!coastalWet) reason = 'rain_only';
+      else if (inner) reason = 'inner_water';
+      else if (!behind) reason = 'bay_beyond_ends';
+      else if (dw > cap) reason = 'beyond_1km';
+      else if (reduced.has(`${key}|${i}`)) reason = 'protected';
+      else reason = 'overtopped';
+      if (dw <= cap || reason === 'beyond_1km') {
+        items.push({ key, i, reason, distWallM: dw });
+        counts[reason] += 1;
+      }
+    }
+  }
+  return { res, items, counts };
+}
+
+/**
+ * Storm-by-storm explanation for one building (middle damage curve): water level, whether it is above the
+ * first floor, whether the project removes it, and the damage before and after.
+ * @param {object} opt for a seawall {crestFt}, for elevation {raiseFt}
+ */
+export function explainBuilding(tile, i, ctx, opt) {
+  const c = tile.cols;
+  const before = computeRows(tile, [i], ctx, { keepLosses: true });
+  let scenOpt = {};
+  if (opt.raiseFt) scenOpt = { ffeAdd: opt.raiseFt };
+  if (opt.crestFt != null && opt.protectedRow) {
+    scenOpt = { coastalOff: (ev, j) => { const v = c[`ww_${ev}`][j]; return Number.isNaN(v) || v < opt.crestFt; } };
+  }
+  const after = computeRows(tile, [i], ctx, { ...scenOpt, keepLosses: true });
+  const ne = ctx.events.length;
+  const ffe = c.ffe[i] + (opt.raiseFt || 0);
+  const storms = ctx.events.map((ev, j) => {
+    const wc = c[`wc_${ev}`][i]; const wo = c[`wo_${ev}`][i]; const ww = c[`ww_${ev}`][i];
+    const coast = Number.isNaN(wc) ? -Infinity : wc; const other = Number.isNaN(wo) ? -Infinity : wo;
+    const level = Math.max(coast, other);
+    const blocked = opt.crestFt != null ? (coast > -Infinity && (Number.isNaN(ww) || ww < opt.crestFt)) : false;
+    return {
+      ev, chance: ctx.P[j], level: Number.isFinite(level) ? level : null, source: coast >= other ? 'sea' : 'rain or canal',
+      wet: level > c.ground[i], aboveFloorBefore: level > c.ffe[i], aboveFloorAfter: level > ffe,
+      blocked: blocked && !!opt.protectedRow, overWall: opt.crestFt != null && coast > -Infinity && !(Number.isNaN(ww) || ww < opt.crestFt),
+      lossBefore: before.lossMid[j], lossAfter: after.lossMid[j],
+    };
+  });
+  return { storms, eydBefore: before.mid[0], eydAfter: after.mid[0], ne };
 }
