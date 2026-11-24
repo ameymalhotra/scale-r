@@ -5418,3 +5418,28 @@ D-113.
   marker still selects its project. What-If tests: 18 pass.
 - Affects: `src/admin/viz/whatif/whatIfMap.{js,css}`,
   `src/admin/viz/whatif/whatIfTabs.js`, `whatIfTabs.test.js`.
+
+### D-215. Guided tour of the Flood What-If view
+
+- Date: 24 Nov 2026. Status: Done (not pushed or deployed). Decided by: the
+  user.
+- What happened: A first-time reader, such as the professor, had only a
+  three-line hint and would not know what the card, the numbers, the
+  buildings or Show why mean.
+- What is wrong: The view needs a walk-through that works without anyone
+  explaining it in person.
+- How we are fixing it: A Tour button in the title row (and "Take the tour"
+  in the first-visit hint) starts a nine-step tour. Each step highlights one
+  part and explains it in one or two sentences: welcome, the tabs, the result
+  card, cost and Details, switching projects, a building card, Show why,
+  drawing your own project, and About. The tour opens the Examples tab and
+  one building card itself, so there is always something real to look at.
+  Back, Next, Skip, the arrow keys and Esc work; on a phone the text sits at
+  the bottom or top of the screen. Plain JavaScript, no new packages.
+- Decision: Adopted.
+- Reason: The user's request.
+- Evidence: Screenshots of every step on desktop and phone in
+  `outputs/admin_data/what_if_screens/tour/`; tests for where the text box is
+  placed (it always stays inside the window). What-If tests: 22 pass.
+- Affects: `src/admin/viz/whatif/whatIfTour.js`, `whatIfTour.test.js`,
+  `whatIfMap.{js,css,html}`.

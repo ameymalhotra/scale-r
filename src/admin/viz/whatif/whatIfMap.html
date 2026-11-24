@@ -6,6 +6,7 @@
       <a class="back" href="/admin" aria-label="Back to admin">←</a>
       <h1>Flood What-If</h1>
       <span class="prelim" title="Estimates for discussion, not for decisions">Estimates</span>
+      <button type="button" class="tourbtn" id="tour-btn" title="A one-minute walk through this view">Tour</button>
     </div>
     <div class="seg" role="group" aria-label="Choose">
       <button type="button" data-tool="seawall" aria-pressed="false">Seawall</button>
@@ -21,7 +22,10 @@
       <li><b>Draw it</b> on the map.</li>
       <li><b>See the damage</b> it prevents.</li>
     </ol>
-    <button type="button" class="btn small" id="hint-close">Got it</button>
+    <div class="hint-btns">
+      <button type="button" class="btn small primary" id="hint-tour">Take the tour</button>
+      <button type="button" class="btn small" id="hint-close">Got it</button>
+    </div>
   </section>
 
   <section class="box tool" id="tool-seawall" aria-label="Seawall" hidden>

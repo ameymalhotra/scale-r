@@ -7,6 +7,7 @@ import {
 import { REASON_STYLE, cardHtml, facts, moneyShort, nearestWater, reasonSentence, shortSentence } from './whatIfExplain.js';
 import { loadJson, tileStore } from './whatIfData.js';
 import { markerList, projectsAfterExamples, setAside, tabChange } from './whatIfTabs.js';
+import { createTour } from './whatIfTour.js';
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
 
@@ -627,6 +628,7 @@ export function mount() {
     else if (t.id === 'about-btn') toggleAbout();
     else if (t.id === 'about-close') toggleAbout(false);
     else if (t.id === 'hint-close') hideHint();
+    else if (t.id === 'tour-btn' || t.id === 'hint-tour') { hideHint(); tour.start(); }
     else if (t.id === 'clear-all') { cancelDrawing(); projects.length = 0; sel = -1; drawProjects(); renderResults(); }
     else if (t.id === 'remove') { projects.splice(sel, 1); sel = projects.length - 1; drawProjects(); renderResults(); }
     else if (t.id === 'raise-all') { const p = projects[sel]; p.n = p.available; $('n-homes').value = String(p.n); update(p); }
@@ -840,9 +842,65 @@ export function mount() {
 
   if (import.meta.env.DEV) {
     // for the timing check in the Part 2 report (drag measurement) and screenshots
-    window.__whatIf = { map, projects, get markers() { return markers; }, dragTimes, loadExamples: () => setTool('examples'), update, compute, showCard, setWhy, setTool, get sel() { return sel; }, get store() { return store; },
+    window.__whatIf = { map, projects, get tour() { return tour; }, get markers() { return markers; }, dragTimes, loadExamples: () => setTool('examples'), update, compute, showCard, setWhy, setTool, get sel() { return sel; }, get store() { return store; },
       add: (kind, extra) => update(newProject(kind, extra)) };
   }
+
+  // ---------------------------------------------------------------- guided tour (D-215)
+  const waitFor = async (ok, ms = 20000) => { const t0 = Date.now(); while (!ok() && Date.now() - t0 < ms && !removed) await new Promise((r) => setTimeout(r, 120)); };
+  const openExamples = async () => {
+    await waitFor(() => man && mapReady);
+    if (tool !== 'examples') setTool('examples');
+    await waitFor(() => projects.length && projects.every((p) => p.res) && !$('results').hidden);
+  };
+  const tour = createTour({
+    root,
+    onEnd: () => { cardPopup.remove(); $('tour-btn')?.focus({ preventScroll: true }); },
+    steps: [
+      { title: 'Welcome to Flood What-If',
+        text: 'This tool estimates how much flood damage a project would prevent in Miami-Dade, and whether it is worth its cost. The tour takes about a minute, and you can leave it at any time.',
+        before: async () => { cancelDrawing(); cardPopup.remove(); } },
+      { title: 'Three tabs',
+        text: '<b>Seawall</b>: draw a wall along the coast. <b>Raise homes</b>: lift homes above the flood. <b>Examples</b>: three ready-made projects. The tour opens Examples for you next.',
+        target: () => root.querySelector('.bar .seg') },
+      { title: 'The answer for one project',
+        text: 'How much damage it prevents in an average year, how many buildings and residents it protects, and how many dollars come back for each dollar spent. <b>Pays back</b> means the benefits are larger than the cost.',
+        before: async () => { await openExamples(); cardPopup.remove(); if (sel !== 0) { sel = 0; drawProjects(); renderResults(); } },
+        target: () => $('results') },
+      { title: 'Cost and details',
+        text: 'The cost is a typical figure from FEMA grant records. Click the pencil to try your own number. <b>Details</b> shows how every number was worked out.',
+        before: openExamples,
+        target: () => $('cost-edit')?.closest('div') || $('results') },
+      { title: 'Switch between projects',
+        text: 'Each project has a number. Click a number here, or the matching circle on the map, to see that project.',
+        before: openExamples,
+        target: () => $('projects') },
+      { title: 'What happens to one building',
+        text: 'Green dots are buildings the project protects. Click any building to see its flood damage today, after the project, and why.',
+        before: async () => {
+          await openExamples();
+          if (sel !== 0) { sel = 0; drawProjects(); renderResults(); }
+          const p = projects[0];
+          const q = p?.reasons?.find((r) => r.reason === 'protected');
+          if (!q) return;
+          const c = store.tiles.get(q.key).cols;
+          map.jumpTo({ center: [c.lon[q.i], c.lat[q.i]], zoom: 16, padding: sidePad() });
+          await new Promise((r) => { map.once('idle', r); setTimeout(r, 2500); });
+          showCard(q.key, q.i);
+        },
+        target: () => root.querySelector('.cardpop') },
+      { title: 'Show why',
+        text: 'Turn this on to color every building by flood damage and see why some buildings are still not protected.',
+        before: async () => { cardPopup.remove(); },
+        target: () => $('legend') },
+      { title: 'Try your own project',
+        text: 'Pick <b>Seawall</b>, click <b>Draw a wall</b>, then click along the blue coast line and double-click to finish. For <b>Raise homes</b>, draw an area and choose how many homes. The results appear at once.',
+        target: () => root.querySelector('.bar .seg') },
+      { title: 'Where the numbers come from',
+        text: '<b>About</b> explains the data, the method and the limits. All numbers are estimates for discussion, not for decisions. You can reopen this tour any time with the <b>Tour</b> button.',
+        target: () => $('about-btn') },
+    ],
+  });
 
   return () => {
     removed = true;
@@ -858,6 +916,7 @@ export function mount() {
     popup.remove();
     infoPopup.remove();
     cardPopup.remove();
+    tour.stop();
     for (const mk of markers) mk.remove();
     map.remove();
     if (import.meta.env.DEV) delete window.__whatIf;
