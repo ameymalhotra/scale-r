@@ -71,6 +71,7 @@ export function mount() {
 
   let man = null; let ctx = null; let store = null; let dryStore = null; let shoreUtm = []; let shoreLL = []; let examples = [];
   let tool = null;
+  let ownProjects = null; // the user's own projects, set aside while the Examples tab is open (D-213)
   let damageExpr = STILL_FLOODS;
   let emode = 'area';
   let why = false;
@@ -501,12 +502,26 @@ export function mount() {
   // ---------------------------------------------------------------- controls
   function setTool(t) {
     cancelDrawing();
-    tool = tool === t ? null : t;
+    const next = tool === t ? null : t;
+    // Examples is a tab of its own: leaving it takes the examples away and brings back the user's projects
+    if (tool === 'examples' && next !== 'examples') leaveExamples();
+    tool = next;
     document.querySelectorAll('[data-tool]').forEach((b) => { const on = b.dataset.tool === tool; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); });
     $('tool-seawall').hidden = tool !== 'seawall';
     $('tool-elevation').hidden = tool !== 'elevation';
     renderElevHelp();
     applyLayers();
+    if (tool === 'examples') loadExamples();
+  }
+
+  function leaveExamples() {
+    projects.length = 0;
+    if (ownProjects) projects.push(...ownProjects);
+    ownProjects = null;
+    sel = projects.length - 1;
+    if (cardPopup) cardPopup.remove();
+    drawProjects();
+    renderResults();
   }
 
   function renderElevHelp() {
@@ -560,13 +575,14 @@ export function mount() {
   async function loadExamples() {
     if (!man) return;
     cancelDrawing();
+    if (!ownProjects) ownProjects = projects.filter((p) => !p.example);
     projects.length = 0;
     for (const e of examples) {
-      if (e.kind === 'seawall') newProject('seawall', { name: e.label, line: e.line, drawn: e.line, onShore: true, snapM: 0, crest: e.crest_ft });
-      else newProject('elevation', { name: e.label, mode: 'ids', fd_ids: e.fd_ids, tiles: e.tiles, raise: e.raise_ft });
+      if (e.kind === 'seawall') newProject('seawall', { example: true, name: e.label, line: e.line, drawn: e.line, onShore: true, snapM: 0, crest: e.crest_ft });
+      else newProject('elevation', { example: true, name: e.label, mode: 'ids', fd_ids: e.fd_ids, tiles: e.tiles, raise: e.raise_ft });
     }
     await Promise.all(projects.map((p) => compute(p)));
-    if (removed) return;
+    if (removed || tool !== 'examples') return; // the user left the tab while the examples were loading
     sel = 0;
     drawProjects();
     renderResults();
@@ -593,7 +609,6 @@ export function mount() {
     else if (t.id === 'wall-draw') startDrawing('wall');
     else if (t.id === 'elev-draw') startDrawing(emode === 'area' ? 'area' : 'click');
     else if (t.id === 'wall-finish' || t.id === 'elev-finish') { if (drawing) finishDrawing(); else cancelDrawing(); }
-    else if (t.id === 'examples') loadExamples();
     else if (t.id === 'about-btn') toggleAbout();
     else if (t.id === 'about-close') toggleAbout(false);
     else if (t.id === 'hint-close') hideHint();
@@ -809,7 +824,7 @@ export function mount() {
 
   if (import.meta.env.DEV) {
     // for the timing check in the Part 2 report (drag measurement) and screenshots
-    window.__whatIf = { map, projects, dragTimes, loadExamples, update, compute, showCard, setWhy, setTool, get sel() { return sel; }, get store() { return store; },
+    window.__whatIf = { map, projects, dragTimes, loadExamples: () => setTool('examples'), update, compute, showCard, setWhy, setTool, get sel() { return sel; }, get store() { return store; },
       add: (kind, extra) => update(newProject(kind, extra)) };
   }
 

@@ -5364,3 +5364,25 @@ D-113.
 - Affects: `scripts/benefit/what_if_parity_fixture.py`,
   `outputs/admin_data/what_if/examples.json` (private, needs re-upload to
   the bucket), `src/admin/viz/whatif/whatIfMap.css`.
+
+### D-213. Examples is a tab of its own
+
+- Date: 24 Nov 2026. Status: Done (not pushed or deployed). Decided by: the
+  user.
+- What happened: Examples was a one-off button. After loading the examples,
+  switching to Seawall or Raise homes left the examples on the map and in
+  the results, and loading them had also deleted the user's own projects.
+- What is wrong: The top row looks like tabs, so the examples should go
+  away when the user changes tab.
+- How we are fixing it: Examples is now a tab like Seawall and Raise homes.
+  Opening it sets the user's own projects aside and shows the three
+  examples. Switching to another tab, or clicking Examples again, removes
+  the examples and brings back the user's own projects. If the user switches
+  away while the examples are still loading, they do not appear.
+- Decision: Adopted.
+- Reason: The user's request.
+- Evidence: Checked in the dev view: draw a wall, open Examples (3 examples
+  shown, tab pressed), switch to Raise homes (only the user's wall on the map
+  and in the results), reopen and close Examples, and a fast switch while
+  loading. What-If tests pass.
+- Affects: `src/admin/viz/whatif/whatIfMap.{js,html}`.
