@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url'
  * "stylesheet"> is still a render-blocking request in Lighthouse. Inlining
  * removes that request without deferring styles (which would flash unstyled
  * content). Mapbox CSS is not inlined: it is a dynamic import that only loads
- * with the map.
+ * with the map. The stylesheet file itself stays in dist/ (D-219).
  *
  * Manrope is the navbar face on every route, including /dashboard whose LCP
  * is text. Preloading the latin woff2 lets the browser start the font file
@@ -43,7 +43,10 @@ function inlineEntryCssAndPreloadFonts() {
               typeof asset.source === 'string'
                 ? asset.source
                 : Buffer.from(asset.source).toString('utf8')
-            delete bundle[assetKey]
+            // Keep the file in the build (D-219): lazy chunks still list it as a
+            // dependency and load it before they run. If it is missing, the
+            // host returns the HTML page instead, Safari refuses it, the
+            // chunk fails and the page goes blank.
             return `<style>${css}</style>`
           },
         )

@@ -5560,3 +5560,36 @@ D-113.
   `whatIfMap.{js,css}`, `whatIfExplain.js`, `whatIfParity.test.js`; reports
   to update by the user: `typical_projects_part2.md`, `admin_what_if_part1.md`,
   `admin_what_if_part2.md`, `stage1_data.md`, `spec_alignment_part2.md`.
+
+### D-219. Keep the main stylesheet file in the build so Safari can open the admin maps
+
+- Date: 24 Nov 2026. Status: Done (not pushed or deployed). Decided by: the
+  user (asked for the fix to be found and tested in a WebKit browser).
+- What happened: After PR #8 went live, the admin panel showed a blank white
+  page in Safari, also in a private window. It worked in Chrome.
+- What is wrong: A build step (`inlineEntryCssAndPreloadFonts` in
+  `vite.config.js`) copies the main stylesheet into the page and then deleted
+  the file. The admin map chunk (gap map, Scenarios, Flood What-If) still
+  lists that file as something to load before it runs. The file was missing,
+  so Vercel served the HTML page in its place; Safari refuses a stylesheet
+  that is HTML, the chunk failed to load ("Unable to preload CSS") and, with
+  no error screen, React left the page blank. Chrome tolerates it. Since
+  PR #8 the map chunk shares code with the main chunk (the private data
+  loader uses the shared sign-in client), which is likely why the
+  dependency appeared now.
+- How we are fixing it: the build step still inlines the stylesheet but no
+  longer deletes the file, so any chunk that asks for it gets real CSS. The
+  styles are the same, so loading them twice changes nothing on screen.
+- Decision: Adopted.
+- Reason: Smallest change that removes the cause; the public pages keep the
+  inlined styles and their speed.
+- Evidence: In WebKit 18.2 (Playwright, the engine behind Safari) the live
+  site's admin map views went blank with "Unable to preload CSS for
+  /assets/index-....css"; the live file returned 200 text/html. With the fix
+  the gap map, Scenarios and Flood What-If all render in WebKit (admin
+  session faked inside the test browser only, private data served from the
+  local copy). Every live script also parses in the macOS JavaScript engine.
+- Found on the way: the site has no error screen, so any failed chunk shows
+  a white page; and `vercel.json` answers missing `/assets/` files with the
+  HTML page instead of a 404. Both are follow-ups, not changed here.
+- Affects: `vite.config.js`.
