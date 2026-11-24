@@ -1,0 +1,73 @@
+<div id="map" role="region" aria-label="Map of Miami-Dade for placing flood projects"></div>
+
+<aside class="side" id="side" aria-label="Flood What-If">
+  <header class="bar">
+    <div class="title-row">
+      <a class="back" href="/admin" aria-label="Back to admin">←</a>
+      <h1>Flood What-If</h1>
+      <span class="prelim" title="Estimates for discussion, not for decisions">Estimates</span>
+      <button type="button" class="tourbtn" id="tour-btn" title="A one-minute walk through this view">Tour</button>
+    </div>
+    <div class="seg" role="group" aria-label="Choose">
+      <button type="button" data-tool="seawall" aria-pressed="false">Seawall</button>
+      <button type="button" data-tool="elevation" aria-pressed="false">Raise homes</button>
+      <button type="button" data-tool="examples" aria-pressed="false">Examples</button>
+      <button type="button" id="about-btn" aria-expanded="false" aria-controls="about">About</button>
+    </div>
+  </header>
+
+  <section class="hint" id="hint" aria-label="How to use" hidden>
+    <ol>
+      <li><b>Pick a project</b> above.</li>
+      <li><b>Draw it</b> on the map.</li>
+      <li><b>See the damage</b> it prevents.</li>
+    </ol>
+    <div class="hint-btns">
+      <button type="button" class="btn small primary" id="hint-tour">Take the tour</button>
+      <button type="button" class="btn small" id="hint-close">Got it</button>
+    </div>
+  </section>
+
+  <section class="box tool" id="tool-seawall" aria-label="Seawall" hidden>
+    <div class="row-btns">
+      <button type="button" class="btn primary" id="wall-draw">Draw a wall</button>
+      <button type="button" class="btn" id="wall-finish" hidden>Finish</button>
+    </div>
+    <p class="help">Click along the blue coast line, then double-click.</p>
+    <label class="slider">
+      <span>Wall height <button type="button" class="q" data-tip="Height of the top of the wall, in feet above the standard US land datum (NAVD88). A typical funded wall in Miami-Dade is +6 ft.">?</button></span>
+      <output id="crest-out">6 ft</output>
+      <input type="range" id="crest" min="4" max="12" step="0.5" value="6" aria-label="Wall height in feet">
+    </label>
+  </section>
+
+  <section class="box tool" id="tool-elevation" aria-label="Raise homes" hidden>
+    <div class="seg seg-sm" role="group" aria-label="How to choose homes">
+      <button type="button" data-emode="area" aria-pressed="true">Draw an area</button>
+      <button type="button" data-emode="click" aria-pressed="false">Click homes</button>
+    </div>
+    <div class="row-btns">
+      <button type="button" class="btn primary" id="elev-draw">Draw an area</button>
+      <button type="button" class="btn" id="elev-finish" hidden>Finish</button>
+    </div>
+    <p class="help" id="elev-help"></p>
+    <label class="field" id="n-field">
+      <span>Homes to raise <button type="button" class="q" data-tip="The most damaged single-family homes in the area are raised. FEMA's grant records give no cost for duplexes or small apartment buildings, so they are not chosen. To test one, use Click homes and type a cost.">?</button></span>
+      <input type="number" id="n-homes" min="1" max="200" step="1" value="1" aria-label="Number of homes to raise">
+    </label>
+    <label class="slider">
+      <span>Raise by</span>
+      <output id="raise-out">3 ft</output>
+      <input type="range" id="raise" min="1" max="6" step="0.5" value="3" aria-label="Raise homes by, in feet">
+    </label>
+  </section>
+
+  <div id="projects" aria-label="Projects"></div>
+  <section class="box result" id="results" aria-live="polite" hidden></section>
+
+  <section class="box about" id="about" aria-label="About this tool" hidden></section>
+</aside>
+
+<div class="legend" id="legend" aria-label="Map legend"></div>
+<div class="status" id="status" role="status" aria-live="polite"></div>
+<div class="tipbox" id="tipbox" role="tooltip" hidden></div>

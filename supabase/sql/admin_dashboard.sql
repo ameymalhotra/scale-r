@@ -1225,3 +1225,22 @@ notify pgrst, 'reload schema';
 
 -- After `npm run seed-merged-conf1`, run in the SQL Editor:
 --   select public.reset_draft_from_published();
+
+-- ── Admin-only data bucket (D-095, run 24 Nov 2026) ─────────────────────────
+-- Private bucket for the admin views' data (gap map, Scenario, Flood What-If).
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('admin-data', 'admin-data', false, 10485760,
+        array['application/json', 'application/geo+json', 'application/octet-stream'])
+on conflict (id) do update
+  set public = false,
+      file_size_limit = excluded.file_size_limit,
+      allowed_mime_types = excluded.allowed_mime_types;
+
+-- Read: signed-in admins only. No insert, update or delete policies: only the
+-- service-role key (npm run upload-admin-data) can write.
+drop policy if exists "admin-data admin read" on storage.objects;
+create policy "admin-data admin read"
+  on storage.objects
+  for select
+  to authenticated
+  using (bucket_id = 'admin-data' and public.is_admin());

@@ -1,0 +1,434 @@
+# What do typical funded flood projects return per dollar? (Part 2)
+
+Benefit simulator. 16 Nov 2026, seawall results updated 23 Nov 2026.
+Branch `admin-what-if`. Decisions D-196 to D-198, D-202 (seawall waterway
+rule) and D-203 (this update) in `DECISIONS.md`. Scripts
+`scripts/benefit/typical_elevation_hma.py` and
+`scripts/benefit/typical_projects_part2.py`; results in
+`outputs/benefit/typical_projects/` (`part2_real_projects.csv`,
+`part2_typical_placements.csv`, `part2_seawall_scan.csv`,
+`hma_elevation_summary.json`, `part2_summary.json`).
+
+## Sources
+
+| Source | What we used | Date of data | How we got it |
+|---|---|---|---|
+| SCALE-R resilience investment database, Part 1 classification (D-196) | Real seawall and elevation projects, their place, cost and size; typical seawall | Projects reported 2003 to 2026 | Already in the repo |
+| FEMA OpenFEMA, HMA Subapplications v2, Florida rows (5,291) | Funded elevation projects in Florida: homes per project and cost per home | Fiscal years 1996 to 2025; refreshed 27 Jul 2026 | Downloaded 16 Nov 2026 (user approved; replaces "HMA Projects", which OpenFEMA no longer serves) |
+| FDEM, Elevate Florida programme snapshot, May 2025 | Second elevation case: about $267,000 per home | May 2025 | Read online in Part 1 |
+| FEMA BCA Toolkit help content, Aug 2025 | 7% discount rate for new BCAs (PDF page 59) | 2025 | Already on disk |
+| FEMA BCA Project Configuration and Cost Estimation Methodology Report, July 2025 | Project useful life: 50 years for floodwalls and concrete infrastructure, 30 years for residential elevation (Table 1, page 16) | 2025 | Already on disk |
+| BLS CPI-U, annual | Costs in 2025 dollars | to 2025 | Already on disk (D-144) |
+| Modules A to C (FEMA 2027 water levels, USACE damage curves, NSI buildings) | Expected yearly damage before and after each project | 2026 build | Already in the repo |
+| Module D coefficients and Florida tax rules | Tax change, with the published Miami price discount scenario (D-187) | 2026 tax roll | Already in the repo |
+| FEMA 2027 FIRM database, water lines (S_Wtr_Ln) | Canals, creeks, rivers and inner waterways, for the seawall waterway rule (D-202) | 2027 preliminary maps | Already on disk |
+| NOAA CO-OPS high tide flooding products; NOAA Sea Level Rise Viewer data download pages | Checked only, for a possible frequent-flood point later (section 6); nothing downloaded | Current | Read online 16 Nov 2026 |
+
+**Estimated** means calculated from data. **Assumed** means a rule or
+input we chose; each one is listed in section 5. The 3% discount rate is
+a sensitivity test we chose (assumed); FEMA's 7% stays the main figure.
+
+## 1. In short
+
+- **Most flood spending is not what Module C can model yet.** Seawalls and
+  home elevation are only about 5% of flood projects and 3% of flood
+  spending in our database; drainage, canals and pumps are most of it and
+  need the rainfall data.
+- **Home elevation pays back where homes already flood often, and only
+  for the worst homes.** FEMA's typical South Florida project (1 home,
+  about $254,000, raised 3 ft) returns **up to $1.26 to $2.45 per dollar**
+  in four high-damage neighbourhoods (Biscayne Park, Miami, Miami Beach,
+  Miami Shores), but that is a best case: it raises the single most
+  damaged home there. The 5th most damaged home returns $0.58 to $1.22
+  and the 10th $0.40 to $0.85. In middle-damage places the most damaged
+  home returns $0.10 to $0.58, and in low-damage places almost nothing
+  (estimated).
+- **Raising 10 homes at once** (the Elevate Florida case, an assumption)
+  returns $0.67 to $0.99 in the same high-damage places, for the same
+  reason: the 2nd to 10th homes flood less than the first.
+- **A typical seawall** (550 ft, crest +6.0 ft NAVD, $1.76M) **does not
+  pay back anywhere in our model.** None of the 10 placements and none of
+  the 443 possible stretches of the coastal shoreline returns $1 per
+  dollar (best $0.87); at +8 ft the four high-damage placements return
+  $0.00 to $0.08 (estimated).
+- **Why a single wall segment protects so little.** In Miami-Dade, most
+  homes near the bay also sit near a canal, creek or inner waterway that
+  connects to it. In a storm the water comes up those waterways as well as
+  over the shore, so a wall along one stretch of bay shoreline leaves those
+  homes flooded from behind. Since D-202 the model counts a home as
+  protected only if its nearest open water is the shoreline behind the
+  wall; that removes more than half of the homes earlier runs credited to a
+  wall (they were the source of the earlier Miami Beach result of $1.58 per
+  dollar). The few homes that do front the bay directly are usually flooded
+  only in storms that go over a 6 ft wall anyway.
+- **What it would take (sensitivity, not a typical project).** A
+  continuous 13.1 km wall along the whole Miami Beach bayfront that also
+  closes the three waterway mouths it crosses would avoid about $11.2M a
+  year at +8 ft, $0.91 per dollar at 7% and $1.53 at 3%, before the cost of
+  the gates (section 4).
+- **Still not in the model, so seawalls may be understated:** tidal and
+  king-tide flooding (the most frequent storm modelled is the 10-year
+  storm), and the seawalls that already line many canals and creeks, which
+  in reality keep some of that back-door water out.
+- **A 3% discount rate (sensitivity) raises every ratio but changes few
+  conclusions.** Ratios rise by about 1.6 times for elevation (30 years)
+  and 1.7 times for seawalls (50 years; less than the benefit gain because
+  maintenance costs also count for longer). Typical seawalls still fail at
+  +6 ft: no placement is above $1, and 1 of 443 shoreline stretches is
+  ($1.47). What does change: the
+  Elevate Florida 10-home case clears $1 in all four high-damage places
+  ($1.06 to $1.56), and the 5th most damaged home clears $1 in three of
+  them.
+- **Frequent flooding is not in the model, so seawall benefits are
+  probably understated.** The most frequent storm in the model is the 10%
+  (10-year) storm. High-tide, king-tide and other frequent flooding are
+  not included, and many Miami-Dade seawalls are built mainly for that.
+  NOAA publishes data that could add a frequent-flood point later
+  (section 6).
+- **Real projects from our database.** Of the 12 shoreline seawalls, 5
+  sit on rivers or inner waterways that FEMA's coastal study does not
+  follow, so they could not be modelled. Of the 7 that ran, 2 are shorter
+  than 200 ft and flagged as likely overstated; the other 5 together cost
+  $15.6M and avoid about $4,400 a year at +6 ft (under $0.01 per dollar,
+  also at 3%). The 5 PortMiami bulkheads and 4 canal or lake walls protect no
+  modelled homes from bay surge. The one elevation project (2 homes in
+  Miami Beach, $820,682) returns **$1.14 per dollar** ($1.80 at 3%).
+- **Where the best returns are:** raising the most flood-prone homes in
+  Miami Beach and the low-lying bayfront of northeast Miami-Dade, where
+  frequent storms already flood buildings. Inland places look poor partly because
+  rainfall flooding is modelled only in the C-8 and C-9 basins (section 5).
+
+*Correction to the first version of this report:* it said 7 of the 12
+shoreline seawalls were not run and 5 ran. The table was right; the
+count was swapped. It is 5 not run and 7 run (D-198).
+
+## 2. How the runs were set up
+
+**Typical elevation project (estimated, FEMA HMA data).** Of 955 Florida
+elevation subapplications, we dropped 40 withdrawn or void, 216 denied,
+not selected or ineligible, 206 still pending or in review, 2 with no
+building count and 35 with zero cost. That leaves 456 funded projects in
+Florida, 13 in South Florida (Miami-Dade, Broward, Palm Beach, Monroe) and
+1 in Miami-Dade. South Florida has at least 10, so it sets the typical
+project:
+
+| | Florida (456) | South Florida (13, used) | Miami-Dade (1) |
+|---|---|---|---|
+| Homes per project, median (middle half) | 1 (1 to 1) | **1 (1 to 1)** | 1 |
+| Cost per home, 2025, median (middle half) | $326,706 ($202,097 to $461,150) | **$253,859 ($221,422 to $381,735)** | $741,878 |
+| Projects with one home | 79% | 77% | 1 of 1 |
+| Fiscal years | 1996 to 2025 | 1999 to 2023 | 2008 |
+
+FEMA elevation grants are almost always for one home at a time. Florida
+projects since 2018 cost more (median $429,150 per home, 185 projects),
+so the South Florida median, which includes older projects, may be on
+the low side.
+
+**Typical seawall** (Part 1, estimated): 550 ft, crest +6.0 ft NAVD,
+$1.76M (middle half $0.56M to $2.74M). At $3,500 per foot, 550 ft would
+cost $1.93M, so the two agree.
+
+**Placing the projects.**
+- Seawall: the wall is laid along FEMA's 2027 coastal shoreline (the
+  transect baseline). It protects buildings whose line to the nearest
+  shoreline point crosses the wall and whose ground is below the crest,
+  for storms whose coastal water level is below the crest (Module C).
+  Since D-202 the building must also have that shoreline as its nearest
+  open water (not a canal, creek, river or inner waterway, from FEMA's 2027
+  water lines) and be within 1 km of the wall.
+- Real seawalls are centred on the project point. Length is as stated,
+  otherwise cost divided by $3,500 per foot, limited to the shoreline line
+  there. Projects more than 500 m from that shoreline are not run.
+- Walls shorter than 200 ft are flagged "end-around flooding not
+  modelled, likely overstated" and left out of totals and best-result
+  statements (D-198).
+- Elevation: the homes with the highest expected yearly damage in the
+  area are raised 3 ft, up to the number funded. For the typical FEMA
+  project we also raise, on its own, the 5th and the 10th most damaged
+  home in the same place, to show how fast the return falls.
+- Table B locations: shoreline stretches (every 250 m) and census tracts
+  were ranked by expected yearly damage, and 4 high, 3 middle and 3 low
+  were picked, one per place. Elevation alternates coastal and inland
+  where it can.
+
+**Benefit per dollar** = present value of losses avoided over the project
+life / (cost + present value of maintenance). Main figure: 7% discount
+rate (FEMA); 50 years for seawalls (present value factor 13.80) and 30
+years for elevation (12.41); maintenance 1% of cost a year for seawalls,
+none for elevation. Sensitivity: 3% discount rate (factors 25.73 and
+19.60), same lives and maintenance. Tax change and property value change
+are kept out of the ratio. "Range" is the spread across the low, middle
+and high damage curves; for Table B we also show the ratio at the 25th
+and 75th percentile cost. Ranges are at 7%.
+
+## 3. Table A: real projects at their real locations (estimated)
+
+Protected means buildings whose expected yearly damage goes down;
+residents are night-time residents of those buildings (NSI).
+
+### Shoreline seawalls (12), the elevation project, then port and canal walls shown separately (9)
+
+| Project | Name | Place | Kind | Size used | Cost (2025) | Protected: buildings / residents | Losses avoided a year, middle (range) | Benefit per dollar at 7%, middle (range) | At 3% (sensitivity) | Same wall at +8 ft, 7% / 3% (sensitivity) | Tax change, year 1 |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| SCALER-0003 | Yacht Club Drive Seawall Repairs | Aventura | shoreline | 140 ft (cost / $3,500 per ft); **short wall: end-around flooding not modelled, likely overstated** | $491,000 | not run: 1.1 km from the coastal shoreline |  |  |  |  |  |
+| SCALER-0012 | NE 213th & NE 183rd Street Seawall | Aventura | shoreline | 493 ft (cost / $3,500 per ft) | $1.73M | not run: 0.6 km from the coastal shoreline |  |  |  |  |  |
+| SCALER-0077 | Town of Bay Harbor Islands Seawall Replacement | Bay Harbor Islands | shoreline | 75 ft (stated); **short wall: end-around flooding not modelled, likely overstated** | $261,706 | 0 / 0 | $0 ($0 to $0) | 0.00 (0.00 to 0.00) | 0.00 | 0.00 / 0.00 | $0 |
+| SCALER-0388 | Homestead Bayfront Marina Seawall Replacement | Homestead | shoreline | 593 ft (cost / $3,500 per ft) | $2.08M | 0 / 0 | $0 ($0 to $0) | 0.00 (0.00 to 0.00) | 0.00 | 0.00 / 0.00 | $0 |
+| SCALER-0473 | North Grapeland Heights Seawall | Miami | shoreline | 102 ft (cost / $3,500 per ft); **short wall: end-around flooding not modelled, likely overstated** | $356,406 | not run: 5.9 km from the coastal shoreline |  |  |  |  |  |
+| SCALER-0613 | Resilient Shoreline Stabilization at Kristi House Children’s Center | Miami | shoreline | 550 ft (stated) | $1.54M | not run: 2.9 km from the coastal shoreline |  |  |  |  |  |
+| SCALER-0614 | Vizcaya Museum and Gardens Seawalls | Miami | shoreline | 160 ft (cost / $3,500 per ft); **short wall: end-around flooding not modelled, likely overstated** | $558,528 | 0 / 0 | $0 ($0 to $0) | 0.00 (0.00 to 0.00) | 0.00 | 0.00 / 0.00 | $0 |
+| SCALER-0681 | Seawalls: Convention Center Dr to Washington | Miami Beach | shoreline | 611 ft (cost / $3,500 per ft) | $2.14M | not run: 0.6 km from the coastal shoreline |  |  |  |  |  |
+| SCALER-0988 | Deering Estate Boat Basin New Seawall | Miami-Dade County | shoreline | 1,674 ft (cost / $3,500 per ft) | $5.86M | 0 / 0 | $0 ($0 to $0) | 0.00 (0.00 to 0.00) | 0.00 | 0.00 / 0.00 | $0 |
+| SCALER-0994 | Crandon Park Marina North and South Seawalls Replacement Project | Miami-Dade County | shoreline | 503 ft (cost / $3,500 per ft) | $1.76M | 1 / 0 | $198 ($0 to $2,340) | 0.00 (0.00 to 0.02) | 0.00 | 0.04 / 0.06 | $0 |
+| SCALER-0996 | Crandon Park U-Shape Seawall | Miami-Dade County | shoreline | 914 ft (cost / $3,500 per ft) | $3.20M | 0 / 0 | $0 ($0 to $0) | 0.00 (0.00 to 0.00) | 0.00 | 0.00 / 0.00 | $0 |
+| SCALER-1333 | Pelican Harbor Marina Seawall Replacement | Miami-Dade County | shoreline | 782 ft (cost / $3,500 per ft) | $2.74M | 7 / 22 | $4,152 ($74 to $124,709) | 0.02 (0.00 to 0.55) | 0.03 | 0.36 / 0.61 | $0 |
+| SCALER-0684 | Elevation of 2 Repetitive Loss Private Properties | Miami Beach | elevation | 2 homes raised 3 ft | $820,682 | 2 / 4 | $75,538 ($44,429 to $111,263) | 1.14 (0.67 to 1.68) | 1.80 |  | $0 |
+| SCALER-0440 | TWP Canal C-6 Bulkhead - Segment 2 Project 0214-2 | Medley | canal or lake edge | 953 ft (cost / $3,500 per ft) | $3.34M | not run: 13.8 km from the coastal shoreline |  |  |  |  |  |
+| SCALER-0454 | Tobie Wilson Park New Seawall - PR-1302 | Medley | canal or lake edge | 230 ft (cost / $3,500 per ft) | $804,840 | not run: 13.1 km from the coastal shoreline |  |  |  |  |  |
+| SCALER-0456 | Lakeside Seawall - LS-0304 | Medley | canal or lake edge | 202 ft (cost / $3,500 per ft) | $708,147 | not run: 16.4 km from the coastal shoreline |  |  |  |  |  |
+| SCALER-0886 | Berth 10 Bulkhead Resiliency | Miami-Dade County | port bulkhead | 5,732 ft (cost / $3,500 per ft) | $20.06M | 0 / 0 | $0 ($0 to $0) | 0.00 (0.00 to 0.00) | 0.00 | 0.00 / 0.00 | $0 |
+| SCALER-0887 | South Bulkhead Repairs (Bays 165-177) | Miami-Dade County | port bulkhead | 1,440 ft (stated) | $17.98M | 0 / 0 | $0 ($0 to $0) | 0.00 (0.00 to 0.00) | 0.00 | 0.00 / 0.00 | $0 |
+| SCALER-0971 | North Bulkhead Improvement Project (PortMiami) | Miami-Dade County | port bulkhead | 17,594 ft (cost / $3,500 per ft) | $61.58M | 0 / 0 | $0 ($0 to $0) | 0.00 (0.00 to 0.00) | 0.00 | 0.00 / 0.01 | $0 |
+| SCALER-1099 | Belen Phase I Drainage Improvements | Miami-Dade County | canal or lake edge | 472 ft (cost / $3,500 per ft) | $1.65M | not run: 15.4 km from the coastal shoreline |  |  |  |  |  |
+| SCALER-1182 | Concrete Panels - Miami SeaPort | Miami-Dade County | port bulkhead | 220 ft (cost / $3,500 per ft) | $771,041 | 0 / 0 | $0 ($0 to $0) | 0.00 (0.00 to 0.00) | 0.00 | 0.00 / 0.00 | $0 |
+| SCALER-1269 | Construction of New Seawall - Area 2 | Miami-Dade County | port bulkhead | 3,412 ft (cost / $3,500 per ft) | $11.94M | 0 / 0 | $0 ($0 to $0) | 0.00 (0.00 to 0.00) | 0.00 | 0.02 / 0.03 | $0 |
+
+- 5 shoreline seawalls were not run: they sit on the Miami River and its
+  side waterways, inner waterways of Aventura, or the Collins Canal, 0.6
+  to 5.9 km from FEMA's coastal shoreline. Module C would otherwise move
+  them to the open shore, which would be wrong.
+- 7 ran. Bay Harbor Islands (75 ft) and Vizcaya (160 ft) are shorter
+  than 200 ft and flagged. With the waterway rule (D-202), Bay Harbor's
+  earlier +8 ft result (43 per dollar) drops to 0: its buildings are nearer
+  the Bay Harbor waterway than the bay.
+- Of the other 5, only Pelican Harbor Marina (7 buildings, 22 residents)
+  protects a measurable amount: $0.02 per dollar at +6 ft, $0.36 at +8 ft
+  ($0.61 at 3%). Before D-202 it was credited with 22 buildings.
+- Port bulkheads: lengths from cost / $3,500 per ft are far too long for
+  heavy port structures (about $12,500 per ft, Part 1), but no modelled
+  homes sit behind them at any length, so the result (no losses avoided)
+  does not change. Their purpose is port operations, not home flood
+  protection.
+- Canal and lake walls in Medley and the C-4 (Belen) protect against canal
+  water. Module C has canal and rainfall flood levels only in the C-8 and
+  C-9 basins, so they cannot be valued yet.
+
+The 5 shoreline seawalls that ran and are at least 200 ft long together
+cost $15.6M and avoid about $4,400 a year at +6 ft ($0.003 per dollar;
+$0.006 at 3%), down from $16,600 before the waterway rule.
+
+## 4. Table B: typical projects placed in 10 locations each (estimated)
+
+"Expected yearly damage before" is for the buildings the project can
+reach: for seawalls, buildings on that stretch of shore with coastal
+flooding and ground below the crest; for elevation, the homes raised.
+All typical seawalls are 550 ft, so none is flagged as short.
+
+#### typical seawall
+
+| ID | Place | Damage band | Coastal or inland | Expected yearly damage before (buildings in play) | Protected: buildings / residents | Losses avoided a year, middle (range) | Benefit per dollar at 7%, middle | At 3% (sensitivity) | Range from damage curves (7%) | Range from cost, 75th to 25th percentile (7%) | At +8 ft crest, 7% / 3% (sensitivity) | Tax change, year 1 | Rainfall levels modelled here |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| S1 | Miami Shores | high | coastal | $25,958 | 0 / 0 | $0 ($0 to $0) | 0.00 | 0.00 | 0.00 to 0.00 | 0.00 to 0.00 | 0.08 / 0.14 | $0 | no losses avoided |
+| S2 | Miami Beach | high | coastal | $15,082 | 0 / 0 | $0 ($0 to $5,143) | 0.00 | 0.00 | 0.00 to 0.04 | 0.00 to 0.00 | 0.08 / 0.14 | $0 | no losses avoided |
+| S3 | Unincorporated Miami-Dade | high | coastal | $7,925 | 0 / 0 | $0 ($0 to $0) | 0.00 | 0.00 | 0.00 to 0.00 | 0.00 to 0.00 | 0.02 / 0.04 | $0 | no losses avoided |
+| S4 | Miami | high | coastal | $3,236 | 0 / 0 | $0 ($0 to $0) | 0.00 | 0.00 | 0.00 to 0.00 | 0.00 to 0.00 | 0.00 / 0.00 | $0 | no losses avoided |
+| S5 | North Miami | middle | coastal | $0 | 0 / 0 | $0 ($0 to $0) | 0.00 | 0.00 | 0.00 to 0.00 | 0.00 to 0.00 | 0.00 / 0.00 | $0 | no losses avoided |
+| S6 | Key Biscayne | middle | coastal | $47,918 | 0 / 0 | $0 ($0 to $0) | 0.00 | 0.00 | 0.00 to 0.00 | 0.00 to 0.00 | 0.01 / 0.02 | $0 | no losses avoided |
+| S7 | Fisher Island | middle | coastal | $46,730 | 4 / 3 | $5,804 ($262 to $101,358) | 0.04 | 0.07 | 0.00 to 0.70 | 0.03 to 0.13 | 0.20 / 0.34 | $0 | no |
+| S8 | Sunny Isles Beach | low | coastal | $0 | 0 / 0 | $0 ($0 to $0) | 0.00 | 0.00 | 0.00 to 0.00 | 0.00 to 0.00 | 0.00 / 0.00 | $0 | no losses avoided |
+| S9 | North Bay Village | low | coastal | $387 | 0 / 0 | $0 ($0 to $170) | 0.00 | 0.00 | 0.00 to 0.00 | 0.00 to 0.00 | 0.00 / 0.00 | $0 | no losses avoided |
+| S10 | Coral Gables | low | coastal | $0 | 0 / 0 | $0 ($0 to $0) | 0.00 | 0.00 | 0.00 to 0.00 | 0.00 to 0.00 | 0.00 / 0.00 | $0 | no losses avoided |
+
+#### typical elevation, FEMA HMA South Florida
+
+| ID | Place | Damage band | Coastal or inland | Expected yearly damage before (buildings in play) | Protected: buildings / residents | Losses avoided a year, middle (range) | Benefit per dollar at 7%, middle | At 3% (sensitivity) | Range from damage curves (7%) | Range from cost, 75th to 25th percentile (7%) | Tax change, year 1 | Rainfall levels modelled here |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| E1 | Biscayne Park | high | coastal | $42,167 | 1 / 2 | $31,310 ($27,262 to $29,716) | 1.53 | 2.42 | 1.33 to 1.45 | 1.02 to 1.75 | $0 | yes (C-8 or C-9) |
+| E2 | Miami | high | coastal | $45,455 | 1 / 3 | $29,661 ($16,884 to $35,056) | 1.45 | 2.29 | 0.83 to 1.71 | 0.96 to 1.66 | $6,865 | no |
+| E3 | Miami Beach | high | coastal | $66,969 | 1 / 3 | $50,163 ($31,455 to $77,760) | 2.45 | 3.87 | 1.54 to 3.80 | 1.63 to 2.81 | $0 | no |
+| E4 | Miami Shores | high | coastal | $38,691 | 1 / 2 | $25,754 ($22,809 to $27,373) | 1.26 | 1.99 | 1.11 to 1.34 | 0.84 to 1.44 | $0 | yes (C-8 or C-9) |
+| E5 | Kendall | middle | coastal | $3,957 | 1 / 4 | $2,104 ($2,830 to $1,580) | 0.10 | 0.16 | 0.14 to 0.08 | 0.07 to 0.12 | $0 | no |
+| E6 | Kendale Lakes | middle | inland | $3,117 | 1 / 2 | $3,117 ($500 to $7,515) | 0.15 | 0.24 | 0.02 to 0.37 | 0.10 to 0.17 | $713 | no |
+| E7 | Hialeah | middle | coastal | $13,122 | 1 / 4 | $11,942 ($6,831 to $14,670) | 0.58 | 0.92 | 0.33 to 0.72 | 0.39 to 0.67 | $0 | no |
+| E8 | Brownsville | low | inland | $77 | 1 / 4 | $77 ($6 to $293) | 0.00 | 0.01 | 0.00 to 0.01 | 0.00 to 0.00 | $0 | no |
+| E9 | Westview | low | coastal | $596 | 1 / 2 | $596 ($133 to $1,193) | 0.03 | 0.05 | 0.01 to 0.06 | 0.02 to 0.03 | $0 | no |
+| E10 | Westchester | low | inland | $237 | 1 / 3 | $237 ($28 to $526) | 0.01 | 0.02 | 0.00 to 0.03 | 0.01 to 0.01 | $92 | no |
+
+#### elevation, Elevate Florida assumption
+
+| ID | Place | Damage band | Coastal or inland | Expected yearly damage before (buildings in play) | Protected: buildings / residents | Losses avoided a year, middle (range) | Benefit per dollar at 7%, middle | At 3% (sensitivity) | Range from damage curves (7%) | Tax change, year 1 | Rainfall levels modelled here |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| E1 | Biscayne Park | high | coastal | $333,916 | 10 / 23 | $212,631 ($199,145 to $200,867) | 0.99 | 1.56 | 0.93 to 0.93 | $2,592 | yes (C-8 or C-9) |
+| E2 | Miami | high | coastal | $255,980 | 10 / 20 | $144,516 ($123,747 to $189,920) | 0.67 | 1.06 | 0.58 to 0.88 | $10,626 | no |
+| E3 | Miami Beach | high | coastal | $228,349 | 10 / 19 | $198,564 ($120,571 to $285,505) | 0.92 | 1.46 | 0.56 to 1.33 | $12,120 | no |
+| E4 | Miami Shores | high | coastal | $225,846 | 10 / 24 | $200,271 ($104,635 to $284,045) | 0.93 | 1.47 | 0.49 to 1.32 | $9,795 | yes (C-8 or C-9) |
+| E5 | Kendall | middle | coastal | $26,593 | 10 / 26 | $19,719 ($17,159 to $24,152) | 0.09 | 0.14 | 0.08 to 0.11 | $264 | no |
+| E6 | Kendale Lakes | middle | inland | $21,933 | 10 / 31 | $21,933 ($5,409 to $43,945) | 0.10 | 0.16 | 0.03 to 0.20 | $1,779 | no |
+| E7 | Hialeah | middle | coastal | $26,548 | 10 / 33 | $24,406 ($12,971 to $32,889) | 0.11 | 0.18 | 0.06 to 0.15 | $1,686 | no |
+| E8 | Brownsville | low | inland | $609 | 10 / 34 | $609 ($28 to $2,003) | 0.00 | 0.00 | 0.00 to 0.01 | $136 | no |
+| E9 | Westview | low | coastal | $3,790 | 10 / 31 | $3,790 ($973 to $7,889) | 0.02 | 0.03 | 0.00 to 0.04 | $406 | no |
+| E10 | Westchester | low | inland | $1,679 | 10 / 32 | $1,679 ($33 to $4,776) | 0.01 | 0.01 | 0.00 to 0.02 | $218 | no |
+
+### How fast the elevation return falls (typical FEMA project, 1 home)
+
+The rows above raise the single most damaged home in each place, so they
+are a best case ("up to"). Here the same project ($253,859, 3 ft) is
+placed instead on the 5th or the 10th most damaged single-family home in
+the same census tract.
+
+| ID | Place | Damage band | Most damaged home: damage a year / benefit per dollar 7% (3%) | 5th most damaged home | 10th most damaged home |
+|---|---|---|---|---|---|
+| E1 | Biscayne Park | high | $42,167 / 1.53 (2.42) | $32,312 / 1.22 (1.93) | $27,686 / 0.85 (1.34) |
+| E2 | Miami | high | $45,455 / 1.45 (2.29) | $21,530 / 0.58 (0.91) | $15,548 / 0.40 (0.63) |
+| E3 | Miami Beach | high | $66,969 / 2.45 (3.87) | $18,929 / 0.78 (1.23) | $14,016 / 0.58 (0.92) |
+| E4 | Miami Shores | high | $38,691 / 1.26 (1.99) | $21,668 / 0.98 (1.55) | $15,993 / 0.75 (1.19) |
+| E5 | Kendall | middle | $3,957 / 0.10 (0.16) | $2,369 / 0.09 (0.14) | $2,040 / 0.05 (0.08) |
+| E6 | Kendale Lakes | middle | $3,117 / 0.15 (0.24) | $2,177 / 0.11 (0.17) | $1,619 / 0.08 (0.12) |
+| E7 | Hialeah | middle | $13,122 / 0.58 (0.92) | $1,524 / 0.07 (0.11) | $1,347 / 0.06 (0.10) |
+| E8 | Brownsville | low | $77 / 0.00 (0.01) | $68 / 0.00 (0.01) | $47 / 0.00 (0.00) |
+| E9 | Westview | low | $596 / 0.03 (0.05) | $368 / 0.02 (0.03) | $223 / 0.01 (0.02) |
+| E10 | Westchester | low | $237 / 0.01 (0.02) | $163 / 0.01 (0.01) | $147 / 0.01 (0.01) |
+
+In the four high-damage places the return falls by 40% to 76% between
+the 1st and the 10th home (from $1.26 to $2.45 down to $0.40 to $0.85 at
+7%). In
+middle and low places even the worst home is below $1, so the drop
+matters little.
+
+![Typical projects placed in 10 locations each, coloured by benefit per dollar](typical_projects_part2_map.png)
+
+*Map: triangles are the typical seawall (S1 to S10), circles the typical
+FEMA elevation (E1 to E10); colour is benefit per dollar at 7%, middle
+estimate. The Elevate Florida case uses the same places as E1 to E10. The
+map did not change with D-198, because the 7% figures did not change.*
+
+**Across the whole coastline (estimated).** We ran the typical seawall on
+all 443 stretches of FEMA's coastal shoreline that have damaged
+buildings behind them (`part2_seawall_scan.csv`):
+- 109 (25%) avoid any loss at all (161 before the waterway rule);
+- at 7%, 1 returns at least $0.50 per dollar and none at least $1 (best:
+  $0.87, unincorporated Miami-Dade); before the rule 6 cleared $1, all in
+  Miami Beach;
+- at 3% (sensitivity), 4 return at least $0.50 and 1 at least $1 ($1.47);
+- the stretches with the most damage behind them are not the best: the two
+  are hardly related (correlation 0.20), because most of that damage
+  reaches buildings through canals and creeks, or in storms above the crest.
+
+**Sensitivity, not a typical project: a closed system along the Miami
+Beach bayfront (D-203).** A continuous wall along the whole 13.1 km FEMA
+coastal shoreline on the bay side of Miami Beach's main island (about 63rd
+Street to South Beach), which also closes the three waterway mouths it
+crosses (Biscayne Waterway, Indian Creek, and an unnamed waterway at the
+north end), as gates, backflow valves or canal walls would. Water can then
+no longer come in through the canals and creeks, so every building whose
+line to the bay shoreline crosses the wall counts; buildings facing the
+Atlantic are not covered. Cost: 42,921 ft at $3,500 per foot = $150M; the
+mouth closures are not costed, so benefit per dollar is an upper bound
+(`scripts/benefit/closed_system_miami_beach.py`, estimated with assumed
+cost).
+
+| Crest | Mouths | Damage avoided a year, middle (range) | Buildings / residents protected | Benefit per $1 at 7% (range) | At 3% (sensitivity) |
+|---|---|---|---|---|---|
+| +6 ft | closed | $2.02M ($0.21M to $15.1M) | 1,245 / 4,391 | 0.16 (0.02 to 1.22) | 0.28 |
+| +8 ft | closed | $11.2M ($4.06M to $54.8M) | 2,850 / 14,315 | 0.91 (0.33 to 4.43) | 1.53 |
+| +6 ft | left open (for comparison) | $0.68M | 717 / 2,853 | 0.06 | 0.09 |
+| +8 ft | left open (for comparison) | $6.34M | 1,805 / 10,593 | 0.51 | 0.86 |
+
+Closing the mouths nearly doubles what the wall avoids. A system of this
+size would only make sense as a whole-city plan, not as a typical funded
+project, and the gates would add a large cost not counted here.
+
+**What drives the results.**
+- Elevation pays where the raised home floods in frequent storms. In the
+  four high-damage tracts the most damaged home has expected damage of
+  $39,000 to $67,000 a year; raising it 3 ft removes most of that. The
+  10th home in the same tract has $14,000 to $28,000.
+- Seawalls pay only where many low-lying buildings face the bay directly,
+  with no canal or creek nearer, and flood in storms that stay below the
+  crest. With the waterway rule this hardly happens for a single 550 ft
+  segment, even at +8 ft.
+- The discount rate matters more for a 50-year seawall than a 30-year
+  elevation, but not enough to turn a near-zero seawall result into a
+  good one.
+- Tax change is small and separate: up to about $12,000 in year 1 for an
+  Elevate Florida group and $0 for every typical seawall placement, under
+  the published Miami price discount scenario (assumption). Homesteaded
+  homes often show $0 in year 1 because Save Our Homes caps their
+  assessed value.
+
+## 5. What is estimated and what is assumed
+
+| Item | Estimated or assumed | Note |
+|---|---|---|
+| Expected yearly damage before and after (Modules A to C) | Estimated | FEMA 2027 water levels, USACE damage curves, NSI buildings; low, middle and high curves give the ranges |
+| Typical seawall size and cost | Estimated, weak | Length from 5 projects, crest from 2, cost from 13 (Part 1) |
+| Typical elevation size and cost | Estimated | 13 funded South Florida FEMA projects; older projects pull the cost down |
+| Elevate Florida case (10 homes, $267,000 each) | Assumed | Rough figure from a programme snapshot |
+| Raise height 3 ft | Assumed | Module C default; FEMA projects usually raise to the base flood elevation plus freeboard, which may be more for deeply flooded homes |
+| Crest +6.0 ft NAVD | Assumed from 2 projects | +8 ft shown as a sensitivity only |
+| Seawall length when not stated | Assumed rule | Cost / $3,500 per ft, limited to the shoreline line there |
+| Short wall flag (under 200 ft) | Assumed rule | Flagged and left out of totals and best results (user, D-198) |
+| Which homes are raised | Assumed rule | The most damaged single-family homes in the area (user's rule); 5th and 10th home shown to test it |
+| Discount rate 7%, project life 50 and 30 years | Assumed (FEMA standard) | FEMA BCA sources in the table above |
+| Discount rate 3% | Assumed (sensitivity) | Shown next to 7%; not the main figure |
+| Maintenance 1% a year for seawalls, none for elevation | Assumed | FEMA gives no standard rate |
+| Tax change | Estimated with an assumed price effect | Published Miami discount scenario (D-187); our own condo coefficient is not reliable (Module D report) |
+
+**Frequent flooding we do not have.** The most frequent storm in the
+model is the 10% (10-year) storm; expected yearly damage counts nothing
+more frequent than that. High-tide, king-tide and other frequent
+(nuisance) flooding are not included. Many Miami-Dade seawalls are built
+mainly to stop exactly that water coming over the wall or through gaps a
+few times a year, so **seawall benefits are probably understated**,
+possibly by a lot for low walls in places like Miami Beach. Elevation
+benefits may be understated too, but less, because tidal water rarely
+reaches the floor of a raised home either way.
+
+**Rainfall flooding we do not have.** Module C has rainfall and canal
+flood levels only in the C-8 and C-9 basins (northeast Miami-Dade);
+elsewhere it uses coastal levels and the FEMA map flood elevation. Of the
+Table B elevation places, only Biscayne Park (E1) and Miami Shores (E4)
+are in those basins. Elsewhere, and especially inland (Kendale Lakes,
+Brownsville, Westchester), damage from heavy rain is missing, so
+elevation benefits there are likely understated. Seawalls do not stop
+rainfall flooding, so missing rainfall mostly leaves their results
+unchanged; where rain floods a building deeper than the sea would, the
+wall's benefit could be slightly overstated.
+
+**Other limits.**
+- Water going around the ends of a wall is not modelled, so short walls
+  are overstated; walls under 200 ft are flagged and left out of
+  summaries.
+- Elevation results raise the most damaged home(s), so they are a best
+  case; see the 5th and 10th home table.
+- Only single-family homes are raised. FEMA's grant records (HMA
+  Subapplications) have no building-type field, few titles (115 of 955
+  Florida elevation records) and none mentioning duplexes, small apartment
+  buildings or condos, so there is no typical cost for 2 to 4 unit
+  buildings (D-205).
+- Seawall benefits count buildings only, not roads, parks or utilities.
+- Each placement is judged alone; neighbouring walls that close a gap
+  together are not modelled, except in the closed-system sensitivity.
+- Existing seawalls along canals and creeks are not in the model, so water
+  coming in through them is probably overstated and a new bayfront wall's
+  benefit understated.
+- FEMA's water lines may miss some small private canals (D-202).
+- No sea level rise in these runs. Sea level rise would raise storm
+  levels and overtop a +6 ft wall even more often, and would make
+  frequent tidal flooding more frequent still.
+
+## 6. Could we add a frequent-flood point later? (report only, nothing built)
+
+Two public NOAA sources would help. Neither needs an account; both would
+need the user's approval to download.
+
+| Source | What it would give | How hard |
+|---|---|---|
+| NOAA CO-OPS high tide flooding products for the Virginia Key tide gauge (station 8723214): flood thresholds (minor, moderate, major, set by NOAA Technical Report NOS CO-OPS 086) and the yearly count of high-tide flood days, with an outlook | One water level and how often it is reached (days a year). That is the frequent-flood point the model lacks: a level reached several times a year, to add below the 10% storm. Converting it to NAVD88 needs the station's published datums. | Easy to get (a few numbers from the station pages or the CO-OPS data service). Moderate to use: Modules A and B need a new, much more frequent storm point, and the single gauge level has to be spread over the county, most simply as a flat level near the shore, which ignores how water actually reaches each street. About 2 to 4 days. |
+| NOAA Sea Level Rise Viewer data (Florida depth and extent layers): mapped flooding connected to the ocean at set heights above the typical high tide (0 to 10 ft above mean higher high water, in half-foot or 1 ft steps), from lidar ground heights | A map of where water at the minor flood threshold actually reaches and how deep, instead of a flat level. We would take the layer nearest the threshold from the first source and read the depth at each building. | Harder: large files for the southeast Florida area, and sampling them at every building point. About a week. The layers do not show water backing up through storm drains, which is a main path for tidal flooding in Miami Beach, so they would still understate it there. |
+
+Suggested order, if wanted: start with the CO-OPS threshold and flood-day
+counts (cheap, and enough to test how much seawall results move), and add
+the Sea Level Rise Viewer layers only if that test shows a large effect.
+The Southeast Florida Regional Climate Change Compact tracks high tide
+flooding at Virginia Key as a climate indicator and could be a cross-check.

@@ -20,7 +20,8 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 MODEL = ROOT / "Modelling Data from Web"
 TRACTS = ROOT / "public" / "femaindex-4326.geojson"
-OUT = ROOT / "src" / "admin" / "viz" / "data" / "tracts.geojson"
+# private admin data (D-095): git-ignored staging, uploaded to the "admin-data" bucket by npm run upload-admin-data
+OUT = ROOT / "Modelling Data from Web" / "outputs" / "admin_data" / "gap" / "tracts.geojson"
 
 GEOID_COL = "L0Census_Tracts.GEOID"
 NAME_COL = "L0Census_Tracts.NAME"
@@ -42,14 +43,14 @@ def _num(value: str | None) -> float | None:
 
 
 def main() -> None:
-    invest = read_csv(MODEL / "tract_investment.csv", [
+    invest = read_csv(MODEL / "data/processed/investment/tract_investment.csv", [
         "population", "investment_total", "investment_per_capita", "project_count",
         "investment_type_gray", "investment_type_green", "investment_type_blue", "investment_type_hybrid",
     ])
-    slr = read_csv(MODEL / "slr_tract.csv", ["slr_3ft_area_share"])
-    surge = read_csv(MODEL / "surge_tract.csv", ["surge_cat3_area_share"])
+    slr = read_csv(MODEL / "data/processed/hazards/slr_tract.csv", ["slr_3ft_area_share"])
+    surge = read_csv(MODEL / "data/processed/hazards/surge_tract.csv", ["surge_cat3_area_share"])
     nri = read_csv(ROOT / "ols_tract_data_enriched.csv", ["RISK_SCORE", "EAL_SCORE", "SOVI_SCORE"])
-    svi = read_csv(MODEL / "tract_analysis.csv", ["EP_POV150"])
+    svi = read_csv(MODEL / "data/processed/analysis/tract_analysis.csv", ["EP_POV150"])
 
     features = []
     for feat in json.load(open(TRACTS))["features"]:
@@ -66,6 +67,7 @@ def main() -> None:
         geom = full.simplify(0.0001, preserve_topology=True)
         features.append({"type": "Feature", "properties": out, "geometry": mapping(geom)})
 
+    OUT.parent.mkdir(parents=True, exist_ok=True)
     with open(OUT, "w") as fh:
         json.dump({"type": "FeatureCollection", "features": features}, fh, separators=(",", ":"))
     print(f"wrote {len(features)} tracts to {OUT.relative_to(ROOT)} ({OUT.stat().st_size / 1e6:.1f} MB)")

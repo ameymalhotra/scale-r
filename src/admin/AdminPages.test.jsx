@@ -74,6 +74,7 @@ describe('admin layout', () => {
     const nav = screen.getByRole('navigation');
     expect(within(nav).getByRole('link', { name: 'Map layers' })).toHaveAttribute('href', '/admin/layers');
     expect(within(nav).getByRole('link', { name: 'Live tool' })).toHaveAttribute('href', '/admin/live-tool');
+    expect(within(nav).getByRole('link', { name: 'Scenarios (preliminary)' })).toHaveAttribute('href', '/admin/viz/scenario');
   });
 });
 

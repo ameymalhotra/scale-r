@@ -3,11 +3,21 @@ import { useNavigate } from 'react-router-dom';
 import gapMarkup from './gapMap.html?raw';
 import { mount as mountGap } from './gapMap.js';
 import './gapMap.css';
+import scenarioMarkup from './scenario/scenarioMap.html?raw';
+import { mount as mountScenario } from './scenario/scenarioMap.js';
+import './scenario/scenarioMap.css';
+import whatIfMarkup from './whatif/whatIfMap.html?raw';
+import { mount as mountWhatIf } from './whatif/whatIfMap.js';
+import './whatif/whatIfMap.css';
 
 // Draft visualization for faculty review. Reachable only from the admin, so the
 // public site never links to or loads them.
 const VIEWS = {
   gap: { className: 'viz-gap', markup: gapMarkup, mount: mountGap, title: 'Resilience gap map' },
+  // Preliminary ML scenario module (prompt 22). Admin only, never linked from the public site (D-094).
+  scenario: { className: 'viz-scenario', markup: scenarioMarkup, mount: mountScenario, title: 'Scenarios (preliminary)' },
+  // Flood What-If (D-200): place a seawall or raise homes and see damage avoided. Admin only; data private (D-095).
+  whatif: { className: 'viz-whatif', markup: whatIfMarkup, mount: mountWhatIf, title: 'Flood What-If' },
 };
 
 export default function VizPage({ view }) {

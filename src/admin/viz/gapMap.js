@@ -1,5 +1,6 @@
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
+import { loadAdminJson } from './adminData.js';
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
 
@@ -428,7 +429,7 @@ export function mount() {
   }
 
   map.on('load', async () => {
-    tracts = await (await fetch(new URL('./data/tracts.geojson', import.meta.url))).json();
+    tracts = await loadAdminJson('gap/tracts.geojson');   // private admin data (D-095)
     if (removed) return;
     classify();
 

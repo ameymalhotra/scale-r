@@ -7,7 +7,7 @@ Only a few small attributes are kept.
 
 Usage: python scripts/python/prepare_footprint_tiles.py parcels path/to/Parcel.geojson
        python scripts/python/prepare_footprint_tiles.py buildings path/to/BuildingFootprint2D.geojson
-       (the source files are not committed; keep them in "Modelling Data from Web/boundaries/", which git ignores)
+       (the source files are not committed; keep them in "Modelling Data from Web/data/raw/boundaries/", which git ignores)
 """
 import json
 import shutil

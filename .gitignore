@@ -30,9 +30,14 @@ scripts/python/*
 !scripts/python/validate_map_surfaces.py
 !scripts/python/build_viz_tracts.py
 !scripts/python/build_viz_exposure.py
+# The surface heat layer used by the population exposure analysis: build scripts and their requirements
+!scripts/python/build_lst_layer.py
+!scripts/python/build_hhi_layer.py
+!scripts/python/requirements.txt
 !scripts/python/prepare_footprint_tiles.py
 !scripts/js/
 scripts/js/*
+!scripts/js/upload-admin-data.mjs
 !scripts/js/audit-performance.mjs
 !scripts/js/gtmetrix-benchmark.mjs
 supabase/*
@@ -79,9 +84,51 @@ __pycache__/
 .claude/
 .serena/
 
-# Raw downloaded datasets (9 GB, files over GitHub's 100 MB limit); see DATA_PROCESSING.md for sources
+# Raw downloaded datasets (9 GB, files over GitHub's 100 MB limit); see reports/data/DATA_PROCESSING.md for sources
+Modelling Data from Web/data/raw/boundaries/
+Modelling Data from Web/data/raw/social/
+Modelling Data from Web/data/raw/physical/
+Modelling Data from Web/data/raw/fema/nfip_claims_miami_dade.csv
+# Benefit simulator downloads (prompt 27, D-119 onward): tax roll, parcels, NSI, flood maps, policies, FHFA, reference documents
+Modelling Data from Web/data/raw/dor/
+Modelling Data from Web/data/raw/nsi/
+Modelling Data from Web/data/raw/fhfa/
+Modelling Data from Web/data/raw/reference_docs/
+Modelling Data from Web/data/raw/fema/nfhl/
+Modelling Data from Web/data/raw/fema/nfip_policies_miami_dade.*
+Modelling Data from Web/data/raw/fema/nfip_policies_parts/
+Modelling Data from Web/data/processed/benefit/buildings.parquet
+Modelling Data from Web/data/processed/benefit/buildings.csv.gz
+Modelling Data from Web/data/processed/benefit/ead_buildings.parquet
+Modelling Data from Web/data/processed/benefit/sales_features.parquet
+Modelling Data from Web/data/processed/benefit/sales_features.csv.gz
+Modelling Data from Web/data/raw/mdc_layers/
+# Analysis outputs, and the processed files that used to live in output/ (kept ignored, as before)
+Modelling Data from Web/outputs/
+Modelling Data from Web/archive/output_part1_tables/
+Modelling Data from Web/data/processed/investment/allocation_audit_*.csv
+Modelling Data from Web/data/processed/investment/project_join_keys.csv
+Modelling Data from Web/data/processed/analysis/variable_dictionary.csv
+# Pre-reorganization paths (5 Nov 2026), kept so nothing surfaces if an old copy reappears
 Modelling Data from Web/tract-level/
 Modelling Data from Web/block-group-level/
 Modelling Data from Web/boundaries/
 Modelling Data from Web/output/
 .Rhistory
+Modelling Data from Web/data/raw/fema/firm_2027/12086C_2027-02-19.zip
+Modelling Data from Web/data/raw/fema/firm_2027/extract/
+Modelling Data from Web/data/raw/fema/firm_2027/12086CV001B.pdf
+Modelling Data from Web/data/processed/benefit/pa_features.parquet
+Modelling Data from Web/data/processed/benefit/ground_3dep.parquet
+Modelling Data from Web/data/processed/benefit/fema2027_zones.parquet
+Modelling Data from Web/data/processed/benefit/module_a_depth.parquet
+Modelling Data from Web/data/processed/benefit/module_b_eyd.parquet
+Modelling Data from Web/data/processed/benefit/sdf_sales.parquet
+Modelling Data from Web/data/raw/fema/nfip_policies_full/
+Modelling Data from Web/data/processed/benefit/module_d_sales.parquet
+Modelling Data from Web/data/processed/benefit/module_d_coefficients.parquet
+Modelling Data from Web/data/processed/benefit/nfip_policies_miami_dade.parquet
+
+# Admin-only data lives in the private Supabase bucket "admin-data" (D-095), never in src/
+src/admin/viz/scenario/data/
+src/admin/viz/data/

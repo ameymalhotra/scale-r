@@ -1,0 +1,333 @@
+{
+  "note": "NFIP policies: see fema/nfip_policies_download_log.json",
+  "files": [
+    {
+      "file": "data/raw/dor/Dade_23_Final_NAL_2026.zip",
+      "url": "https://floridarevenue.com/property/dataportal/Documents/PTO%20Data%20Portal/Tax%20Roll%20Data%20Files/NAL/2026F/Dade%2023%20Final%20NAL%202026.zip",
+      "publisher_date": "posted 28 Oct 2026; CSV inside dated 16 Oct 2026",
+      "downloaded": "2026-11-10",
+      "bytes": 60286847,
+      "sha256": "7aa5d4f6720ad8def25df72d3b077eeb909b2bf349bcf4ea978993b881a8f930"
+    },
+    {
+      "file": "data/raw/dor/miamidade_2026Ppar.zip",
+      "url": "https://floridarevenue.com/property/dataportal/Documents/PTO%20Data%20Portal/Map%20Data/2026F/2026F%20PAR/miamidade_2026Ppar.zip",
+      "publisher_date": "posted 7 Aug 2026; shapefile dated 27 Jul 2026",
+      "downloaded": "2026-11-10",
+      "bytes": 184287329,
+      "sha256": "f52d9e525554cecd9ea89c5f10721a0f1980ca2aeb15207617b82aa4237ab49a"
+    },
+    {
+      "file": "data/raw/dor/miamidade_condos_2026.zip",
+      "url": "https://floridarevenue.com/property/dataportal/Documents/PTO%20Data%20Portal/Map%20Data/2026F/2026F%20PAR/miamidade_condos_2026.zip",
+      "publisher_date": "posted 7 Aug 2026; shapefile dated 28 Apr 2026",
+      "downloaded": "2026-11-10",
+      "bytes": 78143264,
+      "sha256": "ff856a7491d06fabaaaaf8decf27634ac99d85f55413434a32400d32874984ff"
+    },
+    {
+      "file": "data/raw/dor/parcel_shapefiles_readme.pdf",
+      "url": "https://floridarevenue.com/property/dataportal/Documents/PTO%20Data%20Portal/Map%20Data/parcel%20shapefiles%20readme.pdf",
+      "publisher_date": "10 Feb 2026",
+      "downloaded": "2026-11-10",
+      "bytes": 93412,
+      "sha256": "17b82a710a0affc74ce9db28bb24d6ea052546358a59b8bb198127e6ad9892b6"
+    },
+    {
+      "file": "data/raw/reference_docs/dor/2026_NAL_SDF_NAP_Users_Guide.pdf",
+      "url": "https://floridarevenue.com/property/dataportal/Documents/PTO%20Data%20Portal/User%20Guides/2026%20Users%20guide%20and%20quick%20reference/2026_NAL_SDF_NAP_Users_Guide.pdf",
+      "publisher_date": "2026",
+      "downloaded": "2026-11-10",
+      "bytes": 283728,
+      "sha256": "b0fdce41b212324c5c3c430c4c75e21d77ed4003cd42ecc343ce4c27ec0359c4"
+    },
+    {
+      "file": "data/raw/nsi/nsi_2022_12.gpkg.zip",
+      "url": "https://nsi.sec.usace.army.mil/downloads/nsi_2022/nsi_2022_12.gpkg.zip",
+      "publisher_date": "Last-Modified 30 Sep 2022; comparison only (D-130)",
+      "downloaded": "2026-11-10",
+      "bytes": 760417112,
+      "sha256": "d4a967872879e17e2aebcc602d2f5ff07eb200ee0d493e184685d0b5f5bb10a5"
+    },
+    {
+      "file": "data/raw/nsi/nsi_2026_api_12086.geojson",
+      "url": "https://nsi.sec.usace.army.mil/nsiapi/structures?fips=12086&fmt=fc",
+      "publisher_date": "NSI 2026 via API; used (D-130)",
+      "downloaded": "2026-11-10",
+      "bytes": 553916071,
+      "sha256": "e81deb71ea27cf5401a12656f3fe0a70183aa312b88bbc7eefbaabeb42355865"
+    },
+    {
+      "file": "data/raw/fema/nfhl/12086C_20260125.zip",
+      "url": "https://hazards.fema.gov/nfhlv2/output/County/12086C_20260125.zip",
+      "publisher_date": "NFHL database revised 26 Jan 2026; FIRM effective 11 Sep 2009",
+      "downloaded": "2026-11-10",
+      "bytes": 131656386,
+      "sha256": "4f9b4902308921f2bc466078183febcfc89a447f2edbf80feb32f95dac6ccd5d"
+    },
+    {
+      "file": "data/raw/fhfa/hpi_at_tract_miami_dade.csv",
+      "url": "https://www.fhfa.gov/hpi/download/annual/hpi_at_tract.csv",
+      "publisher_date": "Miami-Dade rows of the national file (national SHA-256 in fhfa/sha256.txt); data to 2025",
+      "downloaded": "2026-11-10",
+      "bytes": 577191,
+      "sha256": "58532811df15946b617dc6745871a76b77cfb9fc7da911a942322a3cfd548267"
+    },
+    {
+      "file": "data/raw/reference_docs/usace/occtypes.json",
+      "url": "https://raw.githubusercontent.com/USACE/go-consequences/dff647cabbc1abae3f084e80b7f6a166651d05d8/structures/occtypes.json",
+      "publisher_date": "commit 27 Dec 2021",
+      "downloaded": "2026-11-10",
+      "bytes": 561852,
+      "sha256": "ac0d2222b68884d581a17fb48ee4fdbfa36fe06e7de5ab7fa44de69c5badaab9"
+    },
+    {
+      "file": "data/raw/reference_docs/fema/fema_bca_general-economic-values_2025.pdf",
+      "url": "https://www.fema.gov/sites/default/files/documents/fema_bca_general-economic-values_2025.pdf",
+      "publisher_date": "v13.0, Sep 2024, updated Jul 2025",
+      "downloaded": "2026-11-10",
+      "bytes": 2398416,
+      "sha256": "adbcf013c3ef0f08323faa5b2f6ec94a602883706dcd22c6fa7bd9eeafe60bac"
+    },
+    {
+      "file": "data/raw/reference_docs/fema/fema_bca_hazard-methodology-riverine-coastal-flood_2025.pdf",
+      "url": "https://www.fema.gov/sites/default/files/documents/fema_bca_hazard-methodology-riverine-coastal-flood_2025.pdf",
+      "publisher_date": "v6, Jan 2025, updated Jun 2025",
+      "downloaded": "2026-11-10",
+      "bytes": 1904049,
+      "sha256": "6f4b290bf0e1ee2beb1c99fd5d26fc77e9db302f9a0cc738f072c6fd08d07afc"
+    },
+    {
+      "file": "data/raw/reference_docs/fema/fema_bca_methodology-project-configuration-cost-estimation_2025.pdf",
+      "url": "https://www.fema.gov/sites/default/files/documents/fema_bca_methodology-project-configuration-cost-estimation_2025.pdf",
+      "publisher_date": "v6.0, Dec 2024, updated Jul 2025",
+      "downloaded": "2026-11-10",
+      "bytes": 600902,
+      "sha256": "72afb310f2f6ac35e2f974e3133ea0b4a9321a4082b16683b58d44a8711e211b"
+    },
+    {
+      "file": "data/raw/reference_docs/fema/bca-allhelpcontent-pdf-08-28-2025.pdf",
+      "url": "https://www.fema.gov/sites/default/files/documents/bca-allhelpcontent-pdf-08-28-2025.pdf",
+      "publisher_date": "28 Aug 2025",
+      "downloaded": "2026-11-10",
+      "bytes": 16430165,
+      "sha256": "e83c5233ac9bb2103d192a48cab1c6d8544385477b25fe34ae5ed3aee89571db"
+    },
+    {
+      "file": "data/raw/reference_docs/fema/fema_bca_economic-values-green-infrastructure_2025.pdf",
+      "url": "https://www.fema.gov/sites/default/files/documents/fema_bca_economic-values-green-infrastructure_2025.pdf",
+      "publisher_date": "Jul 2022, updated Jul 2025",
+      "downloaded": "2026-11-10",
+      "bytes": 1747361,
+      "sha256": "92391b1dcf943dd5271e48ae1801db402a82a52a87a4be00975337431706bbb8"
+    },
+    {
+      "file": "data/raw/reference_docs/fema/fema_ecosystem-service-value-updates_2022.pdf",
+      "url": "https://www.fema.gov/sites/default/files/documents/fema_ecosystem-service-value-updates_2022.pdf",
+      "publisher_date": "Jun 2022",
+      "downloaded": "2026-11-10",
+      "bytes": 2941129,
+      "sha256": "a2a5e1859718589fcff75fcf09a196caa8fe9c64c62da7c994640bdb637fdba3"
+    },
+    {
+      "file": "data/raw/reference_docs/fema/fema_standard-economic-values-methodology-report_2023.pdf",
+      "url": "https://www.fema.gov/sites/default/files/documents/fema_standard-economic-values-methodology-report_2023.pdf",
+      "publisher_date": "v12.0, May 2023; superseded by v13, not used",
+      "downloaded": "2026-11-10",
+      "bytes": 1120278,
+      "sha256": "b8dcf206ae0b25d2d371ff6d341443f709ad377059d0aaa7b0807449ca564bfd"
+    },
+    {
+      "file": "data/raw/reference_docs/nhc/nws-nhc-6.pdf",
+      "url": "https://www.nhc.noaa.gov/pdf/nws-nhc-6.pdf",
+      "publisher_date": "Aug 2011 (NOAA Tech. Memo. NWS NHC-6)",
+      "downloaded": "2026-11-10",
+      "bytes": 6279992,
+      "sha256": "e614fe3d01443069b6dcd719759a09f1df61afbc69a97bbb5d2f3fa71a296df5"
+    },
+    {
+      "file": "data/raw/reference_docs/nhc/return_hurr.jpg",
+      "url": "https://www.nhc.noaa.gov/climo/images/return_hurr.jpg",
+      "publisher_date": "HURISK, data to 2010",
+      "downloaded": "2026-11-10",
+      "bytes": 795875,
+      "sha256": "6c3961499a3d9f7d20d880ea1b7e83092bedc0ac9de77cbf675edbabdfb824ca"
+    },
+    {
+      "file": "data/raw/reference_docs/nhc/return_mjrhurr.jpg",
+      "url": "https://www.nhc.noaa.gov/climo/images/return_mjrhurr.jpg",
+      "publisher_date": "HURISK, data to 2010",
+      "downloaded": "2026-11-10",
+      "bytes": 829654,
+      "sha256": "f7c5d4d057d807ef3b8cc4693a05fdadde381c87cf04bbf8995412c8714cfdd9"
+    },
+    {
+      "file": "data/raw/bls/cpiu_1978_1987.json",
+      "url": "https://api.bls.gov/publicAPI/v1/timeseries/data/ (POST, CUUR0000SA0, 1978 to 1987)",
+      "publisher_date": "downloaded 11 Nov 2026",
+      "downloaded": "2026-11-10",
+      "bytes": 10396,
+      "sha256": "8736e2cdcc9bf9407ecf68626430fda491bdb0762db703c836e11294e1c8aa2a"
+    },
+    {
+      "file": "data/raw/bls/cpiu_1988_1997.json",
+      "url": "https://api.bls.gov/publicAPI/v1/timeseries/data/ (POST, CUUR0000SA0, 1988 to 1997)",
+      "publisher_date": "downloaded 11 Nov 2026",
+      "downloaded": "2026-11-10",
+      "bytes": 10463,
+      "sha256": "b3b16259f9a5664eaa3ef9e39c250584eac12b19754882662d2fa7b18dfcdc8b"
+    },
+    {
+      "file": "data/raw/bls/cpiu_1998_2007.json",
+      "url": "https://api.bls.gov/publicAPI/v1/timeseries/data/ (POST, CUUR0000SA0, 1998 to 2007)",
+      "publisher_date": "downloaded 11 Nov 2026",
+      "downloaded": "2026-11-10",
+      "bytes": 10487,
+      "sha256": "b3b975cd6fb378187899b716f91dc57adc393c301e9396477d7fd95423a67c62"
+    },
+    {
+      "file": "data/raw/bls/cpiu_2008_2017.json",
+      "url": "https://api.bls.gov/publicAPI/v1/timeseries/data/ (POST, CUUR0000SA0, 2008 to 2017)",
+      "publisher_date": "downloaded 11 Nov 2026",
+      "downloaded": "2026-11-10",
+      "bytes": 10703,
+      "sha256": "e918b12e7bd247cc68a5ce619038bd16819c3281d62f7e23bb58c36f0128f6b2"
+    },
+    {
+      "file": "data/raw/bls/cpiu_2018_2025.json",
+      "url": "https://api.bls.gov/publicAPI/v1/timeseries/data/ (POST, CUUR0000SA0, 2018 to 2025)",
+      "publisher_date": "downloaded 11 Nov 2026",
+      "downloaded": "2026-11-10",
+      "bytes": 8657,
+      "sha256": "0a6fa17d83ab4a44ec9a60a3d08cf6ad15fd2b651dc9b12549a73b8d127c3130"
+    },
+    {
+      "file": "data/raw/mdc_layers/MetroRailStations_gdb_p0.geojson",
+      "url": "https://services.arcgis.com/8Pc9XBTAsYuxx9Ny/arcgis/rest/services/MetroRailStations_gdb/FeatureServer/0/query?where=1=1&outFields=*&outSR=4326&f=geojson",
+      "publisher_date": "downloaded 11 Nov 2026",
+      "downloaded": "2026-11-10",
+      "bytes": 8658,
+      "sha256": "4bd80a327e4846adca9e4532c4dc39fb4520af70477e57d1a9a4ed405e3185d9"
+    },
+    {
+      "file": "data/raw/mdc_layers/SchoolSite_gdb_p0.geojson",
+      "url": "https://services.arcgis.com/8Pc9XBTAsYuxx9Ny/arcgis/rest/services/SchoolSite_gdb/FeatureServer/0/query?where=1=1&outFields=*&outSR=4326&f=geojson",
+      "publisher_date": "downloaded 11 Nov 2026",
+      "downloaded": "2026-11-10",
+      "bytes": 291161,
+      "sha256": "3cd05994baa4ac16a0cf14f7031c6a44fe27aea564522eda81febdd525aaaa90"
+    },
+    {
+      "file": "data/raw/mdc_layers/CountyParkBoundaries_PROS_View_for_ALWAYS_ON_p0.geojson",
+      "url": "https://services.arcgis.com/8Pc9XBTAsYuxx9Ny/arcgis/rest/services/CountyParkBoundaries_PROS_View_for_ALWAYS_ON/FeatureServer/1/query?where=1=1&outFields=*&outSR=4326&f=geojson",
+      "publisher_date": "downloaded 11 Nov 2026",
+      "downloaded": "2026-11-10",
+      "bytes": 1053270,
+      "sha256": "7de70998c99b82539fd5df5eec1ed02aa3ee28ecc6cb993e05fd2acd2aa300e1"
+    },
+    {
+      "file": "data/raw/mdc_layers/MunicipalParkBoundary_gdb_p0.geojson",
+      "url": "https://services.arcgis.com/8Pc9XBTAsYuxx9Ny/arcgis/rest/services/MunicipalParkBoundary_gdb/FeatureServer/0/query?where=1=1&outFields=*&outSR=4326&f=geojson",
+      "publisher_date": "downloaded 11 Nov 2026",
+      "downloaded": "2026-11-10",
+      "bytes": 1261033,
+      "sha256": "9b0e04e1e37db8cec94f5b820cb89cfd5a0de63c8ae2f074cc912f2c198343b2"
+    },
+    {
+      "file": "data/raw/usgs_3dep/tnm_1m_products.json",
+      "url": "https://tnmaccess.nationalmap.gov/api/v1/products?datasets=Digital%20Elevation%20Model%20(DEM)%201%20meter&bbox=-80.88,25.13,-80.11,25.98&max=500&outputFormat=JSON",
+      "publisher_date": "tile index; FL_MiamiDade_D23 published 15 Dec 2025",
+      "downloaded": "2026-11-10",
+      "bytes": 532782,
+      "sha256": "db8de4c3f4e1ea637097fa84203a3f201d7d712dc24d689b06472ed4fedc2dd9"
+    },
+    {
+      "file": "data/raw/usgs_3dep/metadata/USGS_1M_17_x51y279_FL_MiamiDade_D23.xml",
+      "url": "https://thor-f5.er.usgs.gov/ngtoc/metadata/waf/elevation/1_meter/geotiff/FL_MiamiDade_D23/USGS_1M_17_x51y279_FL_MiamiDade_D23.xml",
+      "publisher_date": "lidar 27 Dec 2023 to 29 May 2024",
+      "downloaded": "2026-11-10",
+      "bytes": 13455,
+      "sha256": "6d9ad4457d34f6dcf7fdc2cd59542d79717835f9b5ab7b8ebb199c167fdda555"
+    },
+    {
+      "file": "data/raw/fema/firm_2027/12086C_2027-02-19.zip",
+      "url": "https://msc.fema.gov/portal/downloadProduct?productTypeID=FINAL_PRODUCT&productSubTypeID=FIRM_DB&productID=12086C_2027-02-19",
+      "publisher_date": "FIRM database for maps effective 19 Feb 2027 (pending)",
+      "downloaded": "2026-11-10",
+      "bytes": 209140307,
+      "sha256": "05be2bc034ba4416f9e7214715a0cca2d2f5437f54221ccfd98bea4a0a55e82f"
+    },
+    {
+      "file": "data/raw/fema/firm_2027/12086CV001B.pdf",
+      "url": "https://msc.fema.gov/portal/downloadProduct?productTypeID=FINAL_PRODUCT&productSubTypeID=FIS_REPORT&productID=12086CV001B",
+      "publisher_date": "Flood Insurance Study volume 1, effective 19 Feb 2027",
+      "downloaded": "2026-11-10",
+      "bytes": 13099171,
+      "sha256": "357276e700ef217cfae06922c63a24ab830f5394eae7d64fe3d751cffcdfc9ed"
+    },
+    {
+      "file": "data/raw/millage/2026_adopted_millage_chart.pdf",
+      "url": "https://www.miamidadepa.gov/resources-pa/library/reports/millage/2026-adopted-millage-chart.pdf",
+      "publisher_date": "created 13 Oct 2026",
+      "downloaded": "2026-11-10",
+      "bytes": 165375,
+      "sha256": "6217220fbcaf9a4cb20ac42e6dabbb331a6835b0e1ddc4578f72ccc71f0e445e"
+    },
+    {
+      "file": "data/raw/millage/2025_Miami-Dade_TACD.pdf",
+      "url": "https://floridarevenue.com/property/dataportal/Documents/PTO%20Data%20Portal/TACD%20History/2025%20Taxing%20Authority%20Code%20Descriptions/2025%20Miami-Dade%20TACD.pdf",
+      "publisher_date": "2025 adopted millage, received by DOR 15 Oct 2025",
+      "downloaded": "2026-11-10",
+      "bytes": 979079,
+      "sha256": "b993b78612d38a22397769b25902d9cea071b1f06a9039031860e364697dacaf"
+    },
+    {
+      "file": "data/raw/millage/millage_tables.html",
+      "url": "https://www.miamidadepa.gov/pa/millage_tables.asp",
+      "publisher_date": "index page of millage charts",
+      "downloaded": "2026-11-10",
+      "bytes": 78923,
+      "sha256": "f7b7f928cb099ac6b988bb374f11b37672a90e60af34f0e329e662f1defaecf6"
+    },
+    {
+      "file": "data/raw/usgs_3dep/metadata/USGS_FL_MiamiDade_1_D23_Final_DEM_Report.txt",
+      "url": "https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/metadata/FL_MiamiDade_D23/FL_MiamiDade_1_D23/reports/USGS_FL_MiamiDade_1_D23_Final_DEM_Report.txt",
+      "publisher_date": "USGS final DEM report (datum check)",
+      "downloaded": "2026-11-10",
+      "bytes": 171019,
+      "sha256": "f1b684cb33fbc4a26d67fffb3645db23686225064e47cc3a40a8f3842c48c68c"
+    },
+    {
+      "file": "data/raw/usgs_3dep/metadata/FL_MiamiDade_D23_Digital_Elevation_Model.xml",
+      "url": "https://prd-tnm.s3.amazonaws.com/StagedProducts/Elevation/metadata/FL_MiamiDade_D23/FL_MiamiDade_1_D23/reports/vendor_provided_xml/FL_MiamiDade_D23_Digital_Elevation_Model.xml",
+      "publisher_date": "vendor metadata: NAVD88 (GEOID18)",
+      "downloaded": "2026-11-10",
+      "bytes": 8954,
+      "sha256": "0b0642a53f389226fa02c7b4c98e6a12dca2ea4e7997c95da292e02e82bf4968"
+    },
+    {
+      "file": "data/raw/fema/community_status/csb_miami_dade.json",
+      "url": "https://www.fema.gov/api/open/v1/NfipCommunityStatusBook?$filter=state eq 'FL' and substringof('MIAMI-DADE',county)&$top=1000&$format=json",
+      "publisher_date": "OpenFEMA, refreshed 25 Aug 2026",
+      "downloaded": "2026-11-10",
+      "bytes": 20976,
+      "sha256": "992dcc30ae3ed9c82c253cafe373a471a96404074bf482c902ed49a7630579e8"
+    },
+    {
+      "file": "data/raw/dor/Dade_23_Final_SDF_2026.zip",
+      "url": "https://floridarevenue.com/property/dataportal/Documents/PTO%20Data%20Portal/Tax%20Roll%20Data%20Files/SDF/2026F/Dade%2023%20Final%20SDF%202026.zip",
+      "publisher_date": "CSV inside dated 16 Oct 2026; sales 2025 and 2026",
+      "downloaded": "2026-11-10",
+      "bytes": 2324867,
+      "sha256": "208b3283a0a7c1a623e6619f0d7375f12754dbdb8e680d33343f72cf8713aa03"
+    },
+    {
+      "file": "data/raw/fema/nfip_policies_full/NfipPoliciesV3.parquet",
+      "url": "https://www.fema.gov/about/reports-and-data/openfema/v3/NfipPoliciesV3.parquet",
+      "publisher_date": "refreshed 9 Sep 2026; 3,713,009,365 bytes; MD5 matches FEMA ETag 275e07e99258e4ff7684cf4505f91406",
+      "downloaded": "2026-11-10",
+      "bytes": 3713009365,
+      "sha256": "b830cd23cd768940591482983ad9551320745edf3aa3b544adab7509bb06f786"
+    }
+  ]
+}

@@ -26,9 +26,9 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 OUT = ROOT / "src" / "exposure" / "data"
 TRACTS = ROOT / "public" / "femaindex-4326.geojson"
-SLR_GPKG = ROOT / "Modelling Data from Web/tract-level/Physical Indicators/FL_SE_slr_data_dist/FL_SE_slr_final_dist.gpkg"
+SLR_GPKG = ROOT / "Modelling Data from Web/data/raw/physical/sea_level_rise/FL_SE_slr_data_dist/FL_SE_slr_final_dist.gpkg"
 LST_TIF = ROOT / "output/lst/lst_composite_f.tif"
-WATER_ZIP = ROOT / "Modelling Data from Web/boundaries/tl_2024_12086_areawater.zip"
+WATER_ZIP = ROOT / "Modelling Data from Web/data/raw/boundaries/tl_2024_12086_areawater.zip"
 PROJECTS_URL = "https://mmlqltdcpsuxirbqhugw.supabase.co/storage/v1/object/public/project-data/projects_merged_conf1.geojson"
 
 METRIC = "EPSG:6346"  # UTM 17N, NAD83(2011): same as the SCALE-R SLR processing
