@@ -5277,3 +5277,22 @@ D-113.
   new `whatIfExplain.test.js` checks the rounding and one-line answers.
 - Affects: `src/admin/viz/whatif/whatIfMap.{html,css,js}`,
   `whatIfExplain.js`.
+
+### D-209. Building compare mode removed from the Flood What-If view
+
+- Date: 24 Nov 2026. Status: Done (not pushed or deployed). Decided by: the
+  user.
+- What happened: Shift-clicking a second building opened two cards side by
+  side with differences highlighted (D-204, kept in D-208).
+- What is wrong: The user asked for it to be removed, to keep the view
+  simple.
+- How we are fixing it: A click now always shows one building card; the
+  shift-click handling, the "Shift-click another building to compare" note
+  and the two-card layout are gone. `cardHtml` still accepts a second card,
+  unused.
+- Decision: Removed.
+- Reason: The user's request.
+- Evidence: `after_desktop_card.jpg` and `after_phone_card.jpg` in
+  `outputs/admin_data/what_if_screens/redesign/`; What-If tests pass.
+- Affects: `src/admin/viz/whatif/whatIfMap.js`, `whatIfMap.css`. D-208's
+  "Compare still works" no longer holds.

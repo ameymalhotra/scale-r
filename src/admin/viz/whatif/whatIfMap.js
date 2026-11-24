@@ -673,8 +673,8 @@ export function mount() {
     if (f && f.properties.k != null) { sel = Number(f.properties.k); drawProjects(); renderResults(); return; }
     const layers = ['wi-hit', 'wi-reason', 'wi-buildings', 'wi-dry'].filter((l) => map.getLayoutProperty(l, 'visibility') !== 'none');
     const b = map.queryRenderedFeatures(e.point, { layers })[0];
-    if (b && b.layer.id === 'wi-hit') { showCard(b.properties.bk, b.properties.bi, e.originalEvent?.shiftKey); return; }
-    if (b && b.properties.dk == null && b.properties.k != null && b.properties.i != null) { showCard(b.properties.k, b.properties.i, e.originalEvent?.shiftKey); return; }
+    if (b && b.layer.id === 'wi-hit') { showCard(b.properties.bk, b.properties.bi); return; }
+    if (b && b.properties.dk == null && b.properties.k != null && b.properties.i != null) { showCard(b.properties.k, b.properties.i); return; }
     if (b) { showDry(b, e.lngLat); return; }
     const a = map.queryRenderedFeatures(e.point, { layers: ['wi-areas-fill'] })[0];
     if (a && a.properties.k != null) { sel = Number(a.properties.k); drawProjects(); renderResults(); }
@@ -719,20 +719,18 @@ export function mount() {
     }
     return { key, i, kind: 'none', color: '#6b7783', title, sentence: 'Floods in at least one storm today.', facts: facts(t, i, man), ex: explainBuilding(t, i, ctx, {}) };
   }
-  function showCard(key, i, compare) {
+  // one building at a time; the shift-click compare mode was removed at the user's request (D-209)
+  function showCard(key, i) {
     infoPopup.remove(); popup.remove();
-    const c = makeCard(key, i);
-    cards = compare && cards.length ? [cards[cards.length - 1], c] : [c];
+    cards = [makeCard(key, i)];
     renderCards();
   }
   function renderCards() {
     const el = $('cards');
     if (!cards.length) { el.hidden = true; el.innerHTML = ''; return; }
-    const [a, b] = cards;
     el.hidden = false;
-    el.classList.toggle('two', cards.length === 2);
-    el.innerHTML = `<div class="cards-bar"><span>${cards.length === 2 ? 'Compared (differences highlighted)' : '<span class="muted desk-only">Shift-click another building to compare</span>'}</span><button type="button" class="linkbtn" id="cards-close">Close</button></div>
-      <div class="cards-row">${cardHtml(a, b)}${b ? cardHtml(b, a) : ''}</div>`;
+    el.innerHTML = `<div class="cards-bar"><span></span><button type="button" class="linkbtn" id="cards-close">Close</button></div>
+      <div class="cards-row">${cardHtml(cards[0])}</div>`;
   }
   $('cards').addEventListener('click', (e) => { if (e.target.id === 'cards-close') { cards = []; renderCards(); } });
 

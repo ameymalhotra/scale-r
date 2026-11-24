@@ -184,7 +184,6 @@
       position: absolute; top: 14px; right: 56px; z-index: 3; width: 340px; max-height: calc(100% - 28px); overflow: auto;
       padding: 10px 12px; border-radius: 14px; background: rgba(255, 255, 255, 0.98); box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18);
     }
-    .cards.two { width: 680px; }
     .cards-bar { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 4px; font-size: 11.5px; }
     .cards-row { display: flex; gap: 12px; }
     .card { flex: 1; min-width: 0; margin: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; font-size: 12px; }
@@ -212,9 +211,8 @@
       .headline b { font-size: 17px; }
       .legend { right: 8px; bottom: 24px; max-width: 58%; padding: 6px 8px; font-size: 10.5px; }
       .status { top: auto; bottom: 70px; left: 50%; }
-      .cards, .cards.two { top: auto; bottom: 8px; left: 8px; right: 8px; width: auto; max-height: 50%; }
+      .cards { top: auto; bottom: 8px; left: 8px; right: 8px; width: auto; max-height: 50%; }
       .cards-row { flex-direction: column; }
-      .desk-only { display: none; }
       .mapboxgl-ctrl-top-right { display: none; }
     }
 }
