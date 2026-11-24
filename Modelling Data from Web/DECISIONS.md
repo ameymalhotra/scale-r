@@ -5337,3 +5337,30 @@ D-113.
 - Evidence: `after_desktop_card.jpg`, `after_phone_card.jpg` in
   `outputs/admin_data/what_if_screens/redesign/`; What-If tests pass.
 - Affects: `src/admin/viz/whatif/whatIfMap.{js,css,html}`.
+
+### D-212. Example 1 is a wall that pays back; long project names wrap
+
+- Date: 24 Nov 2026. Status: Done (not pushed or deployed). Decided by: the
+  user.
+- What happened: Example 1 was the typical Miami Beach wall at +6 ft, which
+  prevents $0 a year in the middle case, so no example wall paid back. Long
+  project names, such as "Typical elevation, Brownsville (low damage)", were
+  cut off with no way to read them.
+- What is wrong: The examples showed only a wall that does nothing, and the
+  project name was unreadable.
+- How we are fixing it: Example 1 is now the strongest 550 ft stretch of the
+  coastline scan (Miami Beach ocean front) with an +8 ft wall: about $299k
+  a year prevented, $1.9M cost, $1.88 back per $1 at 7% ($3.13 at 3.1%).
+  The same stretch at +6 ft returns $0.80, and at +7 ft $1.64. The scan
+  names the place "Unincorporated Miami-Dade" because the FEMA shoreline runs
+  just outside the city outline; the label says Miami Beach. Examples 2 and 3
+  are unchanged ($1.26 and $0.00 per $1). Project names now wrap.
+- Decision: Adopted.
+- Reason: The user's request. Limitation: the wall cost is $3,500 per foot
+  of length whatever the height, so a higher wall looks better than it would
+  with a height-based cost.
+- Evidence: `after2_desktop_examples.jpg`, `after2_phone_examples.jpg` in
+  `outputs/admin_data/what_if_screens/redesign/`; values from the view.
+- Affects: `scripts/benefit/what_if_parity_fixture.py`,
+  `outputs/admin_data/what_if/examples.json` (private, needs re-upload to
+  the bucket), `src/admin/viz/whatif/whatIfMap.css`.

@@ -61,10 +61,12 @@ def main():
             wall(f"typical {sid} +{crest:g} ft", line, crest)
     # two strongest coastline-scan stretches
     scan = pd.read_csv(tp.OUT / "part2_seawall_scan.csv").sort_values("avoided_mid", ascending=False).head(2)
+    scan_lines = {}
     for k, (_, p) in enumerate(scan.iterrows(), 1):
         g = E.base.geometry.iloc[int(p.line)]
         seg = substring(g, p.station - L / 2, p.station + L / 2)
-        wall(f"scan best {k} +6 ft", [tp.TO_LL.transform(*c) for c in seg.coords], tp.CREST)
+        scan_lines[k] = ([tp.TO_LL.transform(*c) for c in seg.coords], p.place)
+        wall(f"scan best {k} +6 ft", scan_lines[k][0], tp.CREST)
     # typical elevation placements
     b = pd.read_csv(tp.OUT / "part2_typical_placements.csv", dtype={"tract": str})
     fema = b[b.case.str.startswith("typical elevation")]
@@ -93,15 +95,17 @@ def main():
             wall(f"real {p.Project_ID} +8 ft", line, 8.0)
     ids, _ = E.top_homes(E.place == "Miami Beach", 2)
     elev("real SCALER-0684 2 homes", ids)
-    # Examples button in the view: typical seawall in Miami Beach (S2), typical elevation in Miami Shores (E4,
-    # most damaged home) and a low-damage placement (typical elevation in Brownsville, E8)
+    # Examples button in the view: a wall that pays back (the strongest stretch of the coastline scan at +8 ft,
+    # D-212), typical elevation in Miami Shores (E4, most damaged home) and a low-damage placement (Brownsville, E8)
     def home(eid):
         ids = next(r["fd_ids"] for r in runs if r["id"] == f"typical {eid} home 1")
         row = A[A.fd_id.isin(ids)].iloc[0]
         return {"fd_ids": ids, "tiles": [f"{int(row.x_utm // 2000)}_{int(row.y_utm // 2000)}"]}
     place = dict(zip(b.id, b.place))
-    seawall_place = dict(zip([f"S{i}" for i in range(1, 11)], pick.place))
-    ex = [{"id": "S2", "kind": "seawall", "label": f"Typical seawall, {seawall_place['S2']} (high damage)", "line": [[float(a), float(c)] for a, c in lines["S2"]], "crest_ft": 6.0},
+    # the scan names this stretch "Unincorporated Miami-Dade" because the FEMA shoreline runs just outside the city
+    # outline, but the wall and every building behind it are on the Miami Beach ocean front (D-212)
+    best_line, _ = scan_lines[1]
+    ex = [{"id": "B1", "kind": "seawall", "label": "Seawall on the strongest stretch of coast, Miami Beach (+8 ft)", "line": [[float(a), float(c)] for a, c in best_line], "crest_ft": 8.0},
           {"id": "E4", "kind": "elevation", "label": f"Typical elevation, {place['E4']} (high damage)", "raise_ft": 3.0, **home("E4")},
           {"id": "E8", "kind": "elevation", "label": f"Typical elevation, {place['E8']} (low damage)", "raise_ft": 3.0, **home("E8")}]
     (paths.ADMIN_WHAT_IF_DIR / "examples.json").write_text(json.dumps(ex, indent=1))

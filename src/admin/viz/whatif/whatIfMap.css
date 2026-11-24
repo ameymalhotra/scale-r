@@ -96,7 +96,8 @@
 
     /* result card */
     .rhead { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 12.5px; }
-    .rhead > div { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .rhead > div { min-width: 0; line-height: 1.35; overflow-wrap: anywhere; }
+    .rhead .linkbtn { flex: none; }
     .headline { margin: 6px 0 2px; font-size: 16px; line-height: 1.3; color: var(--ink); }
     .headline b { font-size: 20px; }
     .line { margin-top: 2px; font-size: 12px; }
