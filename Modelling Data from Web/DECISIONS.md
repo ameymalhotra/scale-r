@@ -5206,3 +5206,27 @@ D-113.
   after); `npx vite build` has no Scenario data in `dist/assets/`.
 - Affects: Branch history of `admin-what-if`; the admin Scenario view needs
   the bucket upload (D-095 steps 1 to 3) before it works in production.
+
+### D-207. D-095 fix: private bucket created; all admin views load from it
+
+- Date: 24 Nov 2026. Status: In progress (bucket done, upload and tests
+  next). Decided by: the user (D-095 plan, approved in D-096).
+- What happened: The user ran the bucket SQL. Checks: bucket `admin-data`
+  exists, not public, 10 MB per file, types JSON, GeoJSON and binary
+  (`application/octet-stream`, for the What-If tiles); one read policy,
+  SELECT for authenticated users where `is_admin()`; the public URL answers
+  400 and a logged-out listing is empty.
+- What is wrong: The gap map still bundled its tract file from `src/`.
+- How we are fixing it: The gap map now loads `gap/tracts.geojson` through
+  `src/admin/viz/adminData.js`, like the Scenario and What-If views;
+  `build_viz_tracts.py` writes to the git-ignored staging folder; the file
+  is removed from `src/` and the folder is git-ignored. New
+  `scripts/js/upload-admin-data.mjs` (`npm run upload-admin-data`) uploads
+  `gap/`, `scenario/` and `what_if/` (918 files, 34.7 MB; test-only files
+  skipped) and refuses a public bucket. The SQL is recorded in
+  `supabase/sql/admin_dashboard.sql`.
+- Decision: The build now contains no admin data.
+- Reason: D-095.
+- Evidence: `npx vite build` (no admin files in `dist/`); 195 tests pass.
+- Affects: All three admin data views. The gap map file stays in the public
+  history of `main` (open decision, D-095 step 6).

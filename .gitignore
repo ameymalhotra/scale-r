@@ -37,6 +37,7 @@ scripts/python/*
 !scripts/python/prepare_footprint_tiles.py
 !scripts/js/
 scripts/js/*
+!scripts/js/upload-admin-data.mjs
 !scripts/js/audit-performance.mjs
 !scripts/js/gtmetrix-benchmark.mjs
 supabase/*
@@ -130,3 +131,4 @@ Modelling Data from Web/data/processed/benefit/nfip_policies_miami_dade.parquet
 
 # Admin-only data lives in the private Supabase bucket "admin-data" (D-095), never in src/
 src/admin/viz/scenario/data/
+src/admin/viz/data/
