@@ -5296,3 +5296,26 @@ D-113.
   `outputs/admin_data/what_if_screens/redesign/`; What-If tests pass.
 - Affects: `src/admin/viz/whatif/whatIfMap.js`, `whatIfMap.css`. D-208's
   "Compare still works" no longer holds.
+
+### D-210. The view's comparison discount rate is FEMA's 3.1%, not 3%
+
+- Date: 24 Nov 2026. Status: Done in the admin view (not pushed); Part 2
+  report and scripts still at 3%. Decided by: the user.
+- What happened: The view showed benefit per dollar at 7% (main) and 3%
+  (sensitivity, an assumption, D-198).
+- What is wrong: A round 3% is not a rate anyone uses. FEMA used 3.1% in
+  2023 and 2024 and went back to 7% in 2025 (FEMA BCA Toolkit help content,
+  28 August 2025, page 59; `data/reference/fema_standard_values.csv`,
+  `discount_rate_2023_2024`).
+- How we are fixing it: `SETTINGS.rates.sensitivity` is 0.031; Details reads
+  "Back per $1 at 7% (FEMA rate since 2025)" and "at 3.1% (FEMA rate in 2023
+  and 2024, shown for comparison)", no longer tagged assumed; About says the
+  same. Damage figures do not change.
+- Decision: 7% stays the main figure; 3.1% is the comparison.
+- Reason: Both rates are published FEMA values, so the comparison is
+  defensible.
+- Evidence: `whatIfEngine.test.js` checks the setting and one ratio (S2:
+  $2.62 per dollar at 3.1%, $2.66 at 3%).
+- Affects: The admin Flood What-If view. `typical_projects_part2.py`
+  (`RATE_LOW`), `closed_system_miami_beach.py` and
+  `reports/benefit/typical_projects_part2.md` still use 3% until rerun.

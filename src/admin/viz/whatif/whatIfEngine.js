@@ -437,7 +437,7 @@ export function topHomes(tiles, ring, n, ctx) {
 export const SETTINGS = {
   seawall: { life: 50, maint: 0.01, unitCost: 3500, unit: 'ft' },
   elevation: { life: 30, maint: 0, unitCost: 254000, unit: 'home' },
-  rates: { main: 0.07, sensitivity: 0.03 },
+  rates: { main: 0.07, sensitivity: 0.031 },   // 7%: FEMA now; 3.1%: FEMA in 2023 and 2024 (D-210)
 };
 
 export function annuity(years, rate) {

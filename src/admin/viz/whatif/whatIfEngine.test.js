@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { fromUtm17, annuity, benefitPerDollar, eydFromLosses, inRing, interp, lineLength, pointLineDist, prepareCurves, snapToShore, toUtm17 } from './whatIfEngine.js';
+import { SETTINGS, fromUtm17, annuity, benefitPerDollar, eydFromLosses, inRing, interp, lineLength, pointLineDist, prepareCurves, snapToShore, toUtm17 } from './whatIfEngine.js';
 
 describe('What-If engine building blocks', () => {
   it('interpolates like numpy, held flat beyond the ends', () => {
@@ -50,6 +50,9 @@ describe('What-If engine building blocks', () => {
     // Part 2 S2: $228,964 a year, $1.76M, seawall -> 1.58 at 7%, 2.66 at 3%
     expect(benefitPerDollar('seawall', 228964, 1.76e6, 0.07)).toBeCloseTo(1.578, 2);
     expect(benefitPerDollar('seawall', 228964, 1.76e6, 0.03)).toBeCloseTo(2.66, 2);
+    // the view's comparison rate is FEMA's 2023 and 2024 rate, 3.1% (D-210)
+    expect(SETTINGS.rates).toEqual({ main: 0.07, sensitivity: 0.031 });
+    expect(benefitPerDollar('seawall', 228964, 1.76e6, 0.031)).toBeCloseTo(2.62, 2);
   });
 
   it('places a wall drawn out in the water onto the shoreline, keeping its length', () => {
