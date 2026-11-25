@@ -77,7 +77,7 @@ export function mount() {
   let damageExpr = STILL_FLOODS;
   let emode = 'area';
   let why = false;
-  let showLinks = true;   // water paths on by default once Show why is on; drawn only for buildings behind the wall (D-217)
+  let showLinks = true;   // lines to nearest water on by default once Show why is on; drawn only for buildings behind the wall (D-217, D-220)
   const BEHIND_WALL = new Set(['protected', 'overtopped']);
   let drawing = null;           // {kind: 'wall' | 'area' | 'click', pts: [[lon, lat], ...]}
   const projects = [];
@@ -161,7 +161,7 @@ export function mount() {
 
     damageExpr = damageColor('eyd');
     // explanation layer (D-204): each flooding building near the selected wall coloured by its reason, and an optional
-    // line to the water it is matched to; under "Show why" (D-208)
+    // line to nearest water (a straight line to its closest open water, not the path water takes, D-220); under "Show why" (D-208)
     const reasonColor = ['match', ['get', 'r'], ...Object.entries(REASON_STYLE).flatMap(([k, v]) => [k, v.color]), '#999'];
     map.addLayer({ id: 'wi-links', type: 'line', source: 'wi-links', paint: { 'line-color': reasonColor, 'line-width': 0.9, 'line-opacity': 0.75 } });
     map.addLayer({ id: 'wi-reason', type: 'circle', source: 'wi-reason',
@@ -222,7 +222,7 @@ export function mount() {
       items.push(`<div class="ramp"><span>Yearly damage</span>${DAMAGE_STOPS.slice(1).map(([, c]) => `<i style="background:${c}"></i>`).join('')}<span>$100 to $50k+</span></div>`);
       items.push(dot('#fff', 'Stays dry in every storm', 'border:1px solid #9aa5ae'));
       if (p?.kind === 'seawall' && p.reasonCounts) {
-        items.push(`<label class="switch sub"><input type="checkbox" id="links" ${showLinks ? 'checked' : ''}><span>Water paths</span><button type="button" class="q" data-tip="A line from each building to the water that floods it, for the buildings behind the wall (green: protected; yellow: water goes over the wall). Each line crosses the wall on its way to the coast.">?</button></label>`);
+        items.push(`<label class="switch sub"><input type="checkbox" id="links" ${showLinks ? 'checked' : ''}><span>Show each building's nearest water</span><button type="button" class="q" data-tip="Straight line to the closest open water (bay, canal or creek). Used to decide whether the wall is between the building and the water. It is not the path water would take.">?</button></label>`);
         items.push(`<div class="lg-h">Within 1 km of ${esc(p.name)}</div>`);
         for (const [k, v] of Object.entries(REASON_STYLE)) {
           if (p.reasonCounts[k]) items.push(`<div title="${esc(v.label)}"><span class="sw" style="background:${v.color}"></span>${v.short} <b>${fmt(p.reasonCounts[k])}</b></div>`);
@@ -434,7 +434,7 @@ export function mount() {
     if (why && ps?.kind === 'seawall' && ps.reasons) {
       const done = new Set();
       for (const q of ps.reasons) {
-        if (done.has(q.b)) continue;   // one dot and one line per building (D-218)
+        if (done.has(q.b)) continue;   // one dot and one line to nearest water per building (D-218)
         done.add(q.b);
         const reason = ps.buildingReason.get(q.b);
         const t = store.tiles.get(q.key);
@@ -998,7 +998,7 @@ export function mount() {
         },
         target: () => root.querySelector('.cardpop') },
       { title: 'Show why',
-        text: 'Turn this on to color every building by flood damage and see why some buildings near a wall are still not protected. <b>Water paths</b> then draws a line from each nearby building to the water that floods it.',
+        text: 'Turn this on to color every building by flood damage and see why some buildings near a wall are still not protected. <b>Show each building\'s nearest water</b> then draws a line to nearest water: a straight line from each building behind the wall to its closest open water. It is not the path water would take.',
         before: async () => { cardPopup.remove(); },
         target: () => $('legend') },
       { title: 'Add a seawall',
