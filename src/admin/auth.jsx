@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient.js';
 import { AdminAuthContext, useAdminAuth } from './contexts.js';
@@ -14,17 +14,26 @@ import { AdminAuthContext, useAdminAuth } from './contexts.js';
 export function AdminAuthProvider({ client = supabase, children }) {
   const [session, setSession] = useState(null);
   const [status, setStatus] = useState(client ? 'loading' : 'unconfigured');
+  // The user last confirmed as an admin. Supabase reports SIGNED_IN again for the same user each time the tab
+  // becomes visible; checking again would swap the page for "Checking your access" and rebuild it, which looks
+  // like a reload and loses the map (D-221). A confirmed admin is not checked again; anyone else is.
+  const checkedUser = useRef(null);
 
   const checkAdmin = useCallback(
     async (nextSession) => {
       setSession(nextSession);
       if (!nextSession) {
+        checkedUser.current = null;
         setStatus('signed-out');
         return;
       }
+      const userId = nextSession.user?.id ?? null;
+      if (userId && userId === checkedUser.current) return;
       setStatus('loading');
       const { data, error } = await client.rpc('is_admin');
-      setStatus(!error && data === true ? 'admin' : 'forbidden');
+      const isAdmin = !error && data === true;
+      checkedUser.current = isAdmin ? userId : null;
+      setStatus(isAdmin ? 'admin' : 'forbidden');
     },
     [client],
   );
