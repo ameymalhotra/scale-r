@@ -5594,6 +5594,31 @@ D-113.
   HTML page instead of a 404. Both are follow-ups, not changed here.
 - Affects: `vite.config.js`.
 
+### D-220. Call the building-to-water lines "line to nearest water"
+
+- Date: 25 Nov 2026. Status: Done (not pushed or deployed). Decided by: the
+  user.
+- What happened: Under Show why, the What-If view draws a line from each
+  building behind a wall to its closest open water. The switch, its tooltip
+  and the tour called these "water paths" and said the line goes "to the
+  water that floods it".
+- What is wrong: The line is straight. It shows which water is nearest, which
+  decides whether the wall stands between the building and the water. It is
+  not the route a storm surge would take, and "water path" suggests it is.
+- How we are fixing it: the lines are now called "line to nearest water". The
+  switch reads "Show each building's nearest water"; its tooltip reads
+  "Straight line to the closest open water (bay, canal or creek). Used to
+  decide whether the wall is between the building and the water. It is not
+  the path water would take." The tour step and code comments use the same
+  words. No logic changes: the same lines are drawn for the same buildings.
+- Decision: Adopted.
+- Reason: The user's decision; the old name overstated what the line means.
+- Evidence: In the dev view (WebKit), Example 1 with Show why on shows the new
+  switch text and tooltip, the switch is on by default, and the counts are
+  unchanged (86 protected). No report used the old name. D-217 and D-218
+  keep "water paths" because they record what was decided at the time.
+- Affects: `src/admin/viz/whatif/whatIfMap.js`.
+
 ### D-221. Do not re-check a confirmed admin when the tab comes back
 
 - Date: 25 Nov 2026. Status: Done (not pushed or deployed). Decided by: the
