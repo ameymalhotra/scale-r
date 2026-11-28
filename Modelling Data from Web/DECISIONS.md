@@ -5593,3 +5593,31 @@ D-113.
   a white page; and `vercel.json` answers missing `/assets/` files with the
   HTML page instead of a 404. Both are follow-ups, not changed here.
 - Affects: `vite.config.js`.
+
+### D-221. Do not re-check a confirmed admin when the tab comes back
+
+- Date: 25 Nov 2026. Status: Done (not pushed or deployed). Decided by: the
+  user reported it; fix chosen in this session.
+- What happened: In Safari, leaving the admin page for another app or tab and
+  coming back made the page reload by itself, losing the map view and any
+  projects drawn in Flood What-If.
+- What is wrong: The sign-in library (supabase-js 2.95.3) re-reads the saved
+  login every time the tab becomes visible and reports "SIGNED_IN" again for
+  the same user. `AdminAuthProvider` treated that as a new sign-in: it set
+  the status to "loading", so `RequireAdmin` swapped the page for "Checking
+  your access" and then built it again from scratch. This happens in every
+  browser, not only Safari.
+- How we are fixing it: the provider remembers the user last confirmed as an
+  admin. A repeat SIGNED_IN for that user only updates the session and keeps
+  the page as it is. A different user, a sign-out, or a user whose check
+  failed is still checked as before.
+- Decision: Adopted.
+- Reason: Smallest change that keeps the access check for every new or
+  changed sign-in.
+- Evidence: New tests in `auth.test.jsx`: the same admin coming back keeps
+  the page mounted with one access check (this test fails on the old code);
+  a different user is checked again. In WebKit (dev build, admin session
+  faked inside the test browser), hiding and showing the tab on Flood
+  What-If: before the fix the view was rebuilt and the 3 example projects
+  were lost; after it, the same view and all 3 projects stay.
+- Affects: `src/admin/auth.jsx`, `src/admin/auth.test.jsx`.
